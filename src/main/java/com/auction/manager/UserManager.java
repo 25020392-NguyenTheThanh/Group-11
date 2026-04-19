@@ -1,4 +1,4 @@
-package com.auction.model.auction;
+package com.auction.manager;
 
 import com.auction.model.user.Admin;
 import com.auction.model.user.Bidder;
@@ -14,7 +14,7 @@ public class UserManager {
     private int UserCounter = 1 ;
     private UserManager(){}
 
-    public UserManager getInstance(){
+    public static UserManager getInstance(){
         if (instance == null) {
             synchronized (UserManager.class){
                 if (instance == null){

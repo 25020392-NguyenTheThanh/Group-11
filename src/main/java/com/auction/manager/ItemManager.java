@@ -1,4 +1,4 @@
-package com.auction.model.auction;
+package com.auction.manager;
 
 import com.auction.model.item.*;
 

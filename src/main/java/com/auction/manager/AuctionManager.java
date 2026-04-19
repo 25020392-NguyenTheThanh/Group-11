@@ -1,8 +1,8 @@
-package com.auction.model.auction;
+package com.auction.manager;
 
 
+import com.auction.model.auction.Auction;
 import com.auction.model.item.Item;
-import com.auction.model.user.User;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
