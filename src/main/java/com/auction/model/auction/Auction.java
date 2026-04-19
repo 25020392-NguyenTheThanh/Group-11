@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Auction {
-    private String id ; // id của phiên đấu giá
+    private int id ; // id của phiên đấu giá
     private Item item ; // sản phẩm đang đấu giá
     private double currentHighestBid ; // giá cao nhất hiện tại
     private Bidder currentWinner ; // người đang dẫn đầu
@@ -18,7 +18,7 @@ public class Auction {
     private LocalDateTime endTime ;
     private List<BidTransaction> bidHistory ; // danh sách các lần đặt giá
 
-    public Auction(String id , Item item , LocalDateTime endTime){
+    public Auction(int id , Item item , LocalDateTime endTime){
         this.id = id ;
         this.item = item ;
         this.currentHighestBid = item.getStartingPrice() ; // giá khởi điểm
@@ -44,7 +44,7 @@ public class Auction {
 
         bidHistory.add((new BidTransaction(bidder , amount)));
     }
-    public String getId() { return id; }
+    public int getId() { return id; }
     public Item getItem() { return item; }
     public double getCurrentHighestBid() { return currentHighestBid; }
     public Bidder getCurrentWinner() { return currentWinner; }

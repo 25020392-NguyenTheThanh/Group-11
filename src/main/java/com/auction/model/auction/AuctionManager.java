@@ -1,15 +1,18 @@
 package com.auction.model.auction;
 
 
+import com.auction.model.item.Item;
 import com.auction.model.user.User;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 public class AuctionManager {
     private static volatile AuctionManager instance ;
-    private static ArrayList<User> users = new ArrayList<>() ; // Danh sách người dùng
     private static ArrayList<Auction> auctions = new ArrayList<>(); // Danh sách các phiên đấu
 
+    private int AuctionCounter = 1 ;
     private AuctionManager(){}
 
     public static AuctionManager getInstance(){
@@ -23,18 +26,23 @@ public class AuctionManager {
         return instance ;
     }
 
-    public void addAuction(Auction auction) { auctions.add(auction); }
-    public ArrayList<Auction> getAuctions() { return auctions; }
-    public void addUser(User user) { users.add(user); }
-    public ArrayList<User> getUsers() { return users; }
+    // tạo 1 phiên mới
+    public Auction createAuction(Item item, LocalDateTime endTime) {
+        int id = AuctionCounter++;
+        Auction auction = new Auction(id, item, endTime);
+        auctions.add(auction);
+        return auction;
+    }
 
-    // tìm user theo username
-    public User findByUsername(String username) {
-        for (User u : users) {
-            if (u.getUsername().equals(username)) {
-                return u;
-            }
+    public List<Auction> getAuctions() { return auctions; }
+
+    // tìm phiên theo id
+    public Auction findAuctionById(int id) {
+        for (Auction a : auctions) {
+            if (a.getId() == id) return a;
         }
+        System.out.println("Phiên không tồn tại");
         return null;
     }
+
 }
