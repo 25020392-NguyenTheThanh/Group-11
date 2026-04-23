@@ -3,7 +3,7 @@ package com.auction.pattern.factory;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
 
-public class VehicleFactory extends ItemFactory{
+public class VehicleFactory extends ItemFactory {
     private int year ;
     public VehicleFactory(int year){
         this.year = year ;
