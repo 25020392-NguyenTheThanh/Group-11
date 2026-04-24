@@ -24,6 +24,7 @@ public class LoginController implements Initializable {
     @FXML
     private VBox boxContainer;
 
+
     @FXML
     private VBox coinContainer;
 
