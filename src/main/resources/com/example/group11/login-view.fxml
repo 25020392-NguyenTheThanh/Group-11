@@ -7,18 +7,21 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.paint.LinearGradient?>
+<?import javafx.scene.paint.Stop?>
 <?import javafx.scene.shape.Circle?>
-<?import javafx.scene.shape.Line?>
 <?import javafx.scene.shape.Rectangle?>
 <?import javafx.scene.text.Text?>
 
 <HBox prefHeight="650.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
     <children>
-        <VBox alignment="CENTER" prefWidth="500.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px;" HBox.hgrow="ALWAYS">
+        <VBox alignment="CENTER" prefWidth="580.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px;" HBox.hgrow="ALWAYS">
             <children>
                 <StackPane prefHeight="400.0">
                     <children>
@@ -26,18 +29,37 @@
                             <children>
                                 <Rectangle arcHeight="10.0" arcWidth="10.0" fill="#334155" height="260.0" layoutX="142.0" layoutY="50.0" width="16.0" />
                                 <Circle fill="#cbd5e1" layoutX="150.0" layoutY="50.0" radius="20.0" />
-                                <Line fx:id="scaleBar" endX="260.0" layoutX="150.0" layoutY="50.0" startX="-180.0" stroke="#cbd5e1" strokeWidth="8.0" />
+
+                                <Rectangle fx:id="scaleBar" arcHeight="12.0" arcWidth="12.0" height="16.0" layoutX="-50.0" layoutY="42.0" width="450.0">
+                                    <fill>
+                                        <LinearGradient endX="0.0" endY="1.0" startX="0.0" startY="0.0">
+                                            <stops>
+                                                <Stop color="#94a3b8" offset="0.0" />
+                                                <Stop color="#f8fafc" offset="0.4" />
+                                                <Stop color="#cbd5e1" offset="0.6" />
+                                                <Stop color="#475569" offset="1.0" />
+                                            </stops>
+                                        </LinearGradient>
+                                    </fill>
+                                    <effect>
+                                        <DropShadow blurType="GAUSSIAN" height="20.0" offsetY="5.0" radius="9.5" width="20.0">
+                                            <color>
+                                                <Color opacity="0.6" />
+                                            </color>
+                                        </DropShadow>
+                                    </effect>
+                                </Rectangle>
                             </children>
                         </Group>
 
-                        <VBox fx:id="boxContainer" alignment="CENTER" maxHeight="130.0" maxWidth="120.0" spacing="8.0" style="-fx-background-color: #1e293b; -fx-background-radius: 12; -fx-border-color: #3b82f6; -fx-border-width: 1.5; -fx-border-radius: 12;" translateX="-220.0" translateY="65.0">
+                        <VBox fx:id="boxContainer" alignment="CENTER" maxHeight="130.0" maxWidth="120.0" spacing="8.0" style="-fx-background-color: #1e293b; -fx-background-radius: 12; -fx-border-color: #3b82f6; -fx-border-width: 1.5; -fx-border-radius: 12;" translateX="-210.0" translateY="65.0">
                             <children>
-                                <Text fill="#3b82f6" style="-fx-font-size: 42px;" text="📦" />
+                                <Text fill="#3b82f6" style="-fx-font-size: 42px;" text="📈" />
                                 <Label style="-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #334155; -fx-padding: 3 8; -fx-background-radius: 8;" text="Net Realized Gain" />
                             </children>
                         </VBox>
 
-                        <VBox fx:id="coinContainer" alignment="CENTER" maxHeight="130.0" maxWidth="120.0" spacing="8.0" style="-fx-background-color: #1e293b; -fx-background-radius: 100; -fx-border-color: #10b981; -fx-border-width: 1.5; -fx-border-radius: 100;" translateX="240.0" translateY="65.0">
+                        <VBox fx:id="coinContainer" alignment="CENTER" maxHeight="130.0" maxWidth="120.0" spacing="8.0" style="-fx-background-color: #1e293b; -fx-background-radius: 100; -fx-border-color: #10b981; -fx-border-width: 1.5; -fx-border-radius: 100;" translateX="230.0" translateY="65.0">
                             <children>
                                 <Text fill="#10b981" style="-fx-font-size: 42px;" text="💰" />
                                 <Label style="-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #334155; -fx-padding: 3 8; -fx-background-radius: 8;" text="Core Equity" />
@@ -49,33 +71,44 @@
                 <VBox alignment="CENTER" spacing="15.0" translateY="30.0">
                     <children>
                         <Text style="-fx-fill: white; -fx-font-size: 26px; -fx-font-weight: bold;" text="Take Your Trading to the Next Level" />
-                        <Label maxWidth="380.0" style="-fx-text-fill: #94a3b8; -fx-font-size: 15px;" text="High-velocity trading engine engineered for market dominance and maximum capital extraction." textAlignment="CENTER" wrapText="true" />
+                        <Label maxWidth="450.0" style="-fx-text-fill: #94a3b8; -fx-font-size: 15px;" text="High-velocity trading engine engineered for market dominance and maximum capital extraction." textAlignment="CENTER" wrapText="true" />
                     </children>
                 </VBox>
             </children>
         </VBox>
 
-        <VBox alignment="CENTER_LEFT" prefWidth="500.0" spacing="25.0" style="-fx-background-color: #f7f9fb; -fx-padding: 60px;" HBox.hgrow="ALWAYS">
+        <VBox alignment="TOP_LEFT" prefWidth="420.0" spacing="25.0" style="-fx-background-color: #f7f9fb; -fx-padding: 110px 50px 60px 50px;" HBox.hgrow="ALWAYS">
             <children>
                 <VBox spacing="8.0">
                     <children>
-                        <Text style="-fx-font-size: 32px; -fx-font-weight: 800; -fx-fill: #191c1e;" text="Welcome to the auction floor" />
-                        <Text style="-fx-fill: #45464d; -fx-font-size: 16px;" text="Log in to choose your preferred experience." />
+                        <Text style="-fx-font-size: 32px; -fx-font-weight: 800; -fx-fill: #1A1A1A;" text="Welcome back" />
+                        <Text style="-fx-fill: #45464d; -fx-font-size: 16px;" text="Log in to your auction floor." />
                     </children>
                 </VBox>
 
-                <VBox spacing="18.0">
+                <VBox spacing="20.0">
                     <children>
-                        <VBox spacing="6.0">
+                        <VBox spacing="8.0">
                             <children>
                                 <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="Email" />
-                                <TextField fx:id="enterEmail" promptText="Enter email" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 8px; -fx-padding: 12px;" />
+                                <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
+                                    <children>
+                                        <Text fill="#94a3b8" style="-fx-font-size: 20px;" text="✉" />
+                                        <TextField fx:id="enterEmail" promptText="Enter email" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" HBox.hgrow="ALWAYS" />
+                                    </children>
+                                </HBox>
                             </children>
                         </VBox>
-                        <VBox spacing="6.0">
+
+                        <VBox spacing="8.0">
                             <children>
                                 <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="Password" />
-                                <PasswordField fx:id="enterPassword" promptText="••••••••" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 8px; -fx-padding: 12px;" />
+                                <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
+                                    <children>
+                                        <Text fill="#94a3b8" style="-fx-font-size: 20px;" text="🔒" />
+                                        <PasswordField fx:id="enterPassword" promptText="••••••••" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" HBox.hgrow="ALWAYS" />
+                                    </children>
+                                </HBox>
                             </children>
                         </VBox>
                     </children>
@@ -83,22 +116,22 @@
 
                 <HBox alignment="CENTER_LEFT">
                     <children>
-                        <CheckBox fx:id="rememberPassword" text="Remember password" />
+                        <CheckBox fx:id="rememberPassword" style="-fx-cursor: hand;" text="Remember me" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Hyperlink fx:id="forgotPassword" text="Forgot password?" />
+                        <Hyperlink fx:id="forgotPassword" style="-fx-font-size: 13px;" text="Forgot password?" />
                     </children>
                 </HBox>
 
-                <VBox alignment="CENTER" spacing="15.0">
+                <VBox alignment="CENTER" spacing="18.0">
                     <children>
-                        <Button fx:id="loginButton" maxWidth="Infinity" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 14px; -fx-background-radius: 4px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
-                        <Button fx:id="createAccountButton" maxWidth="Infinity" style="-fx-background-color: black; -fx-text-fill: white; -fx-padding: 14px; -fx-background-radius: 4px; -fx-font-size: 18px; -fx-cursor: hand;" text="Create new account" />
+                        <Button fx:id="loginButton" maxWidth="Infinity" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
+                        <Button fx:id="createAccountButton" maxWidth="Infinity" style="-fx-background-color: black; -fx-text-fill: white; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Create account" />
 
-                        <HBox alignment="CENTER" spacing="0.0">
+                        <HBox alignment="CENTER" spacing="10.0">
                             <children>
-                                <Hyperlink fx:id="termsLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 13px; -fx-underline: false;" text="Terms of service" />
-                                <Label style="-fx-text-fill: #94a3b8; -fx-font-size: 13px;" text="and" />
-                                <Hyperlink fx:id="privacyLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 13px; -fx-underline: false;" text="Privacy policy" />
+                                <Hyperlink fx:id="termsLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px; -fx-underline: false; -fx-font-weight: 500;" text="Terms of service" />
+                                <Label style="-fx-text-fill: #94a3b8; -fx-font-size: 16px;" text="and" />
+                                <Hyperlink fx:id="privacyLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px; -fx-underline: false; -fx-font-weight: 500;" text="Privacy policy" />
                             </children>
                         </HBox>
                     </children>

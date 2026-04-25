@@ -13,6 +13,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 
@@ -47,7 +48,7 @@ public class LoginController implements Initializable {
     private CheckBox rememberPassword;
 
     @FXML
-    private Line scaleBar;
+    private Rectangle scaleBar;
 
     @FXML
     private Group scaleGroup;

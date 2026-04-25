@@ -13,34 +13,23 @@ import javafx.util.Duration;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-
 public class createAccountController implements Initializable {
 
-    @FXML
-    private VBox Admin;
-
-    @FXML
-    private VBox Bidder;
-
-    @FXML
-    private VBox Seller;
-
+    @FXML private VBox Admin, Bidder, Seller;
     private VBox lastSelected;
 
-    // Các chuỗi Style cơ bản (không bao gồm Scale vì sẽ xử lý bằng Animation)
+    private final String ACCENT_BLUE = "#0058be"; // Màu xanh khi nút được chọn
+
+    // Styles của VBox (khối) giữ nguyên
     private final String NORMAL_STYLE =
-            "-fx-background-color: white; -fx-background-radius: 15; -fx-border-color: #e2e8f0; " +
-                    "-fx-border-radius: 15; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 10, 0, 0, 5);";
+            "-fx-background-color: white; -fx-background-radius: 25; -fx-border-color: #e2e8f0; -fx-border-radius: 25; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 15, 0, 0, 5);";
 
     private final String SELECTED_STYLE =
-            "-fx-background-color: #131b2e; -fx-background-radius: 15; -fx-border-color: #0058be; " +
-                    "-fx-border-width: 2; -fx-border-radius: 15; -fx-cursor: hand; " +
-                    "-fx-effect: dropshadow(gaussian, rgba(0,88,190,0.3), 20, 0, 0, 10);";
+            "-fx-background-color: #131b2e; -fx-background-radius: 25; -fx-border-color: #131b2e; -fx-border-radius: 25; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(19,27,46,0.2), 20, 0, 0, 10);";
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Mặc định chọn Admin
-        applySelection(Admin, false); // false để không chạy animation khi vừa mở app
+        applySelection(Admin, false); // Mặc định chọn Admin
     }
 
     @FXML
@@ -52,53 +41,68 @@ public class createAccountController implements Initializable {
     }
 
     private void applySelection(VBox target, boolean animate) {
-        // 1. Thu nhỏ cái cũ về bình thường
         if (lastSelected != null) {
             playTransition(lastSelected, 1.0, animate);
-            updateContentColor(lastSelected, false);
+            updateContentUI(lastSelected, false);
             lastSelected.setStyle(NORMAL_STYLE);
-            lastSelected.setViewOrder(0);
         }
 
-        // 2. Phóng to cái mới
         playTransition(target, 1.05, animate);
-        updateContentColor(target, true);
+        updateContentUI(target, true);
         target.setStyle(SELECTED_STYLE);
-        target.setViewOrder(-1.0); // Luôn nằm trên cùng khi phóng to
 
         lastSelected = target;
     }
 
-    // Hàm tạo hiệu ứng co giãn mượt mà
     private void playTransition(VBox box, double scaleValue, boolean animate) {
         if (!animate) {
             box.setScaleX(scaleValue);
             box.setScaleY(scaleValue);
             return;
         }
-        ScaleTransition st = new ScaleTransition(Duration.millis(250), box);
+        ScaleTransition st = new ScaleTransition(Duration.millis(200), box);
         st.setToX(scaleValue);
         st.setToY(scaleValue);
         st.play();
     }
 
-    private void updateContentColor(VBox card, boolean isSelected) {
-        String textColor = isSelected ? "white" : "#131b2e";
-        String subTextColor = isSelected ? "#94a3b8" : "#64748b";
+    private void updateContentUI(VBox card, boolean isSelected) {
+        String iconColor = isSelected ? "white" : "#131b2e";
 
         for (Node node : card.getChildren()) {
-            if (node instanceof Label) {
-                Label lbl = (Label) node;
-                if (lbl.getStyle().contains("font-size: 28px")) continue;
-
-                boolean isTitle = lbl.getStyle().contains("font-weight: bold");
-                lbl.setStyle(lbl.getStyle() + "; -fx-text-fill: " + (isTitle ? textColor : subTextColor) + ";");
+            // 1. Icon
+            if (node instanceof Label && node.getStyle().contains("-fx-font-size: 50px")) {
+                node.setStyle("-fx-font-size: 50px; -fx-text-fill: " + iconColor + ";");
             }
+
+            // 2. Logic hoán đổi Title/Description lồng trong VBox
+            if (node instanceof VBox) {
+                VBox textContainer = (VBox) node;
+                for (Node subNode : textContainer.getChildren()) {
+                    if (subNode instanceof Label) {
+                        Label lbl = (Label) subNode;
+                        if (lbl.getStyle().contains("font-weight: bold")) {
+                            lbl.setVisible(!isSelected);
+                            lbl.setManaged(!isSelected);
+                        } else {
+                            lbl.setVisible(isSelected);
+                            lbl.setManaged(isSelected);
+                            lbl.setStyle("-fx-text-fill: white; -fx-font-size: 16px;");
+                        }
+                    }
+                }
+            }
+
+            // 3. Button - Đã sửa để bo góc đồng bộ
             if (node instanceof Button) {
                 Button btn = (Button) node;
-                btn.setStyle(isSelected ?
-                        "-fx-background-color: #0058be; -fx-text-fill: white; -fx-border-radius: 8;" :
-                        "-fx-background-color: transparent; -fx-border-color: #131b2e; -fx-border-radius: 8; -fx-text-fill: #131b2e;");
+                if (isSelected) {
+                    // Khi Card được chọn: Nút có nền xanh, chữ trắng, không viền, bo góc 20
+                    btn.setStyle("-fx-background-color: " + ACCENT_BLUE + "; -fx-text-fill: white; -fx-background-radius: 20; -fx-border-radius: 20; -fx-font-weight: bold; -fx-font-size: 14px; -fx-cursor: hand;");
+                } else {
+                    // Khi Card không được chọn: Trả về style mặc định như FXML (nền trong, viền đen, bo góc 20)
+                    btn.setStyle("-fx-background-color: transparent; -fx-border-color: #131b2e; -fx-border-width: 1.5; -fx-background-radius: 20; -fx-border-radius: 20; -fx-text-fill: #131b2e; -fx-font-weight: bold; -fx-font-size: 14px; -fx-cursor: hand;");
+                }
             }
         }
     }
