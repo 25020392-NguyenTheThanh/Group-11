@@ -9,11 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserManager {
-    private static volatile UserManager instance ;
-    private static List<User> users = new ArrayList<>() ; // Danh sách người dùng
-    private int UserCounter = 1 ;
-    private UserManager(){}
-
+    private static          volatile UserManager instance ;
+    private static          List<User> users = new ArrayList<>() ; // Danh sách người dùng
+    private                 int UserCounter = 1 ;
+    private                 UserManager(){}
     public static UserManager getInstance(){
         if (instance == null) {
             synchronized (UserManager.class){
@@ -26,8 +25,8 @@ public class UserManager {
     }
 
     // đăng kí
-    public User register(String username, String password,
-                         String email, String role) {
+    public synchronized User register(String username, String password,
+                                      String email, String role) {
         for (User u : users) {
             if (u.getUsername().equals(username)) {
                 System.out.println("Username đã tồn tại");
@@ -37,7 +36,7 @@ public class UserManager {
         int id = UserCounter++;
         User newUser;
         if (role.equals("BIDDER")) {
-            newUser = new Bidder(id, username, password, email);
+            newUser = new Bidder(id, username, password, email,0);
         } else if (role.equals("SELLER")) {
             newUser = new Seller(id, username, password, email);
         } else {
@@ -71,3 +70,4 @@ public class UserManager {
         return null ;
     }
 }
+

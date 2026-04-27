@@ -1,21 +1,43 @@
 package com.auction.model.auction;
 
-import com.auction.model.user.Bidder;
 
+import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 
-public class BidTransaction {
-    private Bidder bidder ;
-    private double amount ;
-    private LocalDateTime timestamp ; // thời điểm đặt giá
+// Ghi lại một lần đặt giá trong phiên
 
-    public BidTransaction(Bidder bidder , double amount ){
-        this.bidder = bidder ;
-        this.amount = amount ;
-        this.timestamp = LocalDateTime.now() ;
+public class BidTransaction {
+    private final int bidderId;
+    private final String bidderName;
+    private final double amount;
+    private final LocalDateTime timestamp;
+
+    public BidTransaction(int bidderId, String bidderName, double amount) {
+        this.bidderId = bidderId;
+        this.bidderName = bidderName;
+        this.amount = amount;
+        this.timestamp = LocalDateTime.now();
     }
 
-    public Bidder getBidder() { return bidder; }
-    public double getAmount() { return amount; }
-    public LocalDateTime getTimestamp() { return timestamp; }
+    public int getBidderId() {
+        return bidderId;
+    }
+
+    public String getBidderName() {
+        return bidderName;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+    @Override
+    public String toString() {
+        return String.format("  [%s] %s đặt %.0f₫",
+                timestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+                bidderName, amount);
+    }
 }
