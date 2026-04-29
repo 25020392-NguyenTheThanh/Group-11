@@ -8,6 +8,8 @@
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
@@ -19,17 +21,34 @@
 <?import javafx.scene.shape.Rectangle?>
 <?import javafx.scene.text.Text?>
 
-<HBox prefHeight="650.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
+<HBox fx:id="rootHBox" prefHeight="650.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
     <children>
-        <VBox alignment="CENTER" prefWidth="580.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px;" HBox.hgrow="ALWAYS">
+        <VBox fx:id="door" alignment="TOP_CENTER" prefWidth="580.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px 40px 40px 40px;" HBox.hgrow="ALWAYS">
             <children>
+
+                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <children>
+                        <ImageView fx:id="logoImage" fitHeight="60.0" fitWidth="60.0" pickOnBounds="true" preserveRatio="true" styleClass="ra">
+                            <image>
+                                <Image url="@images/logo.png" />
+                            </image>
+                        </ImageView>
+
+                        <VBox alignment="CENTER_LEFT">
+                            <children>
+                                <Text fill="WHITE" style="-fx-font-size: 26px; -fx-font-weight: 900;" text="HANK AUCTION" />
+                                <Text fill="#94a3b8" style="-fx-font-size: 11px; -fx-font-weight: bold;" text="AUCTION &amp; TRADING FLOOR" />
+                            </children>
+                        </VBox>
+                    </children>
+                </HBox>
+
                 <StackPane prefHeight="400.0">
                     <children>
                         <Group translateY="40.0">
                             <children>
                                 <Rectangle arcHeight="10.0" arcWidth="10.0" fill="#334155" height="260.0" layoutX="142.0" layoutY="50.0" width="16.0" />
                                 <Circle fill="#cbd5e1" layoutX="150.0" layoutY="50.0" radius="20.0" />
-
                                 <Rectangle fx:id="scaleBar" arcHeight="12.0" arcWidth="12.0" height="16.0" layoutX="-50.0" layoutY="42.0" width="450.0">
                                     <fill>
                                         <LinearGradient endX="0.0" endY="1.0" startX="0.0" startY="0.0">
@@ -43,9 +62,7 @@
                                     </fill>
                                     <effect>
                                         <DropShadow blurType="GAUSSIAN" height="20.0" offsetY="5.0" radius="9.5" width="20.0">
-                                            <color>
-                                                <Color opacity="0.6" />
-                                            </color>
+                                            <color><Color opacity="0.6" /></color>
                                         </DropShadow>
                                     </effect>
                                 </Rectangle>
@@ -68,7 +85,7 @@
                     </children>
                 </StackPane>
 
-                <VBox alignment="CENTER" spacing="15.0" translateY="30.0">
+                <VBox alignment="CENTER" spacing="15.0" translateY="60.0">
                     <children>
                         <Text style="-fx-fill: white; -fx-font-size: 26px; -fx-font-weight: bold;" text="Take Your Trading to the Next Level" />
                         <Label maxWidth="450.0" style="-fx-text-fill: #94a3b8; -fx-font-size: 15px;" text="High-velocity trading engine engineered for market dominance and maximum capital extraction." textAlignment="CENTER" wrapText="true" />
@@ -77,7 +94,7 @@
             </children>
         </VBox>
 
-        <VBox alignment="TOP_LEFT" prefWidth="420.0" spacing="25.0" style="-fx-background-color: #f7f9fb; -fx-padding: 110px 50px 60px 50px;" HBox.hgrow="ALWAYS">
+        <VBox fx:id="loginDialog" alignment="TOP_LEFT" prefWidth="420.0" spacing="25.0" style="-fx-background-color: #f7f9fb; -fx-padding: 110px 50px 60px 50px;" HBox.hgrow="ALWAYS">
             <children>
                 <VBox spacing="8.0">
                     <children>
@@ -90,11 +107,11 @@
                     <children>
                         <VBox spacing="8.0">
                             <children>
-                                <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="Email" />
+                                <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="User Name" />
                                 <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
                                     <children>
                                         <Text fill="#94a3b8" style="-fx-font-size: 20px;" text="✉" />
-                                        <TextField fx:id="enterEmail" promptText="Enter email" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" HBox.hgrow="ALWAYS" />
+                                        <TextField fx:id="username" promptText="Enter your username" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" HBox.hgrow="ALWAYS" />
                                     </children>
                                 </HBox>
                             </children>
@@ -125,13 +142,19 @@
                 <VBox alignment="CENTER" spacing="18.0">
                     <children>
                         <Button fx:id="loginButton" maxWidth="Infinity" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
-                        <Button fx:id="createAccountButton" maxWidth="Infinity" style="-fx-background-color: black; -fx-text-fill: white; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Create account" />
+
+                        <HBox alignment="CENTER" spacing="5.0">
+                            <children>
+                                <Label style="-fx-text-fill: #45464d; -fx-font-size: 15px;" text="Don't have an account?" />
+                                <Label fx:id="createAccountLabel" style="-fx-text-fill: #4169E1; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand;" text="Create account" />
+                            </children>
+                        </HBox>
 
                         <HBox alignment="CENTER" spacing="10.0">
                             <children>
-                                <Hyperlink fx:id="termsLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px; -fx-underline: false; -fx-font-weight: 500;" text="Terms of service" />
+                                <Hyperlink fx:id="termsLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Terms of service" />
                                 <Label style="-fx-text-fill: #94a3b8; -fx-font-size: 16px;" text="and" />
-                                <Hyperlink fx:id="privacyLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px; -fx-underline: false; -fx-font-weight: 500;" text="Privacy policy" />
+                                <Hyperlink fx:id="privacyLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Privacy policy" />
                             </children>
                         </HBox>
                     </children>

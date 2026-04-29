@@ -11,21 +11,18 @@ public class HelloApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader1 = new FXMLLoader(HelloApplication.class.getResource("login-view.fxml"));
-        Scene scene1 = new Scene(fxmlLoader1.load(), 320, 240);
+        Scene scene1 = new Scene(fxmlLoader1.load(), 1100, 750);
         stage.setTitle("Welcome to auction floor!");
         stage.setScene(scene1);
         stage.show();
 
-//        FXMLLoader fxmlLoader2 = new FXMLLoader(HelloApplication.class.getResource("createAccount-view.fxml"));
-//
-//        Scene scene2 = new Scene(fxmlLoader2.load(), 1100, 750);
-//
-//        stage.setTitle("AuctionPro - Create Account");
-//        stage.setScene(scene2);
-//
-//
-//        stage.setResizable(true);
-//
+
+
+
+//        FXMLLoader fxmlLoader3 = new FXMLLoader(HelloApplication.class.getResource("auctionList-view.fxml"));
+//        Scene scene3 = new Scene(fxmlLoader3.load(), 1100, 750);
+//        stage.setTitle("Auction List");
+//        stage.setScene(scene3);
 //        stage.show();
     }
 }
