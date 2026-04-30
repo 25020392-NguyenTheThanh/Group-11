@@ -1,23 +1,26 @@
 package com.example.group11.controller;
 
-import javafx.animation.*;
+import com.auction.manager.UserManager;
+import com.auction.model.user.User;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.util.Duration;
+import javafx.stage.Stage;
 
-import java.awt.Desktop;
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -67,147 +70,80 @@ public class LoginController implements Initializable {
     @FXML
     private TextField username;
 
-    @FXML private HBox rootHBox;
+    @FXML
+    private HBox rootHBox;
+
+    private UserManager userManager;
+
+
+    @FXML
+    private TextField visiblePassword;
+
+    @FXML
+    private Text togglePasswordIcon;
+
+    private boolean isPasswordVisible = false;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        //Thiết lập mô hình chuyển động.
+        EquilibriumAnimation.startEquilibriumAnimation(scaleBar, boxContainer, coinContainer);
 
-        startEquilibriumAnimation();
-
-        // Thiết lập hiệu ứng gạch chân khi di chuột (không cần file CSS)
-        setupHoverEffect(termsLink);
-        setupHoverEffect(privacyLink);
+        // Thiết lập hiệu ứng gạch chân khi di chuột.
+        EquilibriumAnimation.setupHoverEffect(termsLink);
+        EquilibriumAnimation.setupHoverEffect(privacyLink);
 
         createAccountLabel.setOnMouseClicked(event -> showSignUp());
+
+        userManager = UserManager.getInstance();
+
+        visiblePassword.textProperty().bindBidirectional(enterPassword.textProperty());
+
     }
 
-    private void startEquilibriumAnimation() {
-        Duration speed = Duration.seconds(1.8);
+    @FXML
+    void handleLogin(MouseEvent event) {
+        String userName = username.getText();
+        String passWord = enterPassword.getText();
 
-        // 1. Thanh cân bập bênh (Góc âm là nghiêng trái xuống)
-        RotateTransition rotateBar = new RotateTransition(speed, scaleBar);
-        rotateBar.setFromAngle(-10);
-        rotateBar.setToAngle(10);
-        rotateBar.setCycleCount(Animation.INDEFINITE);
-        rotateBar.setAutoReverse(true);
-        rotateBar.setInterpolator(Interpolator.EASE_BOTH);
-        rotateBar.play();
-
-        // 2. Khối Hộp (Bên trái) - Khớp thứ tự: Nghiêng trái xuống -> Hộp đi xuống
-        TranslateTransition animBox = new TranslateTransition(speed, boxContainer);
-        animBox.setFromY(20);  // Giảm biên độ xuống 20
-        animBox.setToY(-20);
-        animBox.setCycleCount(Animation.INDEFINITE);
-        animBox.setAutoReverse(true);
-        animBox.setInterpolator(Interpolator.EASE_BOTH);
-        animBox.play();
-
-        // 3. Khối Tiền (Bên phải) - Đảo ngược lại
-        TranslateTransition animCoin = new TranslateTransition(speed, coinContainer);
-        animCoin.setFromY(-35); // Giảm biên độ xuống 35 (vì thanh bên này dài hơn)
-        animCoin.setToY(35);
-        animCoin.setCycleCount(Animation.INDEFINITE);
-        animCoin.setAutoReverse(true);
-        animCoin.setInterpolator(Interpolator.EASE_BOTH);
-        animCoin.play();
+        if (!userName.isEmpty() && !passWord.isEmpty()) {
+            if (userManager.login(userName, passWord) != null) {
+                Stage stage = new Stage();
+                FXMLLoader loader = new FXMLLoader(LoginController.class.getResource("/com/example/group11/auctionList-view.fxml"));
+                try {
+                    Parent root = loader.load();
+                    AuctionListController controller = loader.getController();
+                    controller.setUser(userManager.login(userName, passWord));
+                    stage.setScene(new Scene(root));
+                    stage.show();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
-    /**
-     * Phương thức xử lý khi nhấn vào Điều khoản dịch vụ
-     */
+
+    //Phương thức xử lý khi nhấn vào Điều khoản dịch vụ
+
     @FXML
     void handleOpenTerms(ActionEvent event) {
-        openFile("C:/Users/MY-PC/Downloads/Điều khoản dịch vụ.pdf");
+        EquilibriumAnimation.openFile("documents/terms.pdf");
     }
 
-    /**
-     * Phương thức xử lý khi nhấn vào Chính sách bảo mật
-     */
+    //Phương thức xử lý khi nhấn vào Chính sách bảo mật
+
     @FXML
     void handleOpenPrivacy(ActionEvent event) {
-        openFile("C:/Users/MY-PC/Downloads/Chính sách bảo mật.pdf");
-    }
-
-    /**
-     * Hàm dùng chung để mở tệp bằng ứng dụng mặc định của hệ thống
-     */
-    private void openFile(String filePath) {
-        try {
-            File file = new File(filePath);
-            if (file.exists()) {
-                if (Desktop.isDesktopSupported()) {
-                    Desktop.getDesktop().open(file);
-                } else {
-                    System.out.println("Desktop is not supported on this platform.");
-                }
-            } else {
-                System.out.println("File không tồn tại: " + filePath);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-    /**
-     * Hiệu ứng gạch chân khi di chuột (Hover)
-     */
-    private void setupHoverEffect(Hyperlink link) {
-        link.setOnMouseEntered(e -> link.setUnderline(true));
-        link.setOnMouseExited(e -> link.setUnderline(false));
-    }
-
-    private void playSwitchAnimation(Node leftNode, Node rightNode, Runnable onFinishedAction) {
-        double width = rootHBox.getWidth() / 2; // Sử dụng một nửa chiều rộng thực tế của root
-        Duration duration = Duration.seconds(0.6);
-
-        // 1. Hiệu ứng di chuyển trượt
-        TranslateTransition moveLeft = new TranslateTransition(duration, leftNode);
-        moveLeft.setByX(width);
-        moveLeft.setInterpolator(Interpolator.EASE_BOTH); // Gia tốc mượt ở hai đầu
-
-        TranslateTransition moveRight = new TranslateTransition(duration, rightNode);
-        moveRight.setByX(-width);
-        moveRight.setInterpolator(Interpolator.EASE_BOTH);
-
-        // 2. Hiệu ứng mờ dần (Fade) giúp giảm cảm giác khựng khi tráo đổi Node
-        FadeTransition fadeOutLeft = new FadeTransition(duration.divide(1.5), leftNode);
-        fadeOutLeft.setFromValue(1.0);
-        fadeOutLeft.setToValue(0.5);
-
-        FadeTransition fadeOutRight = new FadeTransition(duration.divide(1.5), rightNode);
-        fadeOutRight.setFromValue(1.0);
-        fadeOutRight.setToValue(0.5);
-
-        ParallelTransition pt = new ParallelTransition(moveLeft, moveRight, fadeOutLeft, fadeOutRight);
-
-        pt.setOnFinished(e -> {
-            // Reset lại các thuộc tính trước khi tráo đổi
-            leftNode.setTranslateX(0);
-            rightNode.setTranslateX(0);
-            leftNode.setOpacity(1.0);
-            rightNode.setOpacity(1.0);
-
-            // Thực hiện thay đổi cấu trúc layout
-            onFinishedAction.run();
-
-            // Thêm một hiệu ứng Fade In nhẹ cho nội dung mới xuất hiện
-            Node newNode = rootHBox.getChildren().get(0); // Lấy node mới ở bên trái
-            FadeTransition fadeIn = new FadeTransition(Duration.seconds(0.3), newNode);
-            fadeIn.setFromValue(0.0);
-            fadeIn.setToValue(1.0);
-            fadeIn.play();
-        });
-
-        pt.play();
+        EquilibriumAnimation.openFile("documents/privacy.pdf");
     }
 
     private void showSignUp() {
         VBox signUpDialog = createSignUpDialog();
         // Tráo đổi vị trí: SignUp bên trái, Door bên phải
-        playSwitchAnimation(door, loginDialog, () -> {
+        EquilibriumAnimation.playSwitchAnimation(door, loginDialog, () -> {
             rootHBox.getChildren().setAll(signUpDialog, door);
-        });
+        }, rootHBox);
 
     }
 
@@ -232,23 +168,72 @@ public class LoginController implements Initializable {
         // --- 2. Email Field ---
         TextField emailField = createStyledTextField("Email address", "@");
 
-        // --- 3. Password Field ---
+        // --- 3. Password Field (Đã tích hợp chức năng Ẩn/Hiện) ---
+        StackPane passwordContainer = new StackPane();
+
+        // Trường nhập mật khẩu (ẩn)
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("••••••••");
         passwordField.setStyle("-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 12px; -fx-font-size: 14px;");
+
+        // Trường hiển thị mật khẩu (hiện)
+        TextField visiblePasswordField = new TextField();
+        visiblePasswordField.setPromptText("••••••••");
+        visiblePasswordField.setStyle("-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 12px; -fx-font-size: 14px;");
+        visiblePasswordField.setVisible(false); // Mặc định ẩn
+
+        // Đồng bộ dữ liệu
+        visiblePasswordField.textProperty().bindBidirectional(passwordField.textProperty());
+
+        // Icon con mắt
+        Text toggleSignUpPasswordIcon = new Text("👁");
+        toggleSignUpPasswordIcon.setStyle("-fx-cursor: hand; -fx-font-size: 16px;");
+        StackPane.setAlignment(toggleSignUpPasswordIcon, Pos.CENTER_RIGHT);
+        StackPane.setMargin(toggleSignUpPasswordIcon, new javafx.geometry.Insets(0, 15, 0, 0));
+
+        final boolean[] isSignUpPasswordVisible = {false};
+        toggleSignUpPasswordIcon.setOnMouseClicked(e -> {
+            isSignUpPasswordVisible[0] = !isSignUpPasswordVisible[0];
+            if (isSignUpPasswordVisible[0]) {
+                toggleSignUpPasswordIcon.setText("🙈");
+                visiblePasswordField.setVisible(true);
+                passwordField.setVisible(false);
+            } else {
+                toggleSignUpPasswordIcon.setText("👁");
+                visiblePasswordField.setVisible(false);
+                passwordField.setVisible(true);
+            }
+        });
+
+        passwordContainer.getChildren().addAll(visiblePasswordField, passwordField, toggleSignUpPasswordIcon);
 
         // --- 4. Role Selection (ComboBox) ---
         ComboBox<String> roleCombo = new ComboBox<>();
         roleCombo.setItems(FXCollections.observableArrayList("Admin", "Bidder", "Seller"));
         roleCombo.setPromptText("Select your role");
         roleCombo.setMaxWidth(Double.MAX_VALUE);
-        // Style cho ComboBox giống với TextField
         roleCombo.setStyle("-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 5px; -fx-font-size: 14px;");
 
         // --- Nút Đăng ký ---
         Button btnSignUp = new Button("Create Account");
         btnSignUp.setMaxWidth(Double.MAX_VALUE);
         btnSignUp.setStyle("-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 15px; -fx-background-radius: 8px; -fx-font-size: 16px; -fx-cursor: hand;");
+        btnSignUp.onMouseClickedProperty().set(event -> {
+            String userName = usernameField.getText();
+            String email = emailField.getText();
+            String password = passwordField.getText();
+            String role = roleCombo.getValue();
+
+            User user = userManager.register(userName, password, email, role);
+            if (user != null) {
+                EquilibriumAnimation.playSwitchAnimation(signUp, door, () -> {
+                    rootHBox.getChildren().setAll(door, loginDialog);
+                }, rootHBox);
+
+            }
+
+        });
+
 
         // --- Nút Quay lại Login ---
         HBox footer = new HBox(5);
@@ -258,9 +243,9 @@ public class LoginController implements Initializable {
         labLink.setStyle("-fx-text-fill: #4169E1; -fx-font-weight: bold; -fx-cursor: hand;");
         labLink.setOnMouseClicked(e -> rootHBox.getChildren().setAll(door, loginDialog));
         labLink.setOnMouseClicked(e -> {
-            playSwitchAnimation(signUp, door, () -> {
+            EquilibriumAnimation.playSwitchAnimation(signUp, door, () -> {
                 rootHBox.getChildren().setAll(door, loginDialog);
-            });
+            }, rootHBox);
         });
 
         footer.getChildren().addAll(lab1, labLink);
@@ -270,7 +255,7 @@ public class LoginController implements Initializable {
                 header,
                 new Label("Username"), usernameField,
                 new Label("Email"), emailField,
-                new Label("Password"), passwordField,
+                new Label("Password"), passwordContainer,
                 new Label("Role"), roleCombo,
                 btnSignUp, footer
         );
@@ -285,4 +270,24 @@ public class LoginController implements Initializable {
         tf.setStyle("-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 12px; -fx-font-size: 14px;");
         return tf;
     }
+
+    @FXML
+    private void togglePasswordVisibility() {
+        isPasswordVisible = !isPasswordVisible;
+
+        if (isPasswordVisible) {
+            // Hiển thị mật khẩu
+            togglePasswordIcon.setText("🙈"); // Đổi icon sang nhắm mắt
+            visiblePassword.setVisible(true);
+            enterPassword.setVisible(false);
+        } else {
+            // Ẩn mật khẩu
+            togglePasswordIcon.setText("👁"); // Đổi icon sang mở mắt
+            visiblePassword.setVisible(false);
+            enterPassword.setVisible(true);
+        }
+    }
+
+
 }
+

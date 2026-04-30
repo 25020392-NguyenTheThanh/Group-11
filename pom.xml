@@ -134,7 +134,7 @@
                     <execution>
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>com.example.group11/com.example.group11.HelloApplication</mainClass>
+                            <mainClass>com.example.group11/com.example.group11.MainApplication</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>

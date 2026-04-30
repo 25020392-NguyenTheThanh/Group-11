@@ -17,4 +17,5 @@ module com.example.group11 {
     exports com.example.group11;
     exports com.example.group11.controller;
     opens com.example.group11.controller to javafx.fxml;
+
 }

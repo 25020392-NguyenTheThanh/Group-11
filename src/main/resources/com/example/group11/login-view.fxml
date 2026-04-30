@@ -23,9 +23,9 @@
 
 <HBox fx:id="rootHBox" prefHeight="650.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
     <children>
+        <!-- Cột Trái: Thông tin / Banner -->
         <VBox fx:id="door" alignment="TOP_CENTER" prefWidth="580.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px 40px 40px 40px;" HBox.hgrow="ALWAYS">
             <children>
-
                 <HBox alignment="CENTER_LEFT" spacing="15.0">
                     <children>
                         <ImageView fx:id="logoImage" fitHeight="60.0" fitWidth="60.0" pickOnBounds="true" preserveRatio="true" styleClass="ra">
@@ -94,6 +94,7 @@
             </children>
         </VBox>
 
+        <!-- Cột Phải: Form Đăng nhập -->
         <VBox fx:id="loginDialog" alignment="TOP_LEFT" prefWidth="420.0" spacing="25.0" style="-fx-background-color: #f7f9fb; -fx-padding: 110px 50px 60px 50px;" HBox.hgrow="ALWAYS">
             <children>
                 <VBox spacing="8.0">
@@ -105,6 +106,7 @@
 
                 <VBox spacing="20.0">
                     <children>
+                        <!-- Khung Nhập Username -->
                         <VBox spacing="8.0">
                             <children>
                                 <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="User Name" />
@@ -117,13 +119,27 @@
                             </children>
                         </VBox>
 
+                        <!-- Khung Nhập Password  -->
                         <VBox spacing="8.0">
                             <children>
                                 <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="Password" />
                                 <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
                                     <children>
                                         <Text fill="#94a3b8" style="-fx-font-size: 20px;" text="🔒" />
-                                        <PasswordField fx:id="enterPassword" promptText="••••••••" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" HBox.hgrow="ALWAYS" />
+
+                                        <!-- Sử dụng StackPane để xếp chồng TextField và PasswordField -->
+                                        <StackPane HBox.hgrow="ALWAYS">
+                                            <children>
+                                                <!-- TextField hiển thị chữ (mặc định ẩn) -->
+                                                <TextField fx:id="visiblePassword" promptText="••••••••" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" visible="false" />
+
+                                                <!-- PasswordField ẩn chữ (mặc định hiện) -->
+                                                <PasswordField fx:id="enterPassword" promptText="••••••••" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" />
+                                            </children>
+                                        </StackPane>
+
+                                        <!-- Icon con mắt có sự kiện onMouseClicked -->
+                                        <Text fx:id="togglePasswordIcon" fill="#94a3b8" onMouseClicked="#togglePasswordVisibility" style="-fx-font-size: 20px; -fx-cursor: hand;" text="👁" />
                                     </children>
                                 </HBox>
                             </children>
@@ -131,6 +147,7 @@
                     </children>
                 </VBox>
 
+                <!-- Tính năng Mở rộng (Remember me / Quên MK) -->
                 <HBox alignment="CENTER_LEFT">
                     <children>
                         <CheckBox fx:id="rememberPassword" style="-fx-cursor: hand;" text="Remember me" />
@@ -139,9 +156,10 @@
                     </children>
                 </HBox>
 
+                <!-- Các Nút Bấm / Liên Kết Cuối -->
                 <VBox alignment="CENTER" spacing="18.0">
                     <children>
-                        <Button fx:id="loginButton" maxWidth="Infinity" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
+                        <Button fx:id="loginButton" maxWidth="Infinity" onMouseClicked="#handleLogin" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
 
                         <HBox alignment="CENTER" spacing="5.0">
                             <children>
@@ -152,9 +170,9 @@
 
                         <HBox alignment="CENTER" spacing="10.0">
                             <children>
-                                <Hyperlink fx:id="termsLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Terms of service" />
+                                <Hyperlink fx:id="termsLink" onAction="#handleOpenTerms" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Terms of service" />
                                 <Label style="-fx-text-fill: #94a3b8; -fx-font-size: 16px;" text="and" />
-                                <Hyperlink fx:id="privacyLink" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Privacy policy" />
+                                <Hyperlink fx:id="privacyLink" onAction="#handleOpenPrivacy" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Privacy policy" />
                             </children>
                         </HBox>
                     </children>

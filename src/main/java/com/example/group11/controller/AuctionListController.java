@@ -1,5 +1,6 @@
 package com.example.group11.controller;
 
+import com.auction.model.user.User;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -12,7 +13,7 @@ import javafx.scene.shape.Circle;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class auctionListController implements Initializable {
+public class AuctionListController implements Initializable {
     @FXML
     private Circle Avarta;
 
@@ -52,8 +53,11 @@ public class auctionListController implements Initializable {
     @FXML
     private Button sellItem;
 
+    private User user;
 
-
+    public void setUser(User user) {
+        this.user = user;
+    }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {

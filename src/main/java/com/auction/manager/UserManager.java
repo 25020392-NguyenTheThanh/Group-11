@@ -15,10 +15,12 @@ public class UserManager {
     private UserManager(){}
 
     public static UserManager getInstance(){
+
         if (instance == null) {
             synchronized (UserManager.class){
                 if (instance == null){
                     instance = new UserManager();
+                    users.add(new Bidder(1, "nguyenvana", "password123", "vana@email.com"));
                 }
             }
         }

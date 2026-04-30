@@ -18,15 +18,12 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
-            prefHeight="850.0" prefWidth="1280.0" style="-fx-background-color: #0A192F;"
-            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.group11.controller.auctionListController">
+<BorderPane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="850.0" prefWidth="1280.0" style="-fx-background-color: #0A192F;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.AuctionListController">
 
     <top>
         <HBox alignment="CENTER_LEFT" prefHeight="70.0" spacing="25.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent transparent #1E2D45 transparent; -fx-border-width: 1;" BorderPane.alignment="CENTER">
             <children>
-                <Label text="ELITE AUCTIONS" textFill="#ffd700">
+                <Label text="HANK AUCTIONS" textFill="#ffd700">
                     <font><Font name="System Bold Italic" size="22.0" /></font>
                 </Label>
                 <TextField fx:id="searchBar" prefHeight="35.0" prefWidth="220.0" promptText="Tìm ID/Tên..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8;" />
@@ -77,11 +74,11 @@
                     <VBox.margin><Insets bottom="20.0" left="15.0" right="15.0" top="20.0" /></VBox.margin>
                 </VBox>
 
-                <Button fx:id="btnDashboardS" onAction="#handleSwitchTab" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="50.0" text="   DASHBOARD" />
-                <Button fx:id="btnMyBids" onAction="#handleSwitchTab" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="50.0" text="   MY BIDS" />
-                <Button fx:id="btnWatchlist" onAction="#handleSwitchTab" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="50.0" text="   WATCHLIST" />
-                <Button fx:id="btnHistory" onAction="#handleSwitchTab" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="50.0" text="   HISTORY" />
-                <Button fx:id="btnSettings" onAction="#handleSwitchTab" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="50.0" text="   SETTINGS" />
+                <Button fx:id="btnDashboardS" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" text="   DASHBOARD" />
+                <Button fx:id="btnMyBids" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" text="   MY BIDS" />
+                <Button fx:id="btnWatchlist" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" text="   WATCHLIST" />
+                <Button fx:id="btnHistory" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" text="   HISTORY" />
+                <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" text="   SETTINGS" />
 
                 <Region VBox.vgrow="ALWAYS" />
                 <Button fx:id="sellItem" maxWidth="1.7976931348623157E308" prefHeight="45.0" style="-fx-background-color: #FFD700; -fx-background-radius: 12; -fx-text-fill: #0A192F; -fx-font-weight: 900;" text="SELL ITEM">
