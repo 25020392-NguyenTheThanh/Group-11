@@ -1,5 +1,6 @@
 package com.auction.model.user;
 
+import com.auction.exception.InvalidBidException;
 import com.auction.pattern.observer.Observer;
 
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.List;
 public class Bidder extends User implements Observer {
     private double balance; // số dư của ví
     private final List<Integer> wonAuctions; // id phiên đấu giá đã từng thắng
+
     public Bidder(int id, String username, String password, String email,double balance) {
         super(id, username, password, email);
         this.balance = balance;
@@ -19,13 +21,18 @@ public class Bidder extends User implements Observer {
     public double getBalance() {
         return balance;
     }
+
     public void topUp(double amount){
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Top up must be positive");
+        }
         this.balance += amount;
     }
-    public boolean deduct(double amount){
-        if (balance < amount) return false;
+    public void deduct(double amount){
+        if (amount > balance) {
+            throw new InvalidBidException("Insufficient balance");
+        }
         balance -= amount;
-        return true;
     }
     public void addWonAuction(int AuctionId){
         wonAuctions.add(AuctionId);

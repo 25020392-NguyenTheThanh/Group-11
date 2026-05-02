@@ -1,6 +1,7 @@
 package com.auction.model.auction;
 
 import com.auction.exception.AuctionClosedException;
+import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
@@ -15,25 +16,25 @@ import java.util.List;
 // sửa thêm một số chỗ tránh rase condition!!
 
 public class Auction implements Subject {
-    private         int id;
-    private         Item item;
-    private         double currentHighestBid;
-    private         Bidder currentWinner;
-    private         AuctionStatus status;
-    private         LocalDateTime endTime;
-    private         List<BidTransaction> bidHistory;
-    private         List<Observer> observers;
-    private final   double minBidStep; // bước giá tối thiểu
+    private int id;
+    private Item item;
+    private double currentHighestBid;
+    private Bidder currentWinner;
+    private AuctionStatus status;
+    private LocalDateTime endTime;
+    private List<BidTransaction> bidHistory;
+    private List<Observer> observers;
+    private final double minBidStep; // bước giá tối thiểu
 
     public Auction(int id, Item item, LocalDateTime endTime, double minBidStep) {
-        this.id               = id;
-        this.item             = item;
+        this.id = id;
+        this.item = item;
         this.currentHighestBid = item.getStartingPrice();
-        this.status           = AuctionStatus.OPEN;
-        this.endTime          = endTime;
-        this.minBidStep       = minBidStep; // bước giá tối thiểu
-        this.bidHistory       = new ArrayList<>();
-        this.observers        = new ArrayList<>();
+        this.status = AuctionStatus.OPEN;
+        this.endTime = endTime;
+        this.minBidStep = minBidStep; // bước giá tối thiểu
+        this.bidHistory = new ArrayList<>();
+        this.observers = new ArrayList<>();
     }
 
 
@@ -73,7 +74,9 @@ public class Auction implements Subject {
     }
 
     public synchronized void finish() {
-        if (status != AuctionStatus.RUNNING) return;
+        if (status != AuctionStatus.RUNNING) {
+            throw new IllegalStateException("Auction not running");
+        }
 
         String msg;
         if (currentWinner == null) {
@@ -118,33 +121,47 @@ public class Auction implements Subject {
     public synchronized void placeBid(Bidder bidder, double amount)
             throws InvalidBidException, AuctionClosedException {
 
+        // Tính xác thực
+        if (bidder != null || !bidder.isAuthenticated()) {
+            throw new AuthenticationException("User not authenticated");
+        }
+
+        // Kiểm tra số tiền
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+
         // Kiểm tra thời gian thực
         if (LocalDateTime.now().isAfter(endTime)) {
             finish();
             throw new AuctionClosedException("Phiên #" + id + " đã hết giờ.");
         }
 
+        // Kiểm tra trạng thái phiên đấu giá
         if (status != AuctionStatus.RUNNING)
             throw new AuctionClosedException(String.format(
                     "Phiên #%d không ở trạng thái RUNNING (hiện: %s)", id, status));
 
+        // Kiê tra số dư
         if (bidder.getBalance() < amount)
             throw new InvalidBidException(String.format(
                     "Số dư không đủ — số dư hiện tại: %,.0f₫, giá đặt: %,.0f₫",
                     bidder.getBalance(), amount));
 
         double minAccepted = currentHighestBid + minBidStep;
+
         if (amount < minAccepted)
             throw new InvalidBidException(String.format(
                     "Giá đặt phải >= %,.0f₫  (giá cao nhất %,.0f₫ + bước tối thiểu %,.0f₫)",
                     minAccepted, currentHighestBid, minBidStep));
 
+        bidder.deduct(amount);
         // FIX: lưu vào lịch sử — phiên bản gốc bỏ sót hoàn toàn
         BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount);
         bidHistory.add(tx);
 
         currentHighestBid = amount;
-        currentWinner     = bidder;
+        currentWinner = bidder;
 
         String msg = String.format(
                 "🔔 Phiên "+id+" — "+bidder.getUsername()+" vừa đặt "+amount+"₫ | Giá cao nhất hiện tại: "+ currentHighestBid);

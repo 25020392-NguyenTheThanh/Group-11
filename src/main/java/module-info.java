@@ -10,6 +10,7 @@ module com.example.group11 {
     requires org.kordamp.bootstrapfx.core;
     requires eu.hansolo.tilesfx;
     requires com.almasb.fxgl.all;
+    requires org.junit.jupiter.api;
 
     opens com.example.group11 to javafx.fxml;
     exports com.example.group11;
