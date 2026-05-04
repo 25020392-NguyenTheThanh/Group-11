@@ -36,7 +36,7 @@
 
                         <VBox alignment="CENTER_LEFT">
                             <children>
-                                <Text fill="WHITE" style="-fx-font-size: 26px; -fx-font-weight: 900;" text="HANK AUCTION" />
+                                <Text fill="WHITE" style="-fx-font-size: 26px; -fx-font-weight: 900;" text="HANK AUCTIONS" />
                                 <Text fill="#94a3b8" style="-fx-font-size: 11px; -fx-font-weight: bold;" text="AUCTION &amp; TRADING FLOOR" />
                             </children>
                         </VBox>
