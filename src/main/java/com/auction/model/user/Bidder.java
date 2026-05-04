@@ -31,7 +31,7 @@ public class Bidder extends User implements Observer {
     }
     public void deduct(double amount) throws InvalidBidException{ // trừ tiền
         if (amount > balance) {
-            throw new InvalidBidException("Số dư không đủ.");
+            throw new InvalidBidException("Số dư không đủ");
         }
         balance -= amount;
     }
