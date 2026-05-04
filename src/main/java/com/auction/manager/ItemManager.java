@@ -1,14 +1,18 @@
 package com.auction.manager;
 
 import com.auction.model.item.*;
+import com.auction.pattern.factory.ItemFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class ItemManager {
     private static volatile ItemManager instance;
-    private List<Item> items = new ArrayList<>();
-    private int itemCounter = 1;
+    private final ConcurrentHashMap<Integer, Item> items = new ConcurrentHashMap<>();
+    private final AtomicInteger itemCounter = new AtomicInteger(1);         // tránh Rase condition khi counter++
 
     private ItemManager() {}
 
@@ -24,36 +28,31 @@ public class ItemManager {
     }
 
     // tạo sản phẩm mới
-    public Item createItem(String type, String name,
-                           String desc, double startPrice) {
-        int id = itemCounter++;
-        Item newItem;
-        if (type.equals("ELECTRONICS")) {
-            newItem = new Electronics(id, name, desc, startPrice, "");
-        } else if (type.equals("ART")) {
-            newItem = new Art(id, name, desc, startPrice, "");
-        } else {
-            newItem = new Vehicle(id, name, desc, startPrice, 0);
-        }
-        items.add(newItem);
-        return newItem;
+    //nhận ItemFactory thay vì String type
+    public Item createItem(ItemFactory factory, int ownerId,
+                           String name, String description, double startingPrice) {
+        int id = itemCounter.getAndIncrement();
+        Item item = factory.createItem(id, ownerId, name, description, startingPrice);
+        items.put(id, item);
+        System.out.println("Sản phẩm mới: " + item.getInfo());
+        return item;
     }
 
     public List<Item> getAvailableItems() {
-        List<Item> result = new ArrayList<>();
-        for (Item item : items) {
-            if (item.getStatus() == ItemStatus.AVAILABLE) {
-                result.add(item);
-            }
-        }
-        return result;
+        return items.values().stream()
+                .filter(i -> i.getStatus() == ItemStatus.AVAILABLE)
+                .collect(Collectors.toList());
+    }
+    public List<Item> getByOwner(int ownerId) {
+        return items.values().stream()
+                .filter(i -> i.getOwnerId() == ownerId)
+                .collect(Collectors.toList());
     }
 
     public Item findItem(int id) {
-        for (Item item : items) {
-            if (item.getId() == id) return item;
-        }
-        System.out.println("Sản phẩm không tồn tại");
-        return null;
+        Item item = items.get(id);
+        if (item == null) System.out.println("Sản phẩm không tồn tại: " + id);
+        return item;
     }
 }
+

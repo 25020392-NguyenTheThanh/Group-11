@@ -9,7 +9,7 @@ public class ArtFactory extends ItemFactory {
         this.artist = artist ;
     }
     @Override
-    public Item createItem(int id , String name , String description , double startingPrice ){
-        return new Art(id , name , description , startingPrice , artist);
+    public Item createItem(int id, int ownerId , String name , String description , double startingPrice ){
+        return new Art(id ,ownerId, name , description , startingPrice , artist);
     }
 }

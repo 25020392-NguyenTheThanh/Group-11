@@ -9,7 +9,7 @@ public class ElectronicsFactory extends ItemFactory {
         this.brand = brand ;
     }
     @Override
-    public Item createItem(int id , String name , String description , double startingPrice ){
-        return new Electronics(id , name , description , startingPrice , brand);
+    public Item createItem(int id ,int ownerId, String name , String description , double startingPrice ){
+        return new Electronics(id,ownerId , name , description , startingPrice , brand);
     }
 }

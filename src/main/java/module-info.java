@@ -12,6 +12,8 @@ module com.example.group11 {
     requires com.almasb.fxgl.all;
     requires java.desktop;
     requires jdk.jfr;
+    requires org.junit.jupiter.api;
+    // jdk.jsobject;
 
     opens com.example.group11 to javafx.fxml;
     exports com.example.group11;
