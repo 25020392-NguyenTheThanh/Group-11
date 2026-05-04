@@ -37,7 +37,6 @@ public class BidTransaction {
     @Override
     public String toString() {
         return String.format("  [%s] %s đặt %.0f₫",
-                timestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
-                bidderName, amount);
+                timestamp.format(DateTimeFormatter.ofPattern("HH:mm:ss")), bidderName, amount);
     }
 }

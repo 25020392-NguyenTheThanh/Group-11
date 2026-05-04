@@ -5,3 +5,4 @@ public class AuctionClosedException extends RuntimeException {
         super(message);
     }
 }
+// ngăn chặn các hành động tác động vào một cuộc đấu giá đã kết thúc

@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Auction đóng vai trò là Subject — notify tất cả observer khi có thay đổi
-// sửa thêm một số chỗ tránh rase condition!!
+// sửa thêm một số chỗ tránh race condition!!
 
 public class Auction implements Subject {
     private int id;
@@ -57,7 +57,6 @@ public class Auction implements Subject {
         }
     }
 
-
     //  Lifecycle
 
     public synchronized void start() {
@@ -94,7 +93,7 @@ public class Auction implements Subject {
         notifyObservers(msg);
     }
 
-    public synchronized void cancel(String reason) {
+    public synchronized void cancel(String reason) { // hủy phiên
         status = AuctionStatus.CANCELED;
         String msg = String.format(
                 "✗ Phiên #%d [%s] bị hủy. Lý do: %s",
@@ -103,7 +102,7 @@ public class Auction implements Subject {
         notifyObservers(msg);
     }
 
-    public synchronized void markPaid() {
+    public synchronized void markPaid() { // Tự động gửi thông báo thanh toán thành công
         if (status != AuctionStatus.FINISHED)
             throw new IllegalStateException("Chỉ có thể thanh toán phiên FINISHED");
 
@@ -115,20 +114,19 @@ public class Auction implements Subject {
         notifyObservers(msg);
     }
 
-
     //  Đặt giá — synchronized chống race condition
 
     public synchronized void placeBid(Bidder bidder, double amount)
             throws InvalidBidException, AuctionClosedException {
 
         // Tính xác thực
-        if (bidder != null || !bidder.isAuthenticated()) {
-            throw new AuthenticationException("User not authenticated");
+        if (bidder == null || !bidder.isAuthenticated()) {
+            throw new AuthenticationException("Người dùng chưa được xác thực");
         }
 
         // Kiểm tra số tiền
         if (amount <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
         }
 
         // Kiểm tra thời gian thực
@@ -169,9 +167,8 @@ public class Auction implements Subject {
         notifyObservers(msg);
     }
 
-    // ──────────────────────────────────────────────
     //  Getters
-    // ──────────────────────────────────────────────
+
     public int                  getId()                { return id; }
     public Item                 getItem()              { return item; }
     public AuctionStatus        getStatus()            { return status; }

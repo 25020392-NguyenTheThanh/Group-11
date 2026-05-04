@@ -9,35 +9,34 @@ import java.util.List;
 // Bidder đóng vai trò là Observer sẽ nhân thông báo khi có bid mới
 // cập nhật thêm thông tin người đấu giá bao gồm số dư, lịch sử đấu giá
 // thêm một số phương thức để cập nhật số dư, hay số lần đấu giá thành công
+
 public class Bidder extends User implements Observer {
     private double balance; // số dư của ví
-    private final List<Integer> wonAuctions; // id phiên đấu giá đã từng thắng
+    private final BidderProfile profile ; // id phiên đấu giá đã từng thắng
 
     public Bidder(int id, String username, String password, String email,double balance) {
         super(id, username, password, email);
         this.balance = balance;
-        this.wonAuctions = new ArrayList<>();
+        this.profile = new BidderProfile(id);
     }
     public double getBalance() {
         return balance;
     }
 
-    public void topUp(double amount){
+    public void topUp(double amount){ // nạp tiền
         if (amount <= 0) {
-            throw new IllegalArgumentException("Top up must be positive");
+            throw new IllegalArgumentException("Số tiền nạp phải là số dương");
         }
         this.balance += amount;
     }
-    public void deduct(double amount){
+    public void deduct(double amount) throws InvalidBidException{ // trừ tiền
         if (amount > balance) {
-            throw new InvalidBidException("Insufficient balance");
+            throw new InvalidBidException("Số dư không đủ.");
         }
         balance -= amount;
     }
-    public void addWonAuction(int AuctionId){
-        wonAuctions.add(AuctionId);
-    }
-    public List<Integer> getWonAuctions() {return wonAuctions;}
+
+    public BidderProfile getProfile() { return profile; }
 
     @Override
     public String getRole() { return "BIDDER"; }
@@ -46,4 +45,6 @@ public class Bidder extends User implements Observer {
     public void send(String message) {
         System.out.println("[Notification for " + getUsername() + "]: " + message);
     }
+
+
 }

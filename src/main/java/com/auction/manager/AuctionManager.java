@@ -1,6 +1,5 @@
 package com.auction.manager;
 
-
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
 import com.auction.model.item.Item;
@@ -11,12 +10,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-
 public class AuctionManager {
     private static volatile AuctionManager instance ;
     // FIX: đổi ArrayList → ConcurrentHashMap để an toàn khi nhiều thread truy cập
     private final ConcurrentHashMap<Integer, Auction> auctions = new ConcurrentHashMap<>();   // Danh sách các phiên đấu
-    private final AtomicInteger AuctionCounter = new AtomicInteger(1);              // tránh Rase condition khi counter++
+    private final AtomicInteger auctionCounter = new AtomicInteger(1);              // tránh Race condition khi counter++
     private AuctionManager(){}
 
     public static AuctionManager getInstance(){
@@ -36,7 +34,7 @@ public class AuctionManager {
             System.out.println("Sản phẩm không ở trạng thái AVAILABLE: " + item.getName());
             return null;
         }
-        int id = AuctionCounter.getAndIncrement();
+        int id = auctionCounter.getAndIncrement();
         Auction auction = new Auction(id, item, endTime, minBidStep);
         item.setStatus(ItemStatus.IN_AUCTION);
         auctions.put(id, auction);

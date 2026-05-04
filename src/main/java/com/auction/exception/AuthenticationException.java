@@ -5,3 +5,4 @@ public class AuthenticationException extends RuntimeException {
         super(message);
     }
 }
+// Xử lý các lỗi liên quan đến xác thực người dùng

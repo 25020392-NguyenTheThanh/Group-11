@@ -5,3 +5,4 @@ public class InvalidBidException extends RuntimeException {
         super(message);
     }
 }
+// xử lý các trường hợp đặt giá thầu không hợp lệ

@@ -9,10 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserManager {
-    private static          volatile UserManager instance ;
-    private static          List<User> users = new ArrayList<>() ; // Danh sách người dùng
-    private                 int UserCounter = 1 ;
-    private                 UserManager(){}
+    private static volatile UserManager instance ;
+    private List<User> users = new ArrayList<>() ; // Danh sách người dùng
+    private int userCounter = 1 ;
+    private UserManager(){}
     public static UserManager getInstance(){
         if (instance == null) {
             synchronized (UserManager.class){
@@ -33,7 +33,7 @@ public class UserManager {
                 return null;
             }
         }
-        int id = UserCounter++;
+        int id = userCounter++;
         User newUser;
         if (role.equals("BIDDER")) {
             newUser = new Bidder(id, username, password, email,0);

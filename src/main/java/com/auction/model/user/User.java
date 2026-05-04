@@ -24,6 +24,8 @@ public abstract class User extends Entity {
     public String getEmail() { return email; }
     public boolean isActive() { return active; }
     public boolean isAuthenticated() { return authenticated; }
+    public void setEmail(String email) { this.email = email ; }
+    public void setPassWord(String password) { this.password = password ;}
 
     public void setActive(boolean active) {this.active = active;}
     // trả về các role : BIDDER , SELLER , ADMIN
