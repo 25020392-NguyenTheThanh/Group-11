@@ -23,7 +23,7 @@ public class Auction implements Subject {
     private AuctionStatus status;
     private LocalDateTime endTime;
     private List<BidTransaction> bidHistory;
-    private List<Observer> observers;
+    private transient List<Observer> observers; // không lưu vào file
     private final double minBidStep; // bước giá tối thiểu
 
     public Auction(int id, Item item, LocalDateTime endTime, double minBidStep) {

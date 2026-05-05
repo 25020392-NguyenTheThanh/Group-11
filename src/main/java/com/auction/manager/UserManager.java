@@ -5,10 +5,13 @@ import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
 import com.auction.model.user.User;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UserManager {
+public class UserManager implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private static volatile UserManager instance ;
     private static List<User> users = new ArrayList<>() ; // Danh sách người dùng
     private int userCounter = 1 ;
@@ -19,7 +22,7 @@ public class UserManager {
             synchronized (UserManager.class){
                 if (instance == null){
                     instance = new UserManager();
-                    users.add(new Bidder(1, "nguyenvana", "password123", "vana@email.com",50));
+//                    users.add(new Bidder(1, "nguyenvana", "password123", "vana@email.com",50));
                 }
             }
         }
@@ -45,6 +48,7 @@ public class UserManager {
             newUser = new Admin(id, username, password, email);
         }
         users.add(newUser);
+        saveToDisk(); // THÊM: lưu ngay khi có thay đổi
         return newUser;
     }
 
@@ -71,5 +75,34 @@ public class UserManager {
         System.out.println("Username không tồn tại");
         return null ;
     }
+
+    public void loadFromDisk(){
+        File f = new File("usermanager.dat");
+
+        if (f.exists()){
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f))){
+                UserManager loaded = (UserManager) ois.readObject();
+                this.users = loaded.users ; // gán danh sách users từ object vừa đọc từ file vào obj hiện tại
+                this.userCounter = loaded.userCounter ;
+            } catch (IOException | ClassNotFoundException e){
+                System.out.println("Lỗi khi load UserManager : " + e.getMessage());
+            }
+        } else {
+            System.out.println("File usermanager.dat chưa tồn tại, tạo user mặc định");
+            System.out.println("File chưa tồn tại, tạo mới");
+            users = new ArrayList<>();  // chỉ tạo list rỗng
+            userCounter = 1;
+        }
+    }
+
+    public void saveToDisk() {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("usermanager.dat"))) {
+            oos.writeObject(this);
+            System.out.println("Đã lưu UserManager xuống file");
+        } catch (IOException e) {
+            System.out.println("Lỗi khi lưu UserManager: " + e.getMessage());
+        }
+    }
+
 }
 

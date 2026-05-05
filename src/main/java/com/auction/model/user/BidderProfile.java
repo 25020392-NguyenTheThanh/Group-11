@@ -1,9 +1,10 @@
 package com.auction.model.user;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BidderProfile {
+public class BidderProfile implements Serializable {
     private final int bidderId;
     private final List<Integer> wonAuctions; // danh sách phiên đã thắng
     private final List<Integer> watchList; // danh sách phiên đang theo dõi
@@ -37,9 +38,11 @@ public class BidderProfile {
     public List<Integer> getParticipatedAuctions() {
         return participatedAuctions;
     }
+
     // WonAuctions
     public void addWonAuction(int auctionId) {
         wonAuctions.add(auctionId);
     }
+
     public List<Integer> getWonAuctions() { return wonAuctions; }
 }

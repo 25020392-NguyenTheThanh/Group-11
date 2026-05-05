@@ -1,8 +1,9 @@
 package com.auction.model.entity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public abstract class Entity {
+public abstract class Entity implements Serializable {
     private int id ;
     private LocalDateTime createAt ; // thời gian tạo ra obj
     public Entity(int id){
