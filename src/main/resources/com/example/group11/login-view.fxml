@@ -2,7 +2,6 @@
 
 <?import javafx.scene.Group?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
@@ -150,16 +149,16 @@
                 <!-- Tính năng Mở rộng (Remember me / Quên MK) -->
                 <HBox alignment="CENTER_LEFT">
                     <children>
-                        <CheckBox fx:id="rememberPassword" style="-fx-cursor: hand;" text="Remember me" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Hyperlink fx:id="forgotPassword" style="-fx-font-size: 13px;" text="Forgot password?" />
+                        <Hyperlink fx:id="forgotPassword" onAction="#hanleClickForgotPassword" style="-fx-font-size: 13px;" text="Forgot password?" />
                     </children>
                 </HBox>
 
                 <!-- Các Nút Bấm / Liên Kết Cuối -->
                 <VBox alignment="CENTER" spacing="18.0">
                     <children>
-                        <Button fx:id="loginButton" maxWidth="Infinity" onMouseClicked="#handleLogin" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
+                        <Label fx:id="errorLabel" style="-fx-text-fill: #ef4444; -fx-font-size: 14px; -fx-font-weight: bold;" text="" visible="false" wrapText="true" />
+                        <Button fx:id="loginButton" maxWidth="Infinity" onAction="#handleLogin" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
 
                         <HBox alignment="CENTER" spacing="5.0">
                             <children>

@@ -17,12 +17,34 @@ public class MainApplication extends Application {
         stage.show();
 
 
-
-
-//        FXMLLoader fxmlLoader3 = new FXMLLoader(MainApplication.class.getResource("auctionList-view.fxml"));
-//        Scene scene3 = new Scene(fxmlLoader3.load(), 1100, 750);
+//        FXMLLoader fxmlLoader2 = new FXMLLoader(MainApplication.class.getResource(""));
+//        Scene scene2 = new Scene(fxmlLoader2.load(), 1100, 750);
 //        stage.setTitle("Auction List");
+//        stage.setScene(scene2);
+//        stage.show();
+
+//        FXMLLoader fxmlLoader3 = new FXMLLoader(MainApplication.class.getResource("item-view.fxml"));
+//        Scene scene3 = new Scene(fxmlLoader3.load(), 1100, 750);
+//        stage.setTitle("Item");
 //        stage.setScene(scene3);
+//        stage.show();
+
+//        FXMLLoader fxmlLoader4 = new FXMLLoader(MainApplication.class.getResource("forgotPassword-view.fxml"));
+//        Scene scene4 = new Scene(fxmlLoader4.load(), 1100, 750);
+//        stage.setTitle("Forgot password");
+//        stage.setScene(scene4);
+//        stage.show();
+
+//        FXMLLoader fxmlLoader5 = new FXMLLoader(MainApplication.class.getResource("bidderAuctionList-view.fxml"));
+//        Scene scene5 = new Scene(fxmlLoader5.load(), 1100, 750);
+//        stage.setTitle("Auction floor of Bidder");
+//        stage.setScene(scene5);
+//        stage.show();
+//
+//        FXMLLoader fxmlLoader6 = new FXMLLoader(MainApplication.class.getResource("sellerAuctionList-view.fxml"));
+//        Scene scene6 = new Scene(fxmlLoader6.load(), 1100, 750);
+//        stage.setTitle("Auction floor of Seller");
+//        stage.setScene(scene6);
 //        stage.show();
     }
 }

@@ -1,5 +1,6 @@
 package com.example.group11.controller;
 
+import com.auction.exception.AuthenticationException;
 import com.auction.manager.UserManager;
 import com.auction.model.user.User;
 import javafx.collections.FXCollections;
@@ -8,21 +9,17 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.stage.Stage;
 
-import java.io.IOException;
 import java.net.URL;
+import java.util.Objects;
 import java.util.ResourceBundle;
 
 
@@ -59,9 +56,6 @@ public class LoginController implements Initializable {
     private Hyperlink privacyLink;
 
     @FXML
-    private CheckBox rememberPassword;
-
-    @FXML
     private Rectangle scaleBar;
 
     @FXML
@@ -81,6 +75,9 @@ public class LoginController implements Initializable {
 
     @FXML
     private Text togglePasswordIcon;
+
+    @FXML
+    private Label errorLabel;
 
     private boolean isPasswordVisible = false;
 
@@ -102,27 +99,56 @@ public class LoginController implements Initializable {
     }
 
     @FXML
-    void handleLogin(MouseEvent event) {
+    void handleLogin(ActionEvent event) {
         String userName = username.getText();
         String passWord = enterPassword.getText();
 
-        if (!userName.isEmpty() && !passWord.isEmpty()) {
-            if (userManager.login(userName, passWord) != null) {
-                Stage stage = new Stage();
-                FXMLLoader loader = new FXMLLoader(LoginController.class.getResource("/com/example/group11/auctionList-view.fxml"));
-                try {
-                    Parent root = loader.load();
-                    AuctionListController controller = loader.getController();
-                    controller.setUser(userManager.login(userName, passWord));
-                    stage.setScene(new Scene(root));
-                    stage.show();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+        User loggedInUser = userManager.login(userName, passWord);
+        // 1. Kiểm tra nếu để trống trường nhập liệu
+        if (userName.isEmpty() || passWord.isEmpty()) {
+            errorLabel.setText("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
+            errorLabel.setVisible(true);
+            return;
+        }
+
+        // 2. Thực hiện đăng nhập
+
+        if (loggedInUser != null) {
+            // Đăng nhập thành công
+            errorLabel.setVisible(false);
+
+            String role = loggedInUser.getRole();
+            FXMLLoader loader;
+
+            switch (role) {
+                case "BIDDER":
+                    loader = EquilibriumAnimation.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
+                    break;
+
+                case "SELLER":
+                    loader = EquilibriumAnimation.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
+                    break;
+                default:
+                    throw new AuthenticationException("Role " + role + " is not recognized.");
             }
+
+            if (loader != null) {
+                // Lấy controller của màn hình mới và truyền user sang
+                Object controller = loader.getController();
+                if (controller instanceof BidderAuctionListController) {
+                    ((BidderAuctionListController) controller).setUser(loggedInUser);
+                } else if (controller instanceof SellerAuctionListController) {
+                    ((SellerAuctionListController) controller).setUser(loggedInUser);
+                }
+
+            } else {
+                // 3. Đăng nhập thất bại
+                errorLabel.setText("Tên đăng nhập hoặc mật khẩu không chính xác.");
+                errorLabel.setVisible(true);
+            }
+
         }
     }
-
 
     //Phương thức xử lý khi nhấn vào Điều khoản dịch vụ
 
@@ -288,6 +314,15 @@ public class LoginController implements Initializable {
         }
     }
 
+    // Quên mật khẩu
+    @FXML
+    private void hanleClickForgotPassword(ActionEvent event) {
+        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "forgotPassword-view.fxml", "Quên mật khẩu!");
 
+        if (loader != null) {
+            ForgotPasswordController controller = loader.getController();
+        }
+
+    }
 }
 

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" spacing="10" style="-fx-background-color: #131313;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <!-- Main Auction Card -->
+        <VBox fx:id="mainCardContainer" maxWidth="350.0" style="-fx-background-color: #1A1A1A; -fx-border-color: #262626; -fx-border-width: 1;">
+            <children>
+
+                <!-- Header Bar -->
+                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0" style="-fx-background-color: #0A0A0A; -fx-border-color: transparent transparent #262626 transparent;">
+                    <padding>
+                        <Insets left="15.0" right="15.0" />
+                    </padding>
+                    <children>
+                        <Label fx:id="auctionIdLabel" style="-fx-text-fill: #d0c6ab; -fx-font-weight: bold;" text="ID: #AU-2026-8899">
+                            <font>
+                                <Font size="9.0" />
+                            </font>
+                        </Label>
+                        <Pane HBox.hgrow="ALWAYS" />
+                        <HBox fx:id="statusContainer" alignment="CENTER" spacing="5.0">
+                            <children>
+                                <Circle fx:id="statusDot" fill="#00e475" radius="3.0" stroke="TRANSPARENT" />
+                                <Label fx:id="statusLabel" style="-fx-text-fill: #00e475; -fx-font-weight: bold;" text="RUNNING">
+                                    <font>
+                                        <Font size="10.0" />
+                                    </font>
+                                </Label>
+                            </children>
+                        </HBox>
+                        <Label fx:id="timerLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="00:15:30">
+                            <font>
+                                <Font size="12.0" />
+                            </font>
+                        </Label>
+                    </children>
+                </HBox>
+
+                <!-- Product Image Container -->
+                <StackPane fx:id="imageContainer" prefHeight="180.0" style="-fx-background-color: #000000;">
+                    <children>
+                        <ImageView fx:id="productImage" fitHeight="180.0" fitWidth="350.0" pickOnBounds="true" preserveRatio="true">
+                            <image>
+                                <Image url="https://lh3.googleusercontent.com/aida-public/AB6AXuBVMAGKkFbo45OTsBsSobXfbNDExErUNOrmwi5tBP3M_Xkz5Pp87L2CMVZm7fuR54EIXTbqY1PfIOd7C-1qaYKZ91Ycjjb2VeoXOM5ZMcwEWh9sRD1NBZMmwemftfNIADQcw5yHuueYdwrYntl4qm5r06zY4x9gCBJASSvhyOqt1L1yzlxfez9H_HhbLRRC2vpCAFBuAW3AMp0ZjZu-NDi1eteCstkcdYUG5Ysm7gsRCk3JzbdraApIRPHxNIWevRgwQ29qkB7xW4Y" />
+                            </image>
+                        </ImageView>
+                    </children>
+                </StackPane>
+
+                <!-- Content Area -->
+                <VBox spacing="12.0">
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                    </padding>
+                    <children>
+                        <!-- Title & Description -->
+                        <VBox spacing="3.0">
+                            <children>
+                                <Label fx:id="productNameLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="LAPTOP GAMING ASUS ROG ZEPHYRUS" wrapText="true">
+                                    <font>
+                                        <Font size="16.0" />
+                                    </font>
+                                </Label>
+                                <Label fx:id="descriptionLabel" style="-fx-text-fill: #d0c6ab;" text="Chip M3 Max, 32GB RAM, SSD 1TB, màn hình 120Hz..." wrapText="true">
+                                    <font>
+                                        <Font size="12.0" />
+                                    </font>
+                                </Label>
+                            </children>
+                        </VBox>
+
+                        <!-- Pricing Section -->
+                        <VBox spacing="4.0" style="-fx-background-color: #0A0A0A; -fx-padding: 8 12; -fx-border-color: transparent transparent transparent #ffd700; -fx-border-width: 0 0 0 3;">
+                            <children>
+                                <VBox>
+                                    <Label style="-fx-text-fill: rgba(255,255,255,0.4); -fx-font-weight: bold;" text="GIÁ KHỞI ĐIỂM">
+                                        <font>
+                                            <Font size="8.0" />
+                                        </font>
+                                    </Label>
+                                    <Label fx:id="startingPriceLabel" style="-fx-text-fill: rgba(255,255,255,0.8);" text="30.000.000 đ">
+                                        <font>
+                                            <Font size="12.0" />
+                                        </font>
+                                    </Label>
+                                </VBox>
+                                <VBox spacing="0.0">
+                                    <children>
+                                        <Label style="-fx-text-fill: #ffd700; -fx-font-weight: bold;" text="GIÁ HIỆN TẠI CAO NHẤT">
+                                            <font>
+                                                <Font size="9.0" />
+                                            </font>
+                                        </Label>
+                                        <Label fx:id="currentPriceLabel" style="-fx-text-fill: #ffd700; -fx-font-weight: bold;" text="55.000.000 đ">
+                                            <font>
+                                                <Font size="20.0" />
+                                            </font>
+                                        </Label>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Dates Section -->
+                        <HBox spacing="0.0" style="-fx-border-color: #262626 transparent #262626 transparent; -fx-border-width: 1 0 1 0; -fx-padding: 8 0;">
+                            <children>
+                                <VBox spacing="2.0" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label style="-fx-text-fill: #d0c6ab;" text="BẮT ĐẦU">
+                                            <font>
+                                                <Font size="8.0" />
+                                            </font>
+                                        </Label>
+                                        <Label fx:id="startTimeLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="10:00 - 10/05/2026">
+                                            <font>
+                                                <Font size="11.0" />
+                                            </font>
+                                        </Label>
+                                    </children>
+                                </VBox>
+                                <VBox spacing="2.0" style="-fx-border-color: transparent transparent transparent #262626; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 15;" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label style="-fx-text-fill: #d0c6ab;" text="KẾT THÚC">
+                                            <font>
+                                                <Font size="8.0" />
+                                            </font>
+                                        </Label>
+                                        <Label fx:id="endTimeLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="14:00 - 15/05/2026">
+                                            <font>
+                                                <Font size="11.0" />
+                                            </font>
+                                        </Label>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </HBox>
+
+                        <!-- Action Buttons -->
+                        <VBox spacing="8.0">
+                            <children>
+                                <Button fx:id="bidButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 2;" text="ĐẶT GIÁ" />
+                                <Button fx:id="detailsButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: white; -fx-border-radius: 2; -fx-padding: 10;" text="CHI TIẾT" />
+                            </children>
+                        </VBox>
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </children>
+    <padding>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+    </padding>
+</VBox>
