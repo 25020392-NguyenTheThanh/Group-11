@@ -22,7 +22,6 @@ public class UserManager implements Serializable {
             synchronized (UserManager.class){
                 if (instance == null){
                     instance = new UserManager();
-//                    users.add(new Bidder(1, "nguyenvana", "password123", "vana@email.com",50));
                 }
             }
         }

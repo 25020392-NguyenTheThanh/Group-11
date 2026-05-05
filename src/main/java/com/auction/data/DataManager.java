@@ -12,7 +12,7 @@ public class DataManager {
     }
 
     public synchronized static List<User> loadUsers(){
-        return load(Data_dir + "users.ser")
+        return load(Data_dir + "users.ser");
     }
 
     private static void save(Object obj , String path) {
