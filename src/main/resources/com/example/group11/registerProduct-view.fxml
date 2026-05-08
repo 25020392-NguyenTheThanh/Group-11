@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Giảm prefWidth xuống 950 để khung gọn hơn -->
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="850.0" prefWidth="950.0" style="-fx-background-color: #0b0e14; -fx-font-family: 'Inter', sans-serif;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.RegisterProductController">
+
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="15.0">
+            <padding>
+                <Insets bottom="15.0" left="40.0" right="40.0" top="20.0" />
+            </padding>
+            <children>
+                <Button fx:id="backAution" mnemonicParsing="false" onAction="#handleBackAuction" style="-fx-background-color: #1d2026; -fx-text-fill: white; -fx-border-color: #32353c; -fx-border-radius: 10; -fx-padding: 6 12; -fx-cursor: hand;" text="← Quay lại" />
+                <VBox>
+                    <Label style="-fx-text-fill: #ffc107; -fx-font-size: 22px; -fx-font-weight: 800;" text="ĐĂNG KÝ ĐẤU GIÁ" />
+                    <Label style="-fx-text-fill: #6e7179; -fx-font-size: 12px;" text="Cấu hình sản phẩm chuyên nghiệp để đấu giá hiệu quả hơn." />
+                </VBox>
+            </children>
+        </HBox>
+    </top>
+
+    <center>
+        <!-- Căn giữa nội dung ScrollPane -->
+        <VBox alignment="TOP_CENTER">
+            <children>
+                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
+                    <content>
+                        <VBox alignment="TOP_CENTER" spacing="20.0">
+                            <padding>
+                                <Insets bottom="50.0" left="40.0" right="40.0" top="5.0" />
+                            </padding>
+                            <children>
+                                <!-- Giới hạn chiều rộng tối đa của các khối nội dung là 850 -->
+                                <VBox maxWidth="850.0" spacing="20.0">
+                                    <children>
+                                        <!-- Mục 1: Thông tin tổng quan -->
+                                        <VBox spacing="15.0" style="-fx-background-color: #1d2026; -fx-background-radius: 12; -fx-border-color: #32353c; -fx-border-radius: 12; -fx-padding: 25;">
+                                            <children>
+                                                <Label style="-fx-text-fill: #ffc107; -fx-font-size: 16px; -fx-font-weight: bold;" text="1. Thông tin tổng quan" />
+                                                <HBox spacing="20.0">
+                                                    <children>
+                                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="TÊN SẢN PHẨM" />
+                                                            <TextField fx:id="productNameField" maxWidth="1.7976931348623157E308" prefHeight="45.0" style="-fx-background-color: #0b0e14; -fx-text-fill: #e1e2eb; -fx-border-color: #32353c; -fx-border-radius: 8;" text="Laptop Gaming ASUS ROG Zephyrus" />
+                                                        </VBox>
+                                                        <!-- Giảm chiều rộng ô Danh mục xuống 250 -->
+                                                        <VBox prefWidth="250.0" spacing="5.0">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="DANH MỤC" />
+                                                            <MenuButton fx:id="categoryMenuButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" prefHeight="45.0" style="-fx-background-color: #0b0e14; -fx-border-color: #32353c; -fx-border-radius: 8;" text="Chọn danh mục ..." textFill="#e1e2eb">
+                                                                <items>
+                                                                    <MenuItem text="Electronics" /><MenuItem text="Vehicle" /><MenuItem text="Art" />
+                                                                </items>
+                                                            </MenuButton>
+                                                        </VBox>
+                                                    </children>
+                                                </HBox>
+                                                <VBox spacing="5.0">
+                                                    <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="MÔ TẢ CHI TIẾT" />
+                                                    <TextArea fx:id="descriptionArea" prefHeight="100.0" style="-fx-control-inner-background: #0b0e14; -fx-text-fill: #e1e2eb; -fx-border-color: #32353c; -fx-border-radius: 8;" text="Chip M3 Max, 32GB RAM, SSD 1TB..." wrapText="true" />
+                                                </VBox>
+
+                                                <VBox spacing="10.0">
+                                                    <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="HÌNH ẢNH SẢN PHẨM" />
+                                                    <StackPane maxWidth="1.7976931348623157E308" prefHeight="320.0" style="-fx-background-color: #0b0e14; -fx-border-color: #ffc107; -fx-border-style: dashed; -fx-border-radius: 12;">
+                                                        <children>
+                                                            <VBox alignment="CENTER" maxHeight="150.0" maxWidth="300.0" spacing="12.0" style="-fx-background-color: rgba(29, 32, 38, 0.8); -fx-background-radius: 16; -fx-cursor: hand;">
+                                                                <children>
+                                                                    <Button fx:id="uploadImageButton" onAction="#handleUploadImage" style="-fx-background-color: transparent; -fx-text-fill: #ffc107; -fx-font-size: 35px; -fx-padding: 0; -fx-cursor: hand;" text="📷+" />
+                                                                    <Label style="-fx-text-fill: #ffc107; -fx-font-size: 13px; -fx-font-weight: bold;" text="Nhấp hoặc kéo ảnh vào để tải lên" />
+                                                                </children>
+                                                            </VBox>
+                                                        </children>
+                                                    </StackPane>
+                                                </VBox>
+                                            </children>
+                                        </VBox>
+
+                                        <!-- Mục 2: Thiết lập Tài chính -->
+                                        <VBox spacing="15.0" style="-fx-background-color: #1d2026; -fx-background-radius: 12; -fx-border-color: #32353c; -fx-border-radius: 12; -fx-padding: 25;">
+                                            <children>
+                                                <Label style="-fx-text-fill: #ffc107; -fx-font-size: 16px; -fx-font-weight: bold;" text="2. Thiết lập Tài chính" />
+                                                <GridPane hgap="20.0" vgap="15.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
+                                                        <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <VBox spacing="5.0">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="GIÁ KHỞI ĐIỂM ($)" />
+                                                            <TextField fx:id="startingPriceField" prefHeight="45.0" style="-fx-background-color: #0b0e14; -fx-text-fill: #e1e2eb; -fx-border-color: #42474f; -fx-border-radius: 8;" text="30.000.000" />
+                                                        </VBox>
+                                                        <VBox spacing="5.0" GridPane.columnIndex="1">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="BƯỚC GIÁ TỐI THIỂU ($)" />
+                                                            <TextField fx:id="minimumBidIncrementField" prefHeight="45.0" style="-fx-background-color: #0b0e14; -fx-text-fill: #e1e2eb; -fx-border-color: #42474f; -fx-border-radius: 8;" text="500.000" />
+                                                        </VBox>
+                                                        <VBox spacing="5.0" GridPane.rowIndex="1">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="TIỀN ĐẶT CỌC YÊU CẦU ($)" />
+                                                            <TextField fx:id="depositField" prefHeight="45.0" style="-fx-background-color: #0b0e14; -fx-text-fill: #e1e2eb; -fx-border-color: #42474f; -fx-border-radius: 8;" text="3.000.000" />
+                                                        </VBox>
+                                                    </children>
+                                                    <rowConstraints><RowConstraints /><RowConstraints /></rowConstraints>
+                                                </GridPane>
+                                            </children>
+                                        </VBox>
+
+                                        <!-- Mục 3: Thời gian -->
+                                        <VBox spacing="15.0" style="-fx-background-color: #1d2026; -fx-background-radius: 12; -fx-border-color: #32353c; -fx-border-radius: 12; -fx-padding: 25;">
+                                            <children>
+                                                <Label style="-fx-text-fill: #ffc107; -fx-font-size: 16px; -fx-font-weight: bold;" text="3. Thiết lập Thời gian" />
+                                                <HBox spacing="20.0">
+                                                    <children>
+                                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="THỜI GIAN BẮT ĐẦU" />
+                                                            <DatePicker fx:id="startDatePicker" maxWidth="1.7976931348623157E308" prefHeight="45.0" promptText="Chọn ngày" style="-fx-control-inner-background: #0b0e14;" />
+                                                        </VBox>
+                                                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                                            <Label style="-fx-text-fill: #d4c5ab; -fx-font-size: 10px; -fx-font-weight: bold;" text="THỜI GIAN KẾT THÚC" />
+                                                            <DatePicker fx:id="endDatePicker" maxWidth="1.7976931348623157E308" prefHeight="45.0" promptText="Chọn ngày" style="-fx-control-inner-background: #0b0e14;" />
+                                                        </VBox>
+                                                    </children>
+                                                </HBox>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+            </children>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" prefHeight="80.0" spacing="20.0" style="-fx-background-color: #1d2026; -fx-border-color: #32353c transparent transparent transparent;">
+            <padding><Insets left="40.0" right="40.0" /></padding>
+            <children>
+                <Button fx:id="submitButton" minHeight="50.0" minWidth="240.0" style="-fx-background-color: #ffc107; -fx-text-fill: #3f2e00; -fx-font-weight: 800; -fx-background-radius: 12; -fx-font-size: 15px; -fx-cursor: hand;" text="ĐĂNG KÝ SẢN PHẨM" />
+            </children>
+        </HBox>
+    </bottom>
+</BorderPane>

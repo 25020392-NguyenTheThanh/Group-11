@@ -1,20 +1,24 @@
 package com.example.group11.controller;
 
 import com.auction.model.user.User;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.chart.LineChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Circle;
 
 import java.net.URL;
 import java.util.ResourceBundle;
 
 public class SellerAuctionListController implements Initializable {
-
     @FXML
     private Button SystemNotification;
 
@@ -22,7 +26,13 @@ public class SellerAuctionListController implements Initializable {
     private Button addFundsBtn;
 
     @FXML
+    private VBox analyticsPane;
+
+    @FXML
     private VBox auctionLive;
+
+    @FXML
+    private Circle avartaSeller;
 
     @FXML
     private Button avatarBtn;
@@ -43,7 +53,22 @@ public class SellerAuctionListController implements Initializable {
     private GridPane contentGrid;
 
     @FXML
+    private TextField filterSearchId;
+
+    @FXML
+    private ComboBox<String> filterSort;
+
+    @FXML
+    private ComboBox<String> filterStatus;
+
+    @FXML
     private BorderPane mainPane;
+
+    @FXML
+    private VBox myListingsView;
+
+    @FXML
+    private LineChart<?, ?> revenueChart;
 
     @FXML
     private TextField searchBar;
@@ -52,13 +77,19 @@ public class SellerAuctionListController implements Initializable {
     private Button sellItemSidebar;
 
     @FXML
+    private StackPane totalProducts;
+
+    @FXML
+    private Label totalProductsLabel;
+
+    @FXML
     private Label walletBalance;
 
-    @FXML
-    private VBox analyticsPane; // Vùng chứa biểu đồ và các báo cáo
-
-    @FXML
-    private LineChart<String, Number> revenueChart; // Ví dụ biểu đồ đường
+//    @FXML
+//    private VBox analyticsPane; // Vùng chứa biểu đồ và các báo cáo
+//
+//    @FXML
+//    private LineChart<String, Number> revenueChart; // Ví dụ biểu đồ đường
 
     private User user;
 
@@ -74,49 +105,100 @@ public class SellerAuctionListController implements Initializable {
     @FXML
     private void handleSwitchTab(ActionEvent event) {
         Button clickedButton = (Button) event.getSource();
-        String tabName = clickedButton.getText().trim().toUpperCase();
 
-        // 1. Reset UI Sidebar
+        // Dùng ID của button để phân biệt (chính xác hơn dùng Text)
+        String buttonId = clickedButton.getId();
+
+        // 1. Cập nhật UI Sidebar
         resetAllButtons();
         setActiveStyle(clickedButton);
 
-        // 2. Điều hướng hiển thị nội dung
-        // Mặc định ẩn tất cả các vùng nội dung chính trước khi chọn
-        contentGrid.setVisible(false);
-        contentGrid.setManaged(false);
-
-        analyticsPane.setVisible(false);
-        analyticsPane.setManaged(false);
-
-
-        // 3. Hiển thị đúng vùng nội dung dựa trên tab được nhấn
-        switch (tabName) {
-            case "ANALYTICS":
-                analyticsPane.setVisible(true);
-                analyticsPane.setManaged(true);
-                //loadAnalyticsData(); // Gọi hàm đổ dữ liệu vào biểu đồ
+        // 2. Điều hướng nội dung
+        switch (buttonId) {
+            case "btnMyListings":
+                showView(myListingsView);
                 break;
 
-            case "MY LISTINGS":
-                contentGrid.setVisible(true);
-                contentGrid.setManaged(true);
-                if (auctionLive != null) {
-                    auctionLive.setVisible(true);
-                    auctionLive.setManaged(true);
-                }
+            case "btnAnalytics":
+                showView(analyticsPane);
+                // loadAnalyticsData(); // Hàm để vẽ biểu đồ
                 break;
 
-            case "SETTINGS":
-                // Chỉ hiện các tùy chọn cài đặt (nếu có pane riêng)
-                System.out.println("Đang mở cài đặt...");
+            case "btnShipping":
+                // Nếu bạn có shippingPane thì show ở đây
+                // Tạm thời ẩn hết hoặc hiện thông báo
+                hideAllViews();
+                System.out.println("Tab Shipping đang được phát triển");
                 break;
 
-            case "SHIPPING":
-                // Hiện danh sách vận chuyển
-                contentGrid.setVisible(true);
-                contentGrid.setManaged(true);
+            case "btnSettings":
+                hideAllViews();
+                System.out.println("Tab Settings đang được phát triển");
                 break;
         }
+    }
+
+//    private void setupFilters() {
+//        // Thiết lập trạng thái theo đúng yêu cầu của bạn
+//        ObservableList<String> statuses = FXCollections.observableArrayList(
+//                "Tất cả", "OPEN", "RUNNING", "FINISHED", "PAID", "CANCELED"
+//        );
+//        filterStatus.setItems(statuses);
+//        filterStatus.getSelectionModel().selectFirst(); // Mặc định chọn "Tất cả"
+//
+//        // Thiết lập sắp xếp
+//        filterSort.setItems(FXCollections.observableArrayList(
+//                "Mới nhất", "Giá cao đến thấp", "Giá thấp đến cao", "Gần kết thúc"
+//        ));
+//        filterSort.getSelectionModel().selectFirst();
+//
+//        // Lắng nghe sự kiện thay đổi filter
+//        filterStatus.setOnAction(e -> handleFilterChange());
+//    }
+//
+//    private void handleFilterChange() {
+//        String selectedStatus = filterStatus.getValue();
+//        System.out.println("Đang lọc theo trạng thái: " + selectedStatus);
+//        // Tại đây gọi hàm để cập nhật lại contentGrid dựa trên database
+//    }
+
+    private void initComboBoxes() {
+        // Thiết lập các trạng thái theo yêu cầu
+        filterStatus.setItems(FXCollections.observableArrayList(
+                "Tất cả trạng thái", "OPEN", "RUNNING", "FINISHED", "PAID", "CANCELED"
+        ));
+        filterStatus.getSelectionModel().selectFirst();
+
+        // Thiết lập các tùy chọn sắp xếp
+        filterSort.setItems(FXCollections.observableArrayList(
+                "Mới nhất", "Giá: Thấp đến Cao", "Giá: Cao đến Thấp", "Kết thúc sớm nhất"
+        ));
+        filterSort.getSelectionModel().selectFirst();
+    }
+
+    @FXML
+    void handleSellItem(ActionEvent event) {
+        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "registerProduct-view.fxml", "Đăng ký sản phẩm");
+
+        if (loader != null) {
+            RegisterProductController controller = loader.getController();
+        }
+    }
+
+    // Hiển thị một Pane và ẩn tất cả các Pane khác trong StackPane
+
+    private void showView(VBox viewToShow) {
+        hideAllViews();
+        viewToShow.setVisible(true);
+        viewToShow.setManaged(true);
+    }
+
+    private void hideAllViews() {
+        myListingsView.setVisible(false);
+        myListingsView.setManaged(false);
+        analyticsPane.setVisible(false);
+        analyticsPane.setManaged(false);
+        // Thêm các Pane khác vào đây nếu có (shippingPane, settingsPane...)
     }
 
     // Reset style cho toàn bộ các nút điều hướng của Seller

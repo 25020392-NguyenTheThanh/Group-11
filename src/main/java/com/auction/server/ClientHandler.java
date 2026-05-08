@@ -32,5 +32,5 @@ public class ClientHandler implements Runnable , Observer {
 
     public void setLoggedInUser(User user){}
 
-    public User getLoggedInUser(){}
+    public User getLoggedInUser(){return loggedInUser;}
 }

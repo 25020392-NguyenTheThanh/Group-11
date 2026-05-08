@@ -10,20 +10,20 @@ import java.io.IOException;
 public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader1 = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
-        Scene scene1 = new Scene(fxmlLoader1.load(), 1100, 750);
-        stage.setTitle("Welcome to auction floor!");
-        stage.setScene(scene1);
-        stage.show();
+//        FXMLLoader fxmlLoader1 = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
+//        Scene scene1 = new Scene(fxmlLoader1.load(), 1100, 750);
+//        stage.setTitle("Welcome to auction floor!");
+//        stage.setScene(scene1);
+//        stage.show();
 
 
-//        FXMLLoader fxmlLoader2 = new FXMLLoader(MainApplication.class.getResource(""));
+//        FXMLLoader fxmlLoader2 = new FXMLLoader(MainApplication.class.getResource("registerProduct-view.fxml"));
 //        Scene scene2 = new Scene(fxmlLoader2.load(), 1100, 750);
-//        stage.setTitle("Auction List");
+//        stage.setTitle("Register Product");
 //        stage.setScene(scene2);
 //        stage.show();
 
-//        FXMLLoader fxmlLoader3 = new FXMLLoader(MainApplication.class.getResource("item-view.fxml"));
+//        FXMLLoader fxmlLoader3 = new FXMLLoader(MainApplication.class.getResource("itemBidder-view.fxml"));
 //        Scene scene3 = new Scene(fxmlLoader3.load(), 1100, 750);
 //        stage.setTitle("Item");
 //        stage.setScene(scene3);
@@ -46,5 +46,11 @@ public class MainApplication extends Application {
 //        stage.setTitle("Auction floor of Seller");
 //        stage.setScene(scene6);
 //        stage.show();
+
+        FXMLLoader fxmlLoader7 = new FXMLLoader(MainApplication.class.getResource("liveAuction-view.fxml"));
+        Scene scene7 = new Scene(fxmlLoader7.load(), 1100, 750);
+        stage.setTitle("Live Auction");
+        stage.setScene(scene7);
+        stage.show();
     }
 }

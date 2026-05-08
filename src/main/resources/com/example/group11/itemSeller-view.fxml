@@ -12,14 +12,21 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" spacing="10" style="-fx-background-color: #131313;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+<VBox alignment="CENTER" spacing="10" style="-fx-background-color: #131313;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.ItemSellerController">
     <children>
-        <!-- Main Auction Card -->
-        <VBox fx:id="mainCardContainer" maxWidth="350.0" style="-fx-background-color: #1A1A1A; -fx-border-color: #262626; -fx-border-width: 1;">
+        <VBox fx:id="mainCardContainer" maxWidth="350.0"
+              style="-fx-background-color: #1A1A1A;
+             -fx-border-color: #262626;
+             -fx-border-width: 1;
+             -fx-background-radius: 15;
+             -fx-border-radius: 15;">
             <children>
 
-                <!-- Header Bar -->
-                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0" style="-fx-background-color: #0A0A0A; -fx-border-color: transparent transparent #262626 transparent;">
+                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0"
+                      style="-fx-background-color: #0A0A0A;
+             -fx-border-color: transparent transparent #262626 transparent;
+             -fx-background-radius: 15 15 0 0;
+             -fx-border-radius: 15 15 0 0;">
                     <padding>
                         <Insets left="15.0" right="15.0" />
                     </padding>
@@ -48,7 +55,6 @@
                     </children>
                 </HBox>
 
-                <!-- Product Image Container -->
                 <StackPane fx:id="imageContainer" prefHeight="180.0" style="-fx-background-color: #000000;">
                     <children>
                         <ImageView fx:id="productImage" fitHeight="180.0" fitWidth="350.0" pickOnBounds="true" preserveRatio="true">
@@ -59,13 +65,11 @@
                     </children>
                 </StackPane>
 
-                <!-- Content Area -->
                 <VBox spacing="12.0">
                     <padding>
                         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
                     </padding>
                     <children>
-                        <!-- Title & Description -->
                         <VBox spacing="3.0">
                             <children>
                                 <Label fx:id="productNameLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="LAPTOP GAMING ASUS ROG ZEPHYRUS" wrapText="true">
@@ -81,7 +85,6 @@
                             </children>
                         </VBox>
 
-                        <!-- Pricing Section -->
                         <VBox spacing="4.0" style="-fx-background-color: #0A0A0A; -fx-padding: 8 12; -fx-border-color: transparent transparent transparent #ffd700; -fx-border-width: 0 0 0 3;">
                             <children>
                                 <VBox>
@@ -113,7 +116,6 @@
                             </children>
                         </VBox>
 
-                        <!-- Dates Section -->
                         <HBox spacing="0.0" style="-fx-border-color: #262626 transparent #262626 transparent; -fx-border-width: 1 0 1 0; -fx-padding: 8 0;">
                             <children>
                                 <VBox spacing="2.0" HBox.hgrow="ALWAYS">
@@ -147,13 +149,12 @@
                             </children>
                         </HBox>
 
-                        <!-- Action Buttons -->
-                        <VBox spacing="8.0">
+                        <HBox spacing="10.0">
                             <children>
-                                <Button fx:id="bidButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 2;" text="ĐẶT GIÁ" />
-                                <Button fx:id="detailsButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: white; -fx-border-radius: 2; -fx-padding: 10;" text="CHI TIẾT" />
+                                <Button fx:id="detailsButton" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: #555555; -fx-border-radius: 5; -fx-padding: 10; -fx-cursor: hand;" text="CHI TIẾT" />
+                                <Button fx:id="deleteButton" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" mnemonicParsing="false" style="-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 5; -fx-cursor: hand;" text="XÓA" />
                             </children>
-                        </VBox>
+                        </HBox>
                     </children>
                 </VBox>
             </children>

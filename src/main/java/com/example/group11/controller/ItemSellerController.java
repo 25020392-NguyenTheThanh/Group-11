@@ -13,16 +13,16 @@ import javafx.scene.shape.Circle;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-public class ItemController implements Initializable {
+public class ItemSellerController implements Initializable {
 
     @FXML
     private Label auctionIdLabel;
 
     @FXML
-    private Button bidButton;
+    private Label currentPriceLabel;
 
     @FXML
-    private Label currentPriceLabel;
+    private Button deleteButton;
 
     @FXML
     private Label descriptionLabel;

@@ -235,7 +235,7 @@ public class LoginController implements Initializable {
 
         // --- 4. Role Selection (ComboBox) ---
         ComboBox<String> roleCombo = new ComboBox<>();
-        roleCombo.setItems(FXCollections.observableArrayList("Admin", "Bidder", "Seller"));
+        roleCombo.setItems(FXCollections.observableArrayList("Bidder", "Seller"));
         roleCombo.setPromptText("Select your role");
         roleCombo.setMaxWidth(Double.MAX_VALUE);
         roleCombo.setStyle("-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 5px; -fx-font-size: 14px;");
