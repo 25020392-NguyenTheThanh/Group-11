@@ -1,252 +1,154 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
-<?import javafx.scene.chart.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.*?>
-<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 
-<BorderPane prefHeight="850.0" prefWidth="1300.0" style="-fx-background-color: #0e0e10;"
-            xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.example.group11.controller.LiveAuctionController">
+<BorderPane prefHeight="800.0" prefWidth="1280.0" style="-fx-background-color: #131315; -fx-font-family: 'Segoe UI', Inter, sans-serif;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
 
-    <!-- THANH NAVBAR TRÊN CÙNG -->
     <top>
-        <HBox alignment="CENTER_LEFT" prefHeight="75.0" spacing="20.0"
-              style="-fx-background-color: #1b1b1d; -fx-border-color: #2d2d30; -fx-border-width: 0 0 1 0;">
+        <HBox alignment="CENTER_LEFT" minHeight="80" spacing="20" style="-fx-background-color: #0f172a; -fx-border-color: #45464d; -fx-border-width: 0 0 1 0;">
             <padding>
-                <Insets left="30.0" right="30.0" />
+                <Insets left="40" right="40" />
             </padding>
-            <children>
-                <Button style="-fx-background-color: #2d2d30; -fx-text-fill: white; -fx-background-radius: 10; -fx-cursor: hand;" text="← Quay lại" />
-
-                <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
-                    <children>
-                        <Label style="-fx-text-fill: #ffb95f; -fx-font-weight: bold; -fx-font-size: 18;" text="HAMMER PORTAL" />
-                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 11;" text="Hệ thống đấu giá thời gian thực v2.0" />
-                    </children>
-                </VBox>
-
-                <HBox alignment="CENTER" spacing="12.0" style="-fx-background-color: #2d2d30; -fx-padding: 5 15; -fx-background-radius: 20;">
-                    <children>
-                        <VBox alignment="CENTER_RIGHT">
-                            <children>
-                                <Label style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;" text="Lê Anh Tuấn" />
-                                <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 10;" text="Số dư: $50,000" />
-                            </children>
-                        </VBox>
-                        <Circle fill="#ffb95f" radius="18.0" stroke="BLACK" strokeType="INSIDE" strokeWidth="0.0" />
-                    </children>
-                </HBox>
-            </children>
+            <Button style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16;" text="&lt;- Quay lại" />
+            <VBox spacing="2">
+                <Label style="-fx-text-fill: #FFC107; -fx-font-size: 24px; -fx-font-weight: bold;" text="ĐẤU GIÁ TRỰC TIẾP" />
+                <Label style="-fx-text-fill: #909097; -fx-font-size: 13px;" text="Theo dõi giá và tham gia đấu giá theo thời gian thực." />
+            </VBox>
         </HBox>
     </top>
 
     <center>
-        <ScrollPane fitToHeight="true" fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;">
-            <content>
-                <HBox spacing="30.0" style="-fx-background-color: #0e0e10;">
-                    <padding>
-                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
-                    </padding>
-                    <children>
+        <HBox spacing="24">
+            <padding>
+                <Insets bottom="24" left="40" right="40" top="24" />
+            </padding>
 
-                        <!-- KHUNG BÊN TRÁI: THÔNG TIN SẢN PHẨM -->
-                        <VBox minWidth="360.0" spacing="20.0">
-                            <children>
-                                <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 13; -fx-font-weight: bold;" text="SẢN PHẨM ĐANG ĐẤU" />
+            <VBox prefWidth="300" spacing="15" HBox.hgrow="ALWAYS">
+                <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 12px; -fx-font-weight: bold;" text="SẢN PHẨM ĐANG ĐẤU" />
 
-                                <VBox spacing="20.0" style="-fx-background-color: #1b1b1d; -fx-background-radius: 15; -fx-padding: 20; -fx-border-color: #2d2d30; -fx-border-radius: 15;">
-                                    <children>
-                                        <StackPane alignment="TOP_LEFT">
-                                            <children>
-                                                <ImageView fitWidth="320.0" pickOnBounds="true" preserveRatio="true">
-                                                    <image>
-                                                        <Image url="https://via.placeholder.com/400x400/1b1b1d/ffb95f?text=Rolex+Submariner" />
-                                                    </image>
-                                                </ImageView>
-                                                <Label style="-fx-background-color: rgba(0,0,0,0.6); -fx-text-fill: white; -fx-padding: 6 12; -fx-background-radius: 8; -fx-font-weight: bold; -fx-border-color: rgba(255,255,255,0.2); -fx-border-radius: 8;" text="Mã: RL001">
-                                                    <StackPane.margin>
-                                                        <Insets left="15.0" top="15.0" />
-                                                    </StackPane.margin>
-                                                </Label>
-                                            </children>
-                                        </StackPane>
+                <StackPane minHeight="300" style="-fx-background-color: #1b1b1d; -fx-border-color: #45464d; -fx-border-radius: 12; -fx-background-radius: 12;">
+                    <Label style="-fx-text-fill: #909097; -fx-text-alignment: center;" text="Hình ảnh sản phẩm&#10;(Rolex Submariner)" />
+                </StackPane>
 
-                                        <HBox alignment="CENTER" spacing="10.0">
-                                            <children>
-                                                <ImageView fitHeight="70.0" fitWidth="70.0" style="-fx-border-color: #ffb95f; -fx-border-width: 1.5; -fx-border-radius: 4;">
-                                                    <image><Image url="https://via.placeholder.com/70" /></image>
-                                                </ImageView>
-                                                <ImageView fitHeight="70.0" fitWidth="70.0" opacity="0.6">
-                                                    <image><Image url="https://via.placeholder.com/70" /></image>
-                                                </ImageView>
-                                                <ImageView fitHeight="70.0" fitWidth="70.0" opacity="0.6">
-                                                    <image><Image url="https://via.placeholder.com/70" /></image>
-                                                </ImageView>
-                                                <StackPane prefHeight="70.0" prefWidth="70.0" style="-fx-background-color: #2d2d30; -fx-background-radius: 4;">
-                                                    <children>
-                                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-weight: bold;" text="+12" />
-                                                    </children>
-                                                </StackPane>
-                                            </children>
-                                        </HBox>
-
-                                        <VBox spacing="8.0">
-                                            <children>
-                                                <Label style="-fx-text-fill: white; -fx-font-size: 24; -fx-font-weight: bold;" text="ROLEX SUBMARINER" />
-                                                <Text fill="#8e8e93" style="-fx-font-size: 14;" text="Mới 100% Fullbox - Bảo hành toàn cầu 5 năm" wrappingWidth="320.0" />
-
-                                                <Region prefHeight="10.0" />
-
-                                                <HBox alignment="CENTER_LEFT" spacing="8.0" style="-fx-cursor: hand;">
-                                                    <children>
-                                                        <Label style="-fx-text-fill: #ffb95f; -fx-font-weight: bold; -fx-font-size: 14;" text="XEM CHI TIẾT" />
-                                                        <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 16;" text="→" />
-                                                    </children>
-                                                </HBox>
-                                            </children>
-                                        </VBox>
-                                    </children>
-                                </VBox>
-                            </children>
-                        </VBox>
-
-                        <!-- KHUNG GIỮA: TRẠNG THÁI ĐẤU GIÁ VÀ BIỂU ĐỒ -->
-                        <VBox spacing="20.0" HBox.hgrow="ALWAYS">
-                            <children>
-                                <HBox alignment="CENTER_LEFT" style="-fx-background-color: #1b1b1d; -fx-background-radius: 15; -fx-padding: 15 20; -fx-border-color: #2d2d30; -fx-border-radius: 15;">
-                                    <children>
-                                        <HBox alignment="CENTER" spacing="8.0" style="-fx-background-color: rgba(219,68,85,0.1); -fx-border-color: #db4455; -fx-border-radius: 20; -fx-padding: 6 12;">
-                                            <children>
-                                                <Circle fill="#db4455" radius="4.0" />
-                                                <Label style="-fx-text-fill: #db4455; -fx-font-weight: bold; -fx-font-size: 11;" text="TRỰC TIẾP" />
-                                            </children>
-                                        </HBox>
-                                        <Region HBox.hgrow="ALWAYS" />
-                                        <HBox alignment="CENTER" spacing="15.0">
-                                            <children>
-                                                <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 11; -fx-font-weight: bold;" text="THỜI GIAN CÒN LẠI" />
-                                                <Label fx:id="timerLabel" style="-fx-text-fill: #ffb95f; -fx-font-size: 32; -fx-font-weight: bold; -fx-font-family: 'Monospaced';" text="00:28:45" />
-                                            </children>
-                                        </HBox>
-                                    </children>
-                                </HBox>
-
-                                <VBox alignment="CENTER" spacing="15.0"
-                                      style="-fx-background-color: #1b1b1d; -fx-background-radius: 15; -fx-border-color: #ffb95f; -fx-border-radius: 15; -fx-border-width: 1.5; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(255, 185, 95, 0.15), 15, 0.2, 0, 0);">
-                                    <children>
-                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 12; -fx-font-weight: bold;" text="GIÁ CAO NHẤT HIỆN TẠI" />
-                                        <Label fx:id="currentPriceLabel" style="-fx-text-fill: #ffb95f; -fx-font-size: 56; -fx-font-weight: bold;" text="/$42,500" />
-
-                                        <HBox alignment="CENTER" spacing="5.0">
-                                            <children>
-                                                <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 13;" text="Đang dẫn đầu: " />
-                                                <Label style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13;" text="/@anhtuan_123" />
-                                            </children>
-                                        </HBox>
-
-                                        <HBox alignment="CENTER" spacing="15.0">
-                                            <children>
-                                                <HBox alignment="CENTER" spacing="10.0" prefWidth="180.0" style="-fx-background-color: #242426; -fx-border-color: #2d2d30; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 12 15;">
-                                                    <children>
-                                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 16;" text="👁" />
-                                                        <Label style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;" text="1,845" />
-                                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 10; -fx-font-weight: bold;" text="NGƯỜI XEM" />
-                                                    </children>
-                                                </HBox>
-                                                <HBox alignment="CENTER" spacing="10.0" prefWidth="180.0" style="-fx-background-color: #242426; -fx-border-color: #2d2d30; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 12 15;">
-                                                    <children>
-                                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 14;" text="🔨" />
-                                                        <Label style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14;" text="142" />
-                                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 10; -fx-font-weight: bold;" text="LƯỢT ĐẶT" />
-                                                    </children>
-                                                </HBox>
-                                            </children>
-                                        </HBox>
-                                    </children>
-                                </VBox>
-
-                                <VBox style="-fx-background-color: #1b1b1d; -fx-background-radius: 15; -fx-padding: 20; -fx-border-color: #2d2d30; -fx-border-radius: 15;" VBox.vgrow="ALWAYS">
-                                    <children>
-                                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-padding: 0 0 15 0;">
-                                            <children>
-                                                <VBox spacing="3.0" HBox.hgrow="ALWAYS">
-                                                    <children>
-                                                        <Label style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13;" text="BIỂU ĐỒ XU HƯỚNG GIÁ (LIVE)" />
-                                                        <Label style="-fx-text-fill: #65666a; -fx-font-size: 10; -fx-font-weight: bold;" text="Y: GIÁ THẦU ($) | X: THỜI GIAN" />
-                                                    </children>
-                                                </VBox>
-                                                <Label style="-fx-text-fill: #ffb95f; -fx-font-weight: bold; -fx-font-size: 10; -fx-border-color: rgba(255,185,95,0.3); -fx-border-radius: 5; -fx-padding: 3 8; -fx-background-color: rgba(255,185,95,0.05); -fx-background-radius: 5;" text="REALTIME" />
-                                            </children>
-                                        </HBox>
-                                        <LineChart fx:id="priceChart" alternativeRowFillVisible="false" horizontalGridLinesVisible="true" legendVisible="false" verticalGridLinesVisible="false" prefHeight="220.0">
-                                            <xAxis><NumberAxis side="BOTTOM" tickLabelFill="#8e8e93" /></xAxis>
-                                            <yAxis><NumberAxis side="LEFT" tickLabelFill="#8e8e93" /></yAxis>
-                                        </LineChart>
-                                    </children>
-                                </VBox>
-                            </children>
-                        </VBox>
-
-                        <!-- KHUNG BÊN PHẢI: LỊCH SỬ VÀ BÀN ĐẶT GIÁ -->
-                        <VBox minWidth="380.0" spacing="20.0">
-                            <children>
-                                <VBox spacing="15.0" VBox.vgrow="ALWAYS" style="-fx-background-color: #1b1b1d; -fx-background-radius: 15; -fx-padding: 20; -fx-border-color: #2d2d30; -fx-border-radius: 15;">
-                                    <children>
-                                        <Label style="-fx-text-fill: white; -fx-font-weight: bold;" text="LỊCH SỬ ĐẶT GIÁ" />
-                                        <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;">
-                                            <content>
-                                                <VBox fx:id="historyContainer" spacing="12.0">
-                                                    <children>
-                                                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: rgba(255,185,95,0.05); -fx-padding: 10; -fx-background-radius: 10; -fx-border-color: #ffb95f; -fx-border-width: 0 0 0 3;">
-                                                            <children>
-                                                                <Circle fill="#8e8e93" radius="15.0" />
-                                                                <VBox HBox.hgrow="ALWAYS">
-                                                                    <children>
-                                                                        <Label style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;" text="anhtuan_123 (Bạn)" />
-                                                                        <Label style="-fx-text-fill: #8e8e93; -fx-font-size: 10;" text="Vừa xong" />
-                                                                    </children>
-                                                                </VBox>
-                                                                <Label style="-fx-text-fill: #ffb95f; -fx-font-weight: bold;" text="/$42,500" />
-                                                            </children>
-                                                        </HBox>
-                                                    </children>
-                                                </VBox>
-                                            </content>
-                                        </ScrollPane>
-                                    </children>
-                                </VBox>
-
-                                <VBox spacing="20.0" style="-fx-background-color: #1b1b1d; -fx-background-radius: 15; -fx-padding: 25; -fx-border-color: #ffb95f; -fx-border-radius: 15; -fx-border-width: 1;">
-                                    <children>
-                                        <Label style="-fx-text-fill: #ffb95f; -fx-font-weight: bold; -fx-font-size: 16;" text="BÀN ĐẶT GIÁ" />
-                                        <GridPane hgap="10.0" vgap="10.0">
-                                            <children>
-                                                <Button maxWidth="1.7976931348623157E308" onAction="#addBid100" style="-fx-background-color: #2d2d30; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="+$100" GridPane.columnIndex="0" />
-                                                <Button maxWidth="1.7976931348623157E308" onAction="#addBid500" style="-fx-background-color: #2d2d30; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="+$500" GridPane.columnIndex="1" />
-                                                <Button maxWidth="1.7976931348623157E308" onAction="#addBid1000" style="-fx-background-color: #2d2d30; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="+$1000" GridPane.columnIndex="2" />
-                                            </children>
-                                            <columnConstraints>
-                                                <ColumnConstraints hgrow="ALWAYS" />
-                                                <ColumnConstraints hgrow="ALWAYS" />
-                                                <ColumnConstraints hgrow="ALWAYS" />
-                                            </columnConstraints>
-                                        </GridPane>
-                                        <TextField fx:id="bidInputField" prefHeight="50.0" promptText="Nhập số tiền..."
-                                                   style="-fx-background-color: #0e0e10; -fx-text-fill: #ffb95f; -fx-border-color: #2d2d30; -fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 0 15; -fx-font-size: 16;" />
-                                        <Button maxWidth="1.7976931348623157E308" onAction="#handleConfirmBid" prefHeight="55.0"
-                                                style="-fx-background-color: #ffb95f; -fx-text-fill: #0e0e10; -fx-font-weight: bold; -fx-font-size: 18; -fx-background-radius: 12; -fx-cursor: hand;" text="XÁC NHẬN THẦU" />
-                                    </children>
-                                </VBox>
-                            </children>
-                        </VBox>
-
-                    </children>
+                <HBox spacing="8">
+                    <StackPane prefHeight="70" prefWidth="70" style="-fx-background-color: #353436; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4;" HBox.hgrow="ALWAYS" />
+                    <StackPane prefHeight="70" prefWidth="70" style="-fx-background-color: #353436; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4;" HBox.hgrow="ALWAYS" />
+                    <StackPane prefHeight="70" prefWidth="70" style="-fx-background-color: #353436; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4;" HBox.hgrow="ALWAYS" />
+                    <StackPane prefHeight="70" prefWidth="70" style="-fx-background-color: #353436; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4;" HBox.hgrow="ALWAYS">
+                        <Label style="-fx-text-fill: #e4e2e4;" text="+12" />
+                    </StackPane>
                 </HBox>
-            </content>
-        </ScrollPane>
+
+                <Label style="-fx-text-fill: #e4e2e4; -fx-font-size: 22px; -fx-font-weight: bold;" text="Rolex Submariner" />
+                <Label style="-fx-text-fill: #909097; -fx-font-size: 14px;" text="Mới 100% Fullbox - Bảo hành toàn cầu 5 năm" />
+                <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 13px; -fx-font-weight: bold;" text="Xem chi tiết -&gt;" />
+            </VBox>
+
+            <VBox prefWidth="500" spacing="20" HBox.hgrow="ALWAYS">
+                <HBox alignment="CENTER_LEFT" style="-fx-background-color: #1b1b1d; -fx-border-color: #45464d; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 15;">
+                    <Label style="-fx-text-fill: #ffb4ab; -fx-background-color: #3a0003; -fx-padding: 4 8; -fx-border-radius: 12; -fx-background-radius: 12; -fx-font-weight: bold; -fx-font-size: 11px;" text="● TRỰC TIẾP" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Label style="-fx-text-fill: #909097; -fx-font-size: 12px; -fx-padding: 0 10 0 0;" text="THỜI GIAN CÒN LẠI" />
+                    <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 24px; -fx-font-weight: bold;" text="00:28:45" />
+                </HBox>
+
+                <VBox alignment="CENTER" spacing="10" style="-fx-background-color: #1a1a1c; -fx-border-color: #45464d; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 24;">
+                    <Label style="-fx-text-fill: #909097; -fx-font-size: 12px;" text="GIÁ CAO NHẤT HIỆN TẠI" />
+                    <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 40px; -fx-font-weight: bold;" text="\$12,500" />
+                    <Label style="-fx-text-fill: #e4e2e4; -fx-font-size: 14px;" text="Đầu thầu: @anhtuan_123" />
+                    <Region prefHeight="10" />
+
+                    <HBox alignment="CENTER" spacing="15">
+                        <HBox alignment="CENTER" spacing="5">
+                            <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 14px; -fx-font-weight: bold;" text="👁 1,845" />
+                            <Label style="-fx-text-fill: #909097; -fx-font-size: 10px;" text="NGƯỜI XEM" />
+                        </HBox>
+                        <Region prefWidth="10" />
+                        <HBox alignment="CENTER" spacing="5">
+                            <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 14px; -fx-font-weight: bold;" text="🔨 142" />
+                            <Label style="-fx-text-fill: #909097; -fx-font-size: 10px;" text="LƯỢT ĐẶT" />
+                        </HBox>
+                    </HBox>
+                </VBox>
+
+                <VBox spacing="10" style="-fx-background-color: #1b1b1d; -fx-border-color: #45464d; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 15;" VBox.vgrow="ALWAYS">
+                    <Label style="-fx-text-fill: #909097; -fx-font-size: 12px; -fx-font-weight: bold;" text="BIỂU ĐỒ XU HƯỚNG GIÁ (Live)" />
+                    <LineChart createSymbols="true" legendVisible="false" style="-fx-background-color: transparent;">
+                        <xAxis>
+                            <NumberAxis autoRanging="false" lowerBound="1400" tickUnit="10" upperBound="1430" />
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis autoRanging="false" lowerBound="12000" tickUnit="100" upperBound="12600" />
+                        </yAxis>
+                    </LineChart>
+                </VBox>
+            </VBox>
+
+            <VBox prefWidth="400" spacing="20" HBox.hgrow="ALWAYS">
+                <VBox style="-fx-background-color: #1a1a1c; -fx-border-color: #45464d; -fx-border-radius: 12; -fx-background-radius: 12;" VBox.vgrow="ALWAYS">
+                    <Label style="-fx-text-fill: #909097; -fx-font-size: 12px; -fx-padding: 15; -fx-border-color: #45464d; -fx-border-width: 0 0 1 0;" text="LỊCH SỬ ĐẶT GIÁ" />
+                    <ScrollPane fitToWidth="true" style="-fx-background: #1a1a1c; -fx-background-color: transparent; -fx-control-inner-background: transparent; -fx-border-color: transparent;">
+                        <VBox spacing="10" style="-fx-padding: 15;">
+                            <HBox alignment="CENTER_LEFT" style="-fx-background-color: #ffb95f15; -fx-border-color: #ffb95f; -fx-border-width: 0 0 0 4; -fx-padding: 10; -fx-background-radius: 4;">
+                                <VBox spacing="2">
+                                    <Label style="-fx-text-fill: #e4e2e4; -fx-font-weight: bold; -fx-font-size: 13px;" text="\@anhtuan_123" />
+                                    <Label style="-fx-text-fill: #909097; -fx-font-size: 10px;" text="14:22:10" />
+                                </VBox>
+                                <Region HBox.hgrow="ALWAYS" />
+                                <Label style="-fx-text-fill: #ffb95f; -fx-font-weight: bold; -fx-font-size: 14px;" text="\$12,500" />
+                            </HBox>
+
+                            <HBox alignment="CENTER_LEFT" style="-fx-border-color: #45464d55; -fx-border-width: 1; -fx-padding: 10; -fx-border-radius: 4;">
+                                <VBox spacing="2">
+                                    <Label style="-fx-text-fill: #e4e2e4; -fx-font-weight: bold; -fx-font-size: 13px;" text="\@hoang_luxury" />
+                                    <Label style="-fx-text-fill: #909097; -fx-font-size: 10px;" text="14:21:45" />
+                                </VBox>
+                                <Region HBox.hgrow="ALWAYS" />
+                                <Label style="-fx-text-fill: #909097; -fx-font-weight: bold; -fx-font-size: 14px;" text="\$12,400" />
+                            </HBox>
+
+                            <HBox alignment="CENTER_LEFT" style="-fx-border-color: #45464d55; -fx-border-width: 1; -fx-padding: 10; -fx-border-radius: 4;">
+                                <VBox spacing="2">
+                                    <Label style="-fx-text-fill: #e4e2e4; -fx-font-weight: bold; -fx-font-size: 13px;" text="\@minh_pawn" />
+                                    <Label style="-fx-text-fill: #909097; -fx-font-size: 10px;" text="14:20:12" />
+                                </VBox>
+                                <Region HBox.hgrow="ALWAYS" />
+                                <Label style="-fx-text-fill: #909097; -fx-font-weight: bold; -fx-font-size: 14px;" text="\$12,350" />
+                            </HBox>
+                        </VBox>
+                    </ScrollPane>
+                </VBox>
+
+                <VBox spacing="15" style="-fx-background-color: #353436; -fx-border-color: #ffb95f; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 20;">
+                    <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 12px; -fx-font-weight: bold;" text="BÀN ĐẶT GIÁ" />
+
+                    <HBox spacing="10">
+                        <Button maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+\$100" HBox.hgrow="ALWAYS" />
+                        <Button maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+\$500" HBox.hgrow="ALWAYS" />
+                        <Button maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+\$1,000" HBox.hgrow="ALWAYS" />
+                    </HBox>
+
+                    <!-- PHẦN ĐÃ CHỈNH SỬA: THÊM KÍ HIỆU $ -->
+                    <HBox alignment="CENTER_LEFT" style="-fx-background-color: #131315; -fx-border-color: #45464d; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 15;">
+                        <TextField promptText="Enter amount..." style="-fx-background-color: transparent; -fx-text-fill: #ffb95f; -fx-font-size: 16px; -fx-padding: 15 0;" HBox.hgrow="ALWAYS" />
+                        <Label style="-fx-text-fill: #e4e2e4; -fx-font-size: 16px;" text="USD" />
+                    </HBox>
+
+                    <Button maxWidth="Infinity" style="-fx-background-color: #ffb95f; -fx-text-fill: #2a1700; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12; -fx-cursor: hand;" text="XÁC NHẬN THẦU" />
+                </VBox>
+            </VBox>
+        </HBox>
     </center>
 </BorderPane>

@@ -85,16 +85,16 @@ public class ForgotPasswordController implements Initializable {
         FXMLLoader loader = EquilibriumAnimation.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 
-    private void showSimpleAlert(String title, String content) {
+    @FXML
+    void handleBackToLogin(ActionEvent event) {
+        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
+    }
+
+    public static void showSimpleAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
-    }
-
-    @FXML
-    void handleBackToLogin(ActionEvent event) {
-        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 }

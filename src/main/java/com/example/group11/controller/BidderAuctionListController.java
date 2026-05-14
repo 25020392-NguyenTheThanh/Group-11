@@ -12,6 +12,8 @@ import javafx.scene.layout.VBox;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import static com.example.group11.controller.EquilibriumAnimation.setupMenuButtonUpdate;
+
 public class BidderAuctionListController implements Initializable {
 
     @FXML
@@ -81,24 +83,13 @@ public class BidderAuctionListController implements Initializable {
         setActiveStyle(btnDashboardS);
 
         // Xử lý cho MenuButton Trạng thái
-        setupMenuButtonUpdate(auctionStatus);
+        EquilibriumAnimation.setupMenuButtonUpdate(auctionStatus);
 
         // Xử lý cho MenuButton Sản phẩm
-        setupMenuButtonUpdate(auctionProduct);
+        EquilibriumAnimation.setupMenuButtonUpdate(auctionProduct);
 
     }
 
-
-    //  Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong
-    private void setupMenuButtonUpdate(MenuButton menuButton) {
-        for (MenuItem item : menuButton.getItems()) {
-            item.setOnAction(event -> {
-                menuButton.setText(item.getText().toUpperCase());
-                // Gọi logic lọc dữ liệu tại đây
-                System.out.println("Bidder đang lọc theo: " + item.getText());
-            });
-        }
-    }
 
     @FXML
     void handleSwitchTab(ActionEvent event) {

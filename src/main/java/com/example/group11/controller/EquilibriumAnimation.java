@@ -7,15 +7,21 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 public class EquilibriumAnimation {
 
@@ -144,5 +150,47 @@ public class EquilibriumAnimation {
         }
     }
 
+    // Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong
+    public static void setupMenuButtonUpdate(MenuButton menuButton) {
+        for (MenuItem item : menuButton.getItems()) {
+            item.setOnAction(event -> {
+                menuButton.setText(item.getText().toUpperCase());
+                // Khu vực xử lý logic lọc dữ liệu hoặc cập nhật trạng thái tương ứng
+                System.out.println("Seller/Bidder đang chọn: " + item.getText());
+            });
+        }
+    }
 
+    /**
+     * Cập nhật số lượng (Số nguyên) cho các Label như: Tổng sản phẩm, Lượt đấu giá.
+     */
+    public static void updateCount(Label label, int value) {
+        if (label != null) {
+            label.setText("🎁 "+NumberFormat.getIntegerInstance(Locale.US).format(value));
+            label.setStyle("-fx-text-fill: #2196F3;");
+        }
+    }
+
+    /**
+     * Cập nhật tiền tệ (Currency) cho các Label như: Tổng doanh thu, Giá chốt.
+     */
+    public static void updateCurrency(Label label, double value) {
+        if (label != null) {
+            String formatted = String.format("$%,.2f", value);
+            label.setText(formatted);
+            label.setStyle("-fx-text-fill: #FFC107; -fx-font-weight: bold;");
+        }
+    }
+
+    /**
+     * Phương thức chung để cập nhật trạng thái kèm màu sắc (Nếu bạn cần)
+     */
+    public static void updateStatus(Label label, String status, String colorHex) {
+        if (label != null) {
+            label.setText(status.toUpperCase());
+            label.setStyle("-fx-text-fill: " + colorHex + "; -fx-font-weight: bold;");
+        }
+    }
 }
+
+

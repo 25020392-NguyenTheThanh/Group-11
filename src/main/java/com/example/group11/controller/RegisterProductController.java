@@ -1,5 +1,10 @@
 package com.example.group11.controller;
 
+import com.auction.manager.ItemManager;
+import com.auction.model.item.Item;
+import com.auction.model.item.ItemStatus;
+import com.auction.pattern.factory.ElectronicsFactory;
+import com.auction.pattern.factory.ItemFactory;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -41,9 +46,34 @@ public class RegisterProductController implements Initializable {
     @FXML
     private Button submitButton;
 
+    private ItemManager itemManager;
+
+    private Item item;
+
+    private ItemFactory factory;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         setupMenuButtonUpdate(categoryMenuButton);
+
+        itemManager=ItemManager.getInstance();
+
+
+    }
+
+    private void  createProcduct () {
+        String name = productNameField.getText();
+        String description = descriptionArea.getText();  // mô tả chi tiết về sản phầm
+        String type = categoryMenuButton.getText();
+        double startingPrice=Double.parseDouble(startingPriceField.getText()); // giá khởi điểm
+
+
+    }
+
+    @FXML
+    void handleRegisterProduct () {
+
+
 
     }
 
@@ -71,4 +101,6 @@ public class RegisterProductController implements Initializable {
     void handleUploadImage() {
 
     }
+
+
 }

@@ -20,7 +20,7 @@
 <?import javafx.scene.shape.Rectangle?>
 <?import javafx.scene.text.Text?>
 
-<HBox fx:id="rootHBox" prefHeight="650.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
+<HBox fx:id="rootHBox" prefHeight="650.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
     <children>
         <!-- Cột Trái: Thông tin / Banner -->
         <VBox fx:id="door" alignment="TOP_CENTER" prefWidth="580.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px 40px 40px 40px;" HBox.hgrow="ALWAYS">
