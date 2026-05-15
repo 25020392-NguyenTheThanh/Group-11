@@ -1,8 +1,11 @@
 package com.example.group11;
 
+import com.auction.client.ServerConnection;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -10,13 +13,30 @@ import java.io.IOException;
 public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        FXMLLoader fxmlLoader1 = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
-        Scene scene1 = new Scene(fxmlLoader1.load(), 1100, 750);
-        stage.setTitle("Welcome to auction floor!");
-        stage.setScene(scene1);
+        // Kết nối tới server TRƯỚC khi mở bất kỳ màn hình nào
+        try {
+            ServerConnection.getInstance().connect();
+        } catch (IOException e) {
+            // Server chưa chạy — hiện thông báo lỗi
+            Alert alert = new Alert(Alert.AlertType.ERROR,
+                    "Không thể kết nối tới server!\nHãy chạy AuctionServer trước.", ButtonType.OK);
+            alert.showAndWait();
+            return; // thoát app
+        }
+
+        FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
+        Scene scene = new Scene(loader.load(), 1100, 750);
+        stage.setTitle("Welcome to Auction Floor!");
+        stage.setScene(scene);
+        stage.setOnCloseRequest(e -> {
+            try {
+                ServerConnection.getInstance().disconnect();
+            } catch (IOException ignored) {
+            }
+        });
         stage.show();
-
-
+    }
+}
 //        FXMLLoader fxmlLoader2 = new FXMLLoader(MainApplication.class.getResource(""));
 //        Scene scene2 = new Scene(fxmlLoader2.load(), 1100, 750);
 //        stage.setTitle("Auction List");
@@ -46,5 +66,3 @@ public class MainApplication extends Application {
 //        stage.setTitle("Auction floor of Seller");
 //        stage.setScene(scene6);
 //        stage.show();
-    }
-}

@@ -22,7 +22,7 @@ public class Response implements Serializable {
         r.message = message;
         return r;
     }
-    public boolean getSuccess(){ return success ;}
+    public boolean isSuccess(){ return success ;}
     public String getMessage(){ return message ; }
     public Object getData(){ return data ; }
 }

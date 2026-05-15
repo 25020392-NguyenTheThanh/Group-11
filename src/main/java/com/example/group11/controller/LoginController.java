@@ -1,8 +1,12 @@
 package com.example.group11.controller;
 
+import com.auction.client.ServerConnection;
 import com.auction.exception.AuthenticationException;
 import com.auction.manager.UserManager;
 import com.auction.model.user.User;
+import com.auction.network.LoginPayload;
+import com.auction.network.RequestType;
+import com.auction.network.Response;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -111,42 +115,29 @@ public class LoginController implements Initializable {
             return;
         }
 
-        // 2. Thực hiện đăng nhập
+        LoginPayload payload = new LoginPayload(userName , passWord);
 
-        if (loggedInUser != null) {
-            // Đăng nhập thành công
+        Response response = ServerConnection.getInstance().send(RequestType.LOGIN , payload);
+        if (response.isSuccess()){
+            User LoggedInuser = (User) response.getData();
             errorLabel.setVisible(false);
+            FXMLLoader loader = switch (loggedInUser.getRole()) {
+                case "BIDDER" -> EquilibriumAnimation.changeScene(event , "bidderAuctionList-view.fxml" , "Auction.floor");
+                case "SELLER" -> EquilibriumAnimation.changeScene(event , "sellerAuctionList-view.fxml" , "Auction.floor");
+                default -> null ;
+            };
 
-            String role = loggedInUser.getRole();
-            FXMLLoader loader;
-
-            switch (role) {
-                case "BIDDER":
-                    loader = EquilibriumAnimation.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
-                    break;
-
-                case "SELLER":
-                    loader = EquilibriumAnimation.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
-                    break;
-                default:
-                    throw new AuthenticationException("Role " + role + " is not recognized.");
-            }
-
-            if (loader != null) {
-                // Lấy controller của màn hình mới và truyền user sang
+            if (loader != null){
                 Object controller = loader.getController();
-                if (controller instanceof BidderAuctionListController) {
-                    ((BidderAuctionListController) controller).setUser(loggedInUser);
-                } else if (controller instanceof SellerAuctionListController) {
-                    ((SellerAuctionListController) controller).setUser(loggedInUser);
+                if (controller instanceof BidderAuctionListController c) {
+                    c.setUser(loggedInUser);
+                } else if (controller instanceof SellerAuctionListController c){
+                    c.setUser(loggedInUser);
+                } else {
+                    errorLabel.setText(response.getMessage());
+                    errorLabel.setVisible(true);
                 }
-
-            } else {
-                // 3. Đăng nhập thất bại
-                errorLabel.setText("Tên đăng nhập hoặc mật khẩu không chính xác.");
-                errorLabel.setVisible(true);
             }
-
         }
     }
 
