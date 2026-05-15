@@ -58,6 +58,7 @@ public class UserManager implements Serializable {
         for (User u : users) {
             if (u.getUsername().equals(username) &&
                     u.getPassword().equals(password)) {
+                u.login(password);
                 return u;
             }
         }

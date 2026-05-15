@@ -167,6 +167,12 @@ public class Auction implements Subject {
         notifyObservers(msg);
     }
 
+    private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException , ClassNotFoundException{
+        ois.defaultReadObject();
+        if (observers == null){
+            observers = new java.util.ArrayList<>();
+        }
+    }
     //  Getters
 
     public int                  getId()                { return id; }
