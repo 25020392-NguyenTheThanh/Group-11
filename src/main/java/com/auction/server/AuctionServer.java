@@ -23,6 +23,9 @@ public class AuctionServer {
         // Load dữ liệu từ file khi server khởi động
         AuctionManager.getInstance().loadFromDisk();
         UserManager.getInstance().loadFromDisk();
+
+        new AuctionTimer(this).start();
+
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
