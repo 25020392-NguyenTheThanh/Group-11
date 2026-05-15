@@ -14,19 +14,10 @@
 
 <VBox alignment="CENTER" spacing="10" style="-fx-background-color: #131313;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.ItemSellerController">
     <children>
-        <VBox fx:id="mainCardContainer" maxWidth="350.0"
-              style="-fx-background-color: #1A1A1A;
-             -fx-border-color: #262626;
-             -fx-border-width: 1;
-             -fx-background-radius: 15;
-             -fx-border-radius: 15;">
+        <VBox fx:id="mainCardContainer" maxWidth="350.0" style="-fx-background-color: #1A1A1A;              -fx-border-color: #262626;              -fx-border-width: 1;              -fx-background-radius: 15;              -fx-border-radius: 15;">
             <children>
 
-                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0"
-                      style="-fx-background-color: #0A0A0A;
-             -fx-border-color: transparent transparent #262626 transparent;
-             -fx-background-radius: 15 15 0 0;
-             -fx-border-radius: 15 15 0 0;">
+                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0" style="-fx-background-color: #0A0A0A;              -fx-border-color: transparent transparent #262626 transparent;              -fx-background-radius: 15 15 0 0;              -fx-border-radius: 15 15 0 0;">
                     <padding>
                         <Insets left="15.0" right="15.0" />
                     </padding>
@@ -151,8 +142,8 @@
 
                         <HBox spacing="10.0">
                             <children>
-                                <Button fx:id="detailsButton" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: #555555; -fx-border-radius: 5; -fx-padding: 10; -fx-cursor: hand;" text="CHI TIẾT" />
-                                <Button fx:id="deleteButton" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS" mnemonicParsing="false" style="-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 5; -fx-cursor: hand;" text="XÓA" />
+                                <Button fx:id="detailsButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: #555555; -fx-border-radius: 5; -fx-padding: 10; -fx-cursor: hand;" text="CHI TIẾT" HBox.hgrow="ALWAYS" />
+                                <Button fx:id="deleteButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleDeleteAuction" style="-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 5; -fx-cursor: hand;" text="XÓA" HBox.hgrow="ALWAYS" />
                             </children>
                         </HBox>
                     </children>

@@ -82,12 +82,12 @@ public class ForgotPasswordController implements Initializable {
         currentUser.setPassWord(pass);
         showSimpleAlert("Thành công", "Mật khẩu của bạn đã được thay đổi.");
 
-        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
+        FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 
     @FXML
     void handleBackToLogin(ActionEvent event) {
-        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
+        FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 
     public static void showSimpleAlert(String title, String content) {

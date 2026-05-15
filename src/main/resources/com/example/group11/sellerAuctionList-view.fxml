@@ -27,6 +27,7 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.collections.FXCollections?>
 <?import java.lang.String?>
+<?import javafx.scene.image.ImageView?>
 <StackPane alignment="TOP_RIGHT" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.SellerAuctionListController">
     <children>
 
@@ -267,14 +268,20 @@
                                                         </VBox>
                                                         <VBox spacing="10.0">
                                                             <Label text="HÌNH ẢNH SẢN PHẨM" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
-                                                            <StackPane prefHeight="220.0" style="-fx-background-color: #0A192F; -fx-border-color: #ffd700; -fx-border-style: dashed; -fx-border-radius: 12; -fx-border-width: 2;">
+                                                            <StackPane fx:id="imageDropzone" onMouseClicked="#handleSelectImage" prefHeight="220.0" style="-fx-background-color: #0A192F; -fx-border-color: #ffd700; -fx-border-style: dashed; -fx-border-radius: 12; -fx-border-width: 2; -fx-cursor: hand;">
                                                                 <children>
-                                                                    <VBox alignment="CENTER" spacing="10.0">
+                                                                    <!-- Nội dung hiển thị khi chưa có ảnh -->
+                                                                    <VBox fx:id="uploadPrompt" alignment="CENTER" spacing="10.0">
                                                                         <children>
-                                                                            <Button fx:id="addImageButton" style="-fx-background-color: transparent; -fx-text-fill: #ffc107;-fx-font-size: 40px; -fx-cursor: hand;" text="📷+" />
-                                                                            <Label text="Nhấp vào để tải lên hình ảnh sản phẩm" textFill="#ffd700"><font><Font name="System Bold" size="13.0" /></font></Label>
+                                                                            <Label style="-fx-text-fill: #ffc107; -fx-font-size: 40px;" text="📷+" />
+                                                                            <Label text="Nhấp vào để tải lên hình ảnh sản phẩm" textFill="#ffd700">
+                                                                                <font><Font name="System Bold" size="13.0" /></font>
+                                                                            </Label>
                                                                         </children>
                                                                     </VBox>
+
+                                                                    <!-- ImageView để hiển thị ảnh xem trước (mặc định ẩn) -->
+                                                                    <ImageView fx:id="productImageView" fitHeight="200.0" fitWidth="350.0" pickOnBounds="true" preserveRatio="true" visible="false" />
                                                                 </children>
                                                             </StackPane>
                                                         </VBox>
@@ -324,7 +331,7 @@
                                                                     </children>
                                                                 </VBox>
                                                                 <Region VBox.vgrow="ALWAYS" />
-                                                                <Button fx:id="submitButton" maxWidth="1.7976931348623157E308" prefHeight="55.0" style="-fx-background-color: #ffc107; -fx-text-fill: #3f2e00; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="XÁC NHẬN ĐĂNG KÝ" />
+                                                                <Button fx:id="submitButton" onAction="#handleSubmitProduct" maxWidth="1.7976931348623157E308" prefHeight="55.0" style="-fx-background-color: #ffc107; -fx-text-fill: #3f2e00; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="XÁC NHẬN ĐĂNG KÝ" />
                                                             </children>
                                                         </VBox>
                                                     </children>

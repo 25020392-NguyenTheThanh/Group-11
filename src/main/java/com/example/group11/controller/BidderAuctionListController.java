@@ -12,8 +12,6 @@ import javafx.scene.layout.VBox;
 import java.net.URL;
 import java.util.ResourceBundle;
 
-import static com.example.group11.controller.EquilibriumAnimation.setupMenuButtonUpdate;
-
 public class BidderAuctionListController implements Initializable {
 
     @FXML
@@ -83,10 +81,10 @@ public class BidderAuctionListController implements Initializable {
         setActiveStyle(btnDashboardS);
 
         // Xử lý cho MenuButton Trạng thái
-        EquilibriumAnimation.setupMenuButtonUpdate(auctionStatus);
+        GenerationSupport.setupMenuButtonUpdate(auctionStatus);
 
         // Xử lý cho MenuButton Sản phẩm
-        EquilibriumAnimation.setupMenuButtonUpdate(auctionProduct);
+        GenerationSupport.setupMenuButtonUpdate(auctionProduct);
 
     }
 

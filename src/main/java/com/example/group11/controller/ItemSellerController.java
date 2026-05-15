@@ -1,6 +1,7 @@
 package com.example.group11.controller;
 
 import com.auction.manager.ItemManager;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
@@ -76,7 +77,9 @@ public class ItemSellerController implements Initializable {
 
     }
 
-    private void handleDeleteAction() {
+    //public void addItem (String)
+    @FXML
+    private void handleDeleteAuction(ActionEvent event) {
         // 1. Tạo một Alert xác nhận
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Xác nhận xóa");
