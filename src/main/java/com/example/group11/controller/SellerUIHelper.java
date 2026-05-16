@@ -2,6 +2,7 @@ package com.example.group11.controller;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
@@ -31,6 +32,31 @@ public class SellerUIHelper {
 
     @FXML
     public static VBox analyticsPane;
+
+    public static boolean needsRefresh = true;
+    // Tách riêng logic load dữ liệu để handleSwitchTab gọn hơn
+    public static void executeTabLogic(String buttonId, GridPane contentGrid, SellerAuctionListController controller) {
+        if (controller == null) return;
+
+        switch (buttonId) {
+            case "btnMyListings":
+                if (contentGrid.getChildren().isEmpty() || needsRefresh) {
+                    controller.loadMyListingView();
+                    needsRefresh = false;
+                }
+                break;
+            case "btnAnalytics":
+                controller.loadAnalyticsData();
+                break;
+            case "btnOrderHistory":
+                System.out.println("Tab Shipping đang phát triển");
+                break;
+        }
+    }
+
+    public static void setNeedsRefresh(boolean refresh) {
+        needsRefresh = refresh;
+    }
 
     // Hiển thị một Pane và ẩn tất cả các Pane khác trong StackPane
     public static void showView(VBox viewToShow, List<VBox> allViews) {
@@ -85,6 +111,5 @@ public class SellerUIHelper {
         }
         return null;
     }
-
 
 }
