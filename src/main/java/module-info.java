@@ -13,6 +13,7 @@ module com.example.group11 {
     requires java.desktop;
     requires jdk.jfr;
     requires org.junit.jupiter.api;
+    requires java.sql;
     // jdk.jsobject;
 
     opens com.example.group11 to javafx.fxml;

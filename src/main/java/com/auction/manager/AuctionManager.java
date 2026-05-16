@@ -1,7 +1,10 @@
 package com.auction.manager;
 
+import com.auction.data.AuctionDAO;
+import com.auction.data.ItemDAO;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
+import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
 
@@ -17,7 +20,10 @@ public class AuctionManager implements Serializable {
     private static volatile AuctionManager instance ;
     // FIX: đổi ArrayList → ConcurrentHashMap để an toàn khi nhiều thread truy cập
     private final ConcurrentHashMap<Integer, Auction> auctions = new ConcurrentHashMap<>();   // Danh sách các phiên đấu
-    private AtomicInteger auctionCounter = new AtomicInteger(1);              // tránh Race condition khi counter++
+    private AtomicInteger auctionCounter = new AtomicInteger(1);// tránh Race condition khi counter++
+    private final AuctionDAO auctionDAO = new AuctionDAO();
+    private final ItemDAO itemDAO = new ItemDAO();
+
     private AuctionManager(){}
 
     public static AuctionManager getInstance(){
@@ -40,6 +46,11 @@ public class AuctionManager implements Serializable {
         int id = auctionCounter.getAndIncrement();
         Auction auction = new Auction(id, item, endTime, minBidStep);
         item.setStatus(ItemStatus.IN_AUCTION);
+        itemDAO.updateStatus(item.getId() , "IN_AUCTION");
+        int realId = auctionDAO.save(auction); // lưu vào MySQL
+        if (realId == -1 ) return null ;
+
+        Auction saved = new Auction(realId , item , endTime , minBidStep);
         auctions.put(id, auction);
         System.out.printf("Phiên #%d tạo cho [%s] — kết thúc: %s%n", id, item.getName(), endTime);
         return auction;
@@ -60,35 +71,32 @@ public class AuctionManager implements Serializable {
         if (a == null) System.out.println("Phiên không tồn tại: " + id);
         return a;
     }
-
-    public void loadFromDisk() {
-        File f = new File("auctionmanager.dat");
-        if (f.exists()) {
-            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(f))) {
-                // Đọc HashMap từ file
-                HashMap<Integer, Auction> loadedMap = (HashMap<Integer, Auction>) ois.readObject();
-                int loadedCounter = ois.readInt();
-
-                // Chuyển sang ConcurrentHashMap
-                auctions.clear();
-                auctions.putAll(loadedMap);
-                auctionCounter.set(loadedCounter);
-
-            } catch (Exception e) {
-                System.out.println("Lỗi load: " + e.getMessage());
-            }
+    // gọi sau mỗi lần placeBid - lưu vào MySQL
+    public void onBidPlaced(Auction auction , BidTransaction tx){
+        auctionDAO.update(auction);
+        auctionDAO.saveBidTransaction(auction.getId() , tx);
+    }
+    //Gọi khi phiên kết thúc
+    public void onAuctionFinished(Auction auction){
+        auctionDAO.update(auction);
+        if (auction.getStatus() == AuctionStatus.FINISHED ||
+            auction.getStatus() == AuctionStatus.CANCELED) {
+            itemDAO.updateStatus(auction.getItem().getId() , "SOLD");
         }
     }
 
-    public void saveToDisk() {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("auctionmanager.dat"))) {
-            // Chuyển ConcurrentHashMap -> HashMap để lưu
-            HashMap<Integer, Auction> saveMap = new HashMap<>(auctions);
-            oos.writeObject(saveMap);
-            oos.writeInt(auctionCounter.get());
-            System.out.println("Đã lưu " + auctions.size() + " phiên đấu giá");
-        } catch (Exception e) {
-            System.out.println("Lỗi lưu: " + e.getMessage());
+    public void loadFromDB(){
+        List<Auction> list = auctionDAO.findAll(itemDAO);
+        auctions.clear();
+        list.forEach(a -> auctions.put(a.getId(),a));
+        if (!list.isEmpty()){
+            int maxId = list.stream().mapToInt(Auction::getId).max().getAsInt();
+            auctionCounter.set(maxId + 1);
         }
+        System.out.println("Đã load " + auctions.size() + " auctions từ MySQL");
     }
+    public void saveAuction(Auction auction){
+        auctionDAO.update(auction);
+    }
+
 }
