@@ -1,18 +1,20 @@
 package com.auction.manager;
 
-import com.auction.model.item.*;
+import com.auction.data.DataManager;
+import com.auction.model.item.Item;
+import com.auction.model.item.ItemStatus;
 import com.auction.pattern.factory.ItemFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class ItemManager {
+
     private static volatile ItemManager instance;
+
+    // Runtime cache — key = itemId
     private final ConcurrentHashMap<Integer, Item> items = new ConcurrentHashMap<>();
-    private final AtomicInteger itemCounter = new AtomicInteger(1);         // tránh Rase condition khi counter++
 
     private ItemManager() {}
 
@@ -27,32 +29,59 @@ public class ItemManager {
         return instance;
     }
 
-    // tạo sản phẩm mới
-    //nhận ItemFactory thay vì String type
+    /**
+     * Tạo Item mới bằng factory, lưu vào MySQL, giữ trong RAM.
+     * return Item vừa tạo (id là id thật từ DB).
+     */
     public Item createItem(ItemFactory factory, int ownerId,
                            String name, String description, double startingPrice) {
-        int id = itemCounter.getAndIncrement();
-        Item item = factory.createItem(id, ownerId, name, description, startingPrice);
-        items.put(id, item);
+        // Tạo tạm với id=0 để factory build đúng kiểu
+        Item temp = factory.createItem(0, ownerId, name, description, startingPrice);
+
+        // Lưu vào MySQL — nhận id thật
+        int dbId = DataManager.getInstance().addItem(temp);
+        if (dbId == -1) {
+            System.out.println("Lỗi lưu item vào DB: " + name);
+            return null;
+        }
+
+        // Tạo lại với id thật
+        Item item = factory.createItem(dbId, ownerId, name, description, startingPrice);
+        items.put(dbId, item);
+
         System.out.println("Sản phẩm mới: " + item.getInfo());
         return item;
     }
 
+    // Lấy item theo id — kiểm tra RAM trước, fallback về MySQL.
+    public Item findItem(int id) {
+        Item item = items.get(id);
+        if (item != null) return item;
+
+        // Fallback: tìm trong DB rồi cache lại
+        List<Item> all = DataManager.getInstance().getAllItems();
+        for (Item i : all) {
+            if (i.getId() == id) {
+                items.put(id, i);
+                return i;
+            }
+        }
+        System.out.println("Sản phẩm không tồn tại: " + id);
+        return null;
+    }
+
+    // Lấy tất cả item đang AVAILABLE.
     public List<Item> getAvailableItems() {
         return items.values().stream()
                 .filter(i -> i.getStatus() == ItemStatus.AVAILABLE)
                 .collect(Collectors.toList());
     }
-    public List<Item> getByOwner(int ownerId) {
-        return items.values().stream()
-                .filter(i -> i.getOwnerId() == ownerId)
-                .collect(Collectors.toList());
-    }
 
-    public Item findItem(int id) {
-        Item item = items.get(id);
-        if (item == null) System.out.println("Sản phẩm không tồn tại: " + id);
-        return item;
+    // Lấy item theo owner — từ MySQL để đảm bảo đủ dữ liệu ngay cả sau restart.
+    public List<Item> getByOwner(int ownerId) {
+        List<Item> fromDb = DataManager.getInstance().getItemsBySeller(ownerId);
+        // Đồng bộ cache
+        fromDb.forEach(i -> items.put(i.getId(), i));
+        return fromDb;
     }
 }
-
