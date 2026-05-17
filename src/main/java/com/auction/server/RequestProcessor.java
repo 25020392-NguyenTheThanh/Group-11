@@ -83,8 +83,13 @@ public class RequestProcessor {
             Bidder bidder = (Bidder) user;
             auction.placeBid(bidder, payload.amount);
 
-            BidTransaction tx = auction.getBidHistory().get(auction.getBidHistory().size() - 1);
-            AuctionManager.getInstance().onBidPlaced(auction , tx);
+            // Ghi lịch sử bid vào MySQL
+            AuctionManager.getInstance().recordBid(
+                    payload.auctionId,
+                    bidder.getId(),
+                    bidder.getUsername(),
+                    payload.amount
+            );
             return Response.ok("Đặt giá thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
@@ -129,7 +134,8 @@ public class RequestProcessor {
         if (auction == null) return Response.error("Không thể tạo phiên - sản phẩm không ở trạng thái AVAILABLE");
 
         auction.start(); // chuyển sang RUNNING
-        AuctionManager.getInstance().saveAuction(auction);
+        // Đồng bộ trạng thái RUNNING vào DB
+        com.auction.data.DataManager.getInstance().startAuction(auction.getId());
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại

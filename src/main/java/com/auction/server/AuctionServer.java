@@ -21,10 +21,6 @@ public class AuctionServer {
     private final ExecutorService threadPool = Executors.newCachedThreadPool();
 
     public void start() {
-        // Load dữ liệu từ file khi server khởi động
-        AuctionManager.getInstance().loadFromDB();
-        UserManager.getInstance().loadFromDB();
-        ItemManager.getInstance().loadFromDB();
 
         new AuctionTimer(this).start();
 
