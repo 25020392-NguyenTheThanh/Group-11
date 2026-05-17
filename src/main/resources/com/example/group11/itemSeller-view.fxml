@@ -38,11 +38,6 @@
                                 </Label>
                             </children>
                         </HBox>
-                        <Label fx:id="timerLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="00:15:30">
-                            <font>
-                                <Font size="12.0" />
-                            </font>
-                        </Label>
                     </children>
                 </HBox>
 
@@ -76,6 +71,21 @@
                             </children>
                         </VBox>
 
+                        <HBox alignment="CENTER_LEFT" spacing="6.0" style="-fx-background-color: #222222; -fx-padding: 6 10; -fx-background-radius: 5;">
+                            <children>
+                                <Label fx:id="attributeKeyLabel" style="-fx-text-fill: #ffd700; -fx-font-weight: bold;" text="THƯƠNG HIỆU:">
+                                    <font>
+                                        <Font size="11.0" />
+                                    </font>
+                                </Label>
+                                <Label fx:id="attributeValueLabel" style="-fx-text-fill: white;" text="ASUS">
+                                    <font>
+                                        <Font size="11.0" />
+                                    </font>
+                                </Label>
+                            </children>
+                        </HBox>
+
                         <VBox spacing="4.0" style="-fx-background-color: #0A0A0A; -fx-padding: 8 12; -fx-border-color: transparent transparent transparent #ffd700; -fx-border-width: 0 0 0 3;">
                             <children>
                                 <VBox>
@@ -90,55 +100,8 @@
                                         </font>
                                     </Label>
                                 </VBox>
-                                <VBox spacing="0.0">
-                                    <children>
-                                        <Label style="-fx-text-fill: #ffd700; -fx-font-weight: bold;" text="GIÁ HIỆN TẠI CAO NHẤT">
-                                            <font>
-                                                <Font size="9.0" />
-                                            </font>
-                                        </Label>
-                                        <Label fx:id="currentPriceLabel" style="-fx-text-fill: #ffd700; -fx-font-weight: bold;" text="55.000.000 đ">
-                                            <font>
-                                                <Font size="20.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
                             </children>
                         </VBox>
-
-                        <HBox spacing="0.0" style="-fx-border-color: #262626 transparent #262626 transparent; -fx-border-width: 1 0 1 0; -fx-padding: 8 0;">
-                            <children>
-                                <VBox spacing="2.0" HBox.hgrow="ALWAYS">
-                                    <children>
-                                        <Label style="-fx-text-fill: #d0c6ab;" text="BẮT ĐẦU">
-                                            <font>
-                                                <Font size="8.0" />
-                                            </font>
-                                        </Label>
-                                        <Label fx:id="startTimeLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="10:00 - 10/05/2026">
-                                            <font>
-                                                <Font size="11.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
-                                <VBox spacing="2.0" style="-fx-border-color: transparent transparent transparent #262626; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 15;" HBox.hgrow="ALWAYS">
-                                    <children>
-                                        <Label style="-fx-text-fill: #d0c6ab;" text="KẾT THÚC">
-                                            <font>
-                                                <Font size="8.0" />
-                                            </font>
-                                        </Label>
-                                        <Label fx:id="endTimeLabel" style="-fx-text-fill: white; -fx-font-weight: bold;" text="14:00 - 15/05/2026">
-                                            <font>
-                                                <Font size="11.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
-                            </children>
-                        </HBox>
 
                         <HBox spacing="10.0">
                             <children>

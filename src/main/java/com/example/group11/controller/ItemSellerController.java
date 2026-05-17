@@ -18,15 +18,10 @@ import java.net.URL;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
-import static com.example.group11.controller.ForgotPasswordController.showSimpleAlert;
-
 public class ItemSellerController implements Initializable {
 
     @FXML
     private Label auctionIdLabel;
-
-    @FXML
-    private Label currentPriceLabel;
 
     @FXML
     private Button deleteButton;
@@ -36,9 +31,6 @@ public class ItemSellerController implements Initializable {
 
     @FXML
     private Button detailsButton;
-
-    @FXML
-    private Label endTimeLabel;
 
     @FXML
     private StackPane imageContainer;
@@ -53,9 +45,6 @@ public class ItemSellerController implements Initializable {
     private Label productNameLabel;
 
     @FXML
-    private Label startTimeLabel;
-
-    @FXML
     private Label startingPriceLabel;
 
     @FXML
@@ -66,9 +55,6 @@ public class ItemSellerController implements Initializable {
 
     @FXML
     private Label statusLabel;
-
-    @FXML
-    private Label timerLabel;
 
     private ItemManager itemManager;
 
@@ -108,7 +94,7 @@ public class ItemSellerController implements Initializable {
         System.out.println("Đang xóa mục: " + auctionIdLabel.getText());
 
         // Ví dụ: Thông báo sau khi xóa thành công
-        showSimpleAlert("Thông báo", "Đã xóa thành công!");
+        NotificationController.showAlert("Thông báo", "Đã xóa thành công!");
 
         // Có thể thêm logic ẩn/xóa mainCardContainer khỏi UI cha tại đây
     }

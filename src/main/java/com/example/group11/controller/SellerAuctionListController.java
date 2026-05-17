@@ -1,5 +1,6 @@
 package com.example.group11.controller;
 
+import com.auction.model.item.Item;
 import com.auction.model.user.User;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -20,6 +21,7 @@ import javafx.stage.FileChooser;
 import java.io.File;
 import java.net.URL;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -170,6 +172,9 @@ public class SellerAuctionListController implements Initializable {
     @FXML
     private Label walletBalance;
 
+    @FXML
+    private VBox dynamicAttributesContainer;
+
     private VBox lastView;
 
     private Button lastButton;
@@ -186,6 +191,9 @@ public class SellerAuctionListController implements Initializable {
     private Map<String, VBox> viewMapping;
 
     private User user;
+
+    // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
+    private final List<AuctionItemMock> auctionItems = new ArrayList<>(AuctionItemMock.getMockList());
 
     public void setUser(User user) {
         this.user = user;
@@ -220,6 +228,8 @@ public class SellerAuctionListController implements Initializable {
         GenerationSupport.setupMenuButtonUpdate(filterSort);
         GenerationSupport.setupMenuButtonUpdate(filterStatus);
         GenerationSupport.setupMenuButtonUpdate(categoryMenuButton);
+
+        setupCategoryMenuItems();
 
     }
 
@@ -278,20 +288,22 @@ public class SellerAuctionListController implements Initializable {
         // 1. Xóa sạch các card cũ trong lưới để tránh trùng lặp
         contentGrid.getChildren().clear();
 
+
+
         // 2. Giả lập danh sách dữ liệu (Sau này bạn sẽ thay bằng List<AuctionItem> từ database)
-        // Dữ liệu mẫu dựa trên ảnh "Laptop Gaming ASUS" bạn cung cấp
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < auctionItems.size(); i++) {
+            AuctionItemMock item = auctionItems.get(i);
+
+            // Gọi Factory đúc Card truyền đầy đủ thuộc tính từ đối tượng Mock
             VBox productCard = ProductCardFactory.createProductCard(
-                    "AU-2026-8899", // auctionId [cite: 209]
-                    "LAPTOP GAMING ASUS ROG ZEPHYRUS", // productName
-                    "Chip M3 Max, 32GB RAM, SSD 1TB, màn hình 120Hz...", // description
-                    "30.000.000", // startingPrice
-                    "55.000.000", // currentPrice
-                    "10:00 - 10/05/2026", // startTime
-                    "14:00 - 15/05/2026", // endTime
-                    "RUNNING", // status
-                    "00:15:30", // timer
-                    "https://your-image-url.com/laptop.png", // imageUrl
+                    item.getId(),
+                    item.getName(),
+                    item.getDesc(),
+                    item.getStartPrice(),
+                    item.getAttributeKey(),
+                    item.getAttributeValue(),
+                    item.getStatus(),
+                    item.getImageUrl(),
                     (cardNode) -> {
                         // HÀM CALLBACK: Đoạn code này chỉ chạy khi người dùng bấm "Đồng ý" ở Alert bên kia
                         this.contentGrid.getChildren().remove(cardNode);
@@ -380,6 +392,56 @@ public class SellerAuctionListController implements Initializable {
         // 3. Đổ dữ liệu vào bảng: orderTable.setItems(orderList);
 
         System.out.println("Đang tải dữ liệu lịch sử đơn hàng...");
+    }
+
+    /**
+     * Cài đặt các danh mục bên trong MenuButton và lắng nghe sự kiện tuyển chọn
+     */
+    private void setupCategoryMenuItems() {
+        MenuItem menuItemElectronics = new MenuItem("Electronics");
+        MenuItem menuItemVehicle = new MenuItem("Vehicle");
+        MenuItem menuItemArt = new MenuItem("Art");
+
+        // Gắn logic xử lý hiển thị nhãn & gợi ý nhập dựa trên file thiết kế của bạn
+        menuItemElectronics.setOnAction(e -> handleCategorySelection("Electronics", "THƯƠNG HIỆU (BRAND)", "Ví dụ: ASUS, Apple, Samsung..."));
+        menuItemVehicle.setOnAction(e -> handleCategorySelection("Vehicle", "NĂM SẢN XUẤT (YEAR)", "Ví dụ: 2024, 2025..."));
+        menuItemArt.setOnAction(e -> handleCategorySelection("Art", "NGHỆ SĨ (ARTIST)", "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh..."));
+
+        // Nạp các MenuItem này vào trong MenuButton giao diện
+        categoryMenuButton.getItems().setAll(menuItemElectronics, menuItemVehicle, menuItemArt);
+    }
+
+    /**
+     * Xử lý thay đổi giao diện form nhập động tương ứng với danh mục được chọn
+     */
+    private void handleCategorySelection(String categoryName, String labelText, String promptText) {
+        // 1. Cập nhật text hiển thị trên MenuButton
+        categoryMenuButton.setText(categoryName);
+
+        // 2. Xóa các thuộc tính cũ đang hiển thị (nếu có)
+        if (dynamicAttributesContainer != null) {
+            dynamicAttributesContainer.getChildren().clear();
+
+            // 3. Tạo VBox nhỏ để bọc Label và TextField mới
+            VBox fieldGroup = new VBox(5.0); // spacing = 5
+
+            // 4. Tạo Label (Áp dụng đúng style thiết kế)
+            Label dynamicLabel = new Label(labelText.toUpperCase());
+            dynamicLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+            // 5. Tạo TextField (Áp dụng đúng style input fields dark-theme của hệ thống)
+            TextField dynamicTextField = new TextField();
+            dynamicTextField.setPromptText(promptText);
+            dynamicTextField.setPrefHeight(45.0);
+            dynamicTextField.setStyle("-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8;");
+
+            // Đặt ID cố định để sau này dễ dàng gọi hàm .lookup() lấy dữ liệu ra
+            dynamicTextField.setId("customAttributeField");
+
+            // 6. Đưa Label và TextField vào nhóm, rồi đẩy vào container chính
+            fieldGroup.getChildren().addAll(dynamicLabel, dynamicTextField);
+            dynamicAttributesContainer.getChildren().add(fieldGroup);
+        }
     }
 
     @FXML

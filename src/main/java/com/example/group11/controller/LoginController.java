@@ -68,7 +68,6 @@ public class LoginController implements Initializable {
 
     private UserManager userManager;
 
-
     @FXML
     private TextField visiblePassword;
 
@@ -258,7 +257,6 @@ public class LoginController implements Initializable {
             }
 
         });
-
 
         // --- Nút Quay lại Login ---
         HBox footer = new HBox(5);

@@ -273,6 +273,12 @@
                                                                             <MenuItem text="Electronics" /><MenuItem text="Art" /><MenuItem text="Vehicle" />
                                                                         </items>
                                                                     </MenuButton>
+
+                                                                    <VBox fx:id="dynamicAttributesContainer" spacing="5.0">
+                                                                        <padding>
+                                                                            <Insets top="10.0" bottom="10.0" />
+                                                                        </padding>
+                                                                    </VBox>
                                                                 </VBox>
                                                             </children>
                                                         </HBox>

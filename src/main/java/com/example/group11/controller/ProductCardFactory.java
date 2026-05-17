@@ -1,6 +1,7 @@
 package com.example.group11.controller;
 
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -16,15 +17,15 @@ import java.util.function.Consumer;
 
 public class ProductCardFactory {
 
-    public static VBox createProductCard(String id, String name, String desc, String startPrice, String currentPrice, String startTime, String endTime,
-                                         String status, String timeLeft, String imageUrl, Consumer<VBox> onDeleteSuccess) {
+    public static VBox createProductCard(String id, String name, String desc, String startPrice, String attributeKey,
+                                         String attributeValue, String status, String imageUrl, Consumer<VBox> onDeleteSuccess) {
         // Container chính (mainCardContainer trong FXML)
         VBox card = new VBox();
         card.setPrefWidth(260.0);
         card.setMaxWidth(260.0);
         card.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #262626; -fx-border-width: 1; -fx-background-radius: 15; -fx-border-radius: 15;");
 
-        // 1. Header: ID, Status và Timer
+        // 1. Header: ID, Status
         HBox header = new HBox();
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         header.setPrefHeight(35.0);
@@ -47,11 +48,7 @@ public class ProductCardFactory {
         lblStatus.setFont(new Font(9.0));
         statusBox.getChildren().addAll(dot, lblStatus);
 
-        Label lblTimer = new Label(timeLeft);
-        lblTimer.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
-        lblTimer.setFont(new Font(11.0));
-
-        header.getChildren().addAll(lblId, spacer, statusBox, lblTimer);
+        header.getChildren().addAll(lblId, spacer, statusBox);
 
         // 2. Hình ảnh sản phẩm
         StackPane imgStack = new StackPane();
@@ -87,6 +84,20 @@ public class ProductCardFactory {
         lblDesc.setWrapText(true);
         nameDesc.getChildren().addAll(lblName, lblDesc);
 
+        // Thuộc tính đặc trưng (HBox thương hiệu)
+        HBox attrBox = new HBox(6.0);
+        attrBox.setAlignment(Pos.CENTER_LEFT);
+        attrBox.setStyle("-fx-background-color: #222222; -fx-padding: 6 10; -fx-background-radius: 5;");
+
+        Label lblAttrKey = new Label(attributeKey.toUpperCase() + ":");
+        lblAttrKey.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
+        lblAttrKey.setFont(new Font(11.0));
+
+        Label lblAttrVal = new Label(attributeValue);
+        lblAttrVal.setStyle("-fx-text-fill: white;");
+        lblAttrVal.setFont(new Font(11.0));
+        attrBox.getChildren().addAll(lblAttrKey, lblAttrVal);
+
         // Khu vực giá
         VBox priceContainer = new VBox(4.0);
         priceContainer.setStyle("-fx-background-color: #0A0A0A; -fx-padding: 8 12; -fx-border-color: transparent transparent transparent #ffd700; -fx-border-width: 0 0 0 3;");
@@ -100,43 +111,7 @@ public class ProductCardFactory {
         vStart.setFont(new Font(11.0));
         startPriceBox.getChildren().addAll(tStart, vStart);
 
-        VBox currentPriceBox = new VBox();
-        Label tCurrent = new Label("GIÁ HIỆN TẠI CAO NHẤT");
-        tCurrent.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
-        tCurrent.setFont(new Font(8.0));
-        Label vCurrent = new Label(currentPrice + " đ");
-        vCurrent.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
-        vCurrent.setFont(new Font(16.0));
-        currentPriceBox.getChildren().addAll(tCurrent, vCurrent);
-
-        priceContainer.getChildren().addAll(startPriceBox, currentPriceBox);
-
-        // Khu vực thời gian (HBox)
-        HBox timeBox = new HBox();
-        timeBox.setStyle("-fx-border-color: #262626 transparent #262626 transparent; -fx-border-width: 1 0 1 0; -fx-padding: 8 0;");
-
-        VBox startTimeV = new VBox(2.0);
-        HBox.setHgrow(startTimeV, javafx.scene.layout.Priority.ALWAYS);
-        Label tS = new Label("BẮT ĐẦU");
-        tS.setStyle("-fx-text-fill: #d0c6ab;");
-        tS.setFont(new Font(8.0));
-        Label vS = new Label(startTime);
-        vS.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
-        vS.setFont(new Font(10.0));
-        startTimeV.getChildren().addAll(tS, vS);
-
-        VBox endTimeV = new VBox(2.0);
-        HBox.setHgrow(endTimeV, javafx.scene.layout.Priority.ALWAYS);
-        endTimeV.setStyle("-fx-border-color: transparent transparent transparent #262626; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 15;");
-        Label tE = new Label("KẾT THÚC");
-        tE.setStyle("-fx-text-fill: #d0c6ab;");
-        tE.setFont(new Font(8.0));
-        Label vE = new Label(endTime);
-        vE.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
-        vE.setFont(new Font(10.0));
-        endTimeV.getChildren().addAll(tE, vE);
-
-        timeBox.getChildren().addAll(startTimeV, endTimeV);
+        priceContainer.getChildren().addAll(startPriceBox);
 
         // Nút bấm hành động
         HBox actions = new HBox(8.0);
@@ -158,7 +133,7 @@ public class ProductCardFactory {
         actions.getChildren().addAll(btnDetails, btnDelete);
 
         // Lắp ráp toàn bộ card
-        content.getChildren().addAll(nameDesc, priceContainer, timeBox, actions);
+        content.getChildren().addAll(nameDesc, priceContainer, attrBox, actions);
         card.getChildren().addAll(header, imgStack, content);
 
         return card;

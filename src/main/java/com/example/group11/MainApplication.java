@@ -17,7 +17,7 @@ public class MainApplication extends Application {
 //        stage.show();
 
 
-//        FXMLLoader fxmlLoader2 = new FXMLLoader(MainApplication.class.getResource("-view.fxml"));
+//        FXMLLoader fxmlLoader2 = new FXMLLoader(MainApplication.class.getResource("registerProduct-view.fxml"));
 //        Scene scene2 = new Scene(fxmlLoader2.load(), 1100, 750);
 //        stage.setTitle("Register Product");
 //        stage.setScene(scene2);

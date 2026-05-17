@@ -65,7 +65,7 @@ public class ForgotPasswordController implements Initializable {
 
             welcomeText.setText("Chào " + currentUser.getUsername() + ", hãy nhập mật khẩu mới.");
         } else {
-            showSimpleAlert("Lỗi", "Tên đăng nhập không tồn tại!");
+            NotificationController.showAlert("Lỗi", "Tên đăng nhập không tồn tại!");
         }
     }
 
@@ -76,11 +76,11 @@ public class ForgotPasswordController implements Initializable {
         String confirm = confirmPasswordField.getText();
 
         if (pass.isEmpty() || !pass.equals(confirm)) {
-            showSimpleAlert("Lỗi", "Mật khẩu không khớp hoặc đang để trống!");
+            NotificationController.showAlert("Lỗi", "Mật khẩu không khớp hoặc đang để trống!");
         }
 
         currentUser.setPassWord(pass);
-        showSimpleAlert("Thành công", "Mật khẩu của bạn đã được thay đổi.");
+        NotificationController.showNotification("Thành công", "Mật khẩu của bạn đã được thay đổi.");
 
         FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
@@ -90,11 +90,4 @@ public class ForgotPasswordController implements Initializable {
         FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 
-    public static void showSimpleAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
-    }
 }
