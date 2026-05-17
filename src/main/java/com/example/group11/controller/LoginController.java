@@ -119,6 +119,7 @@ public class LoginController implements Initializable {
 
         Response response = ServerConnection.getInstance().send(RequestType.LOGIN , payload);
         if (response.isSuccess()){
+            ServerConnection.getInstance().startListening();
             User LoggedInuser = (User) response.getData();
             errorLabel.setVisible(false);
             FXMLLoader loader = switch (loggedInUser.getRole()) {

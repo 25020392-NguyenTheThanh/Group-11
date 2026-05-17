@@ -173,6 +173,12 @@ public class Auction implements Subject {
             observers = new java.util.ArrayList<>();
         }
     }
+    public void restoreStatus(AuctionStatus status){
+        this.status = status ;
+    }
+    public void restoreHighestBid(double bid){
+        this.currentHighestBid = bid ;
+    }
     //  Getters
 
     public int                  getId()                { return id; }

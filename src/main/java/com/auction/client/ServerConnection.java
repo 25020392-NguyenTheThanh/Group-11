@@ -34,7 +34,6 @@ public class ServerConnection {
         out = new ObjectOutputStream(socket.getOutputStream());
         out.flush();
         in = new ObjectInputStream(socket.getInputStream());
-        startListening(); // lắng nghe notification từ server
         System.out.println("Đã kết nối tới server");
     }
     // gửi request và chờ response - dùng cho các thao tác ( login , bid , ...)
@@ -43,14 +42,18 @@ public class ServerConnection {
             out.writeObject(new Request(type , payload));
             out.flush();
             out.reset(); // xóa cache ObjectOutputStream đang giữ
-            return (Response) in.readObject(); // chờ server phản hồi
+            while (true){
+                Object obj = in.readObject();
+                if (obj instanceof Response r) return r ;
+            }
         } catch (IOException | ClassNotFoundException e){
             System.err.println("Lỗi gửi request : " + e.getMessage());
             return Response.error("Mất kết nối tới server");
         }
     }
 
-    private void startListening(){
+    public void startListening(){
+        if (listenerThread != null && listenerThread.isAlive()) return;
         listenerThread = new Thread(() -> {
            while (!socket.isClosed()){
                try {
