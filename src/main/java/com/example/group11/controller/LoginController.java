@@ -5,6 +5,7 @@ import com.auction.exception.AuthenticationException;
 import com.auction.manager.UserManager;
 import com.auction.model.user.User;
 import com.auction.network.LoginPayload;
+import com.auction.network.RegisterPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
 import javafx.collections.FXCollections;
@@ -96,7 +97,7 @@ public class LoginController implements Initializable {
 
         createAccountLabel.setOnMouseClicked(event -> showSignUp());
 
-        userManager = UserManager.getInstance();
+//        userManager = UserManager.getInstance();
 
         visiblePassword.textProperty().bindBidirectional(enterPassword.textProperty());
 
@@ -107,7 +108,6 @@ public class LoginController implements Initializable {
         String userName = username.getText();
         String passWord = enterPassword.getText();
 
-        User loggedInUser = userManager.login(userName, passWord);
         // 1. Kiểm tra nếu để trống trường nhập liệu
         if (userName.isEmpty() || passWord.isEmpty()) {
             errorLabel.setText("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
@@ -119,9 +119,9 @@ public class LoginController implements Initializable {
 
         Response response = ServerConnection.getInstance().send(RequestType.LOGIN , payload);
         if (response.isSuccess()){
-            ServerConnection.getInstance().startListening();
-            User LoggedInuser = (User) response.getData();
             errorLabel.setVisible(false);
+            User loggedInUser = (User) response.getData();
+            ServerConnection.getInstance().startListening();
             FXMLLoader loader = switch (loggedInUser.getRole()) {
                 case "BIDDER" -> EquilibriumAnimation.changeScene(event , "bidderAuctionList-view.fxml" , "Auction.floor");
                 case "SELLER" -> EquilibriumAnimation.changeScene(event , "sellerAuctionList-view.fxml" , "Auction.floor");
@@ -248,6 +248,20 @@ public class LoginController implements Initializable {
                     rootHBox.getChildren().setAll(door, loginDialog);
                 }, rootHBox);
 
+            }
+            RegisterPayload payload = new RegisterPayload();
+            payload.username = userName;
+            payload.password = password;
+            payload.email    = email;
+            payload.role     = role.toUpperCase(); // "BIDDER" / "SELLER"
+
+            Response response = ServerConnection.getInstance().send(RequestType.REGISTER, payload);
+
+            if (response.isSuccess()) {
+                // Đăng ký thành công → quay về màn hình login
+                EquilibriumAnimation.playSwitchAnimation(signUp, door, () -> {
+                    rootHBox.getChildren().setAll(door, loginDialog);
+                }, rootHBox);
             }
 
         });
