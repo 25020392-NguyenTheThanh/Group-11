@@ -1,23 +1,34 @@
 package com.example.group11.controller;
 
+import com.auction.model.item.Item;
 import com.auction.model.user.User;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.*;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.net.URL;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
+
+import static com.example.group11.controller.ImagesController.confirmRemoveImage;
+import static com.example.group11.controller.ImagesController.displayImage;
+import static com.example.group11.controller.SellerUIHelper.*;
 
 public class SellerAuctionListController implements Initializable {
     @FXML
@@ -25,9 +36,6 @@ public class SellerAuctionListController implements Initializable {
 
     @FXML
     private Button addFundsBtn;
-
-    @FXML
-    private Button addImageButton;
 
     @FXML
     private Button addItemSidebar;
@@ -51,13 +59,13 @@ public class SellerAuctionListController implements Initializable {
     private Button btnMyListings;
 
     @FXML
+    private Button btnOrderHistory;
+
+    @FXML
     private Button btnProfileInfo;
 
     @FXML
     private Button btnSettings;
-
-    @FXML
-    private Button btnOrderHistory;
 
     @FXML
     private MenuButton categoryMenuButton;
@@ -102,6 +110,9 @@ public class SellerAuctionListController implements Initializable {
     private MenuButton filterStatus;
 
     @FXML
+    private StackPane imageDropzone;
+
+    @FXML
     private BorderPane mainPane;
 
     @FXML
@@ -120,6 +131,9 @@ public class SellerAuctionListController implements Initializable {
     private TableView<?> orderTable;
 
     @FXML
+    private ImageView productImageView;
+
+    @FXML
     private TextField productNameField;
 
     @FXML
@@ -132,6 +146,9 @@ public class SellerAuctionListController implements Initializable {
     private LineChart<String, Number> revenueChart;
 
     @FXML
+    private Label soldProductsLabel;
+
+    @FXML
     private DatePicker startDatePicker;
 
     @FXML
@@ -141,21 +158,42 @@ public class SellerAuctionListController implements Initializable {
     private Button submitButton;
 
     @FXML
-    private Label totalProductsLabel;
-
-    @FXML
     private Label totalBidsLabel;
 
     @FXML
-    private Label soldProductsLabel;
+    private Label totalProductsLabel;
 
     @FXML
     private Label totalRevenueLabel;
 
     @FXML
+    private VBox uploadPrompt;
+
+    @FXML
     private Label walletBalance;
 
+    @FXML
+    private VBox dynamicAttributesContainer;
+
+    private VBox lastView;
+
+    private Button lastButton;
+
+    private VBox currentView; // Lưu view hiện tại để gán cho lastView khi chuyển tiếp
+
+    // Biến lưu trữ file ảnh đã chọn để dùng khi nhấn "XÁC NHẬN ĐĂNG KÝ"
+    private File selectedImageFile;
+
+    private List<Button> allButtons;
+
+    private List<VBox> allViews;
+
+    private Map<String, VBox> viewMapping;
+
     private User user;
+
+    // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
+    private final List<AuctionItemMock> auctionItems = new ArrayList<>(AuctionItemMock.getMockList());
 
     public void setUser(User user) {
         this.user = user;
@@ -163,90 +201,134 @@ public class SellerAuctionListController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        setActiveStyle(btnMyListings);
-        showView(myListingsView);
-        loadMyListingView();
+        currentView = myListingsView;
+        lastView = myListingsView;
+        lastButton = btnMyListings;
+        // Khởi tạo các tập hợp dữ liệu (List/Map) để Helper làm việc
+        allButtons = List.of(btnMyListings, btnAnalytics, btnOrderHistory, btnSettings);
+        allViews = List.of(myListingsView, analyticsPane, orderHistoryView, registerProductView);
+        viewMapping = Map.of(
+                "btnMyListings", myListingsView,
+                "btnAnalytics", analyticsPane,
+                "btnOrderHistory", orderHistoryView,
+                "btnSettings", new VBox() // Hoặc view tương ứng
+        );
 
-        EquilibriumAnimation.setupMenuButtonUpdate(filterSort);
-        EquilibriumAnimation.setupMenuButtonUpdate(filterStatus);
-        EquilibriumAnimation.setupMenuButtonUpdate(categoryMenuButton);
+        // THIẾT LẬP GIAO DIỆN MẶC ĐỊNH (My Listings)
+        currentView = myListingsView;
 
-        initRegistrationLogic();
+        // Sử dụng Helper để hiển thị và đổi màu nút
+        SellerUIHelper.showView(currentView, allViews);
+        SellerUIHelper.setActiveStyle(btnMyListings);
+
+        // NẠP DỮ LIỆU BAN ĐẦU
+        // Gọi executeTabLogic với ID của tab mặc định
+        SellerUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
+
+        GenerationSupport.setupMenuButtonUpdate(filterSort);
+        GenerationSupport.setupMenuButtonUpdate(filterStatus);
+        GenerationSupport.setupMenuButtonUpdate(categoryMenuButton);
+
+        setupCategoryMenuItems();
+
     }
 
     @FXML
     private void handleSwitchTab(ActionEvent event) {
         Button clickedButton = (Button) event.getSource();
-
         // Dùng ID của button để phân biệt (chính xác hơn dùng Text)
         String buttonId = clickedButton.getId();
+        VBox targetView = SellerUIHelper.getVBoxFromId(buttonId, viewMapping);
+
+        // Chỉ lưu nếu view hiện tại khác với view sắp tới (tránh lưu đè chính nó)
+        if (currentView != targetView) {
+            lastView = currentView;
+            lastButton = SellerUIHelper.findActiveButton(allButtons); // Hàm phụ để tìm nút đang sáng
+        }
 
         // 1. Cập nhật UI Sidebar
-        resetAllButtons();
-        setActiveStyle(clickedButton);
+        SellerUIHelper.resetAllButtons(allButtons);
+        SellerUIHelper.setActiveStyle(clickedButton);
 
-        // 2. Điều hướng nội dung
-        switch (buttonId) {
-            case "btnMyListings":
-                showView(myListingsView);
-                loadMyListingView();
-                break;
+        // Cập nhật currentView và hiển thị
+        currentView = targetView;
+        SellerUIHelper.showView(currentView, allViews);
 
-            case "btnAnalytics":
-                showView(analyticsPane);
-                loadAnalyticsData(); // Hàm để vẽ biểu đồ
-                break;
-
-            case "btnOrderHistory":
-                showView(orderHistoryView);
-                System.out.println("Tab Shipping đang được phát triển");
-                break;
-
-            case "btnSettings":
-                hideAllViews();
-                System.out.println("Tab Settings đang được phát triển");
-                break;
-        }
+        SellerUIHelper.executeTabLogic(buttonId, contentGrid, this);
     }
 
     @FXML
     void handleAddItem(ActionEvent event) {
+        // Lưu lại vết trước khi sang trang đăng ký
+        lastView = currentView;
+        lastButton = SellerUIHelper.findActiveButton(allButtons);
+
         // Thay vì chuyển Scene, ta chuyển View trong cùng 1 cửa sổ
-        resetAllButtons(); // Bỏ active ở các nút sidebar
-        showView(registerProductView);
+        SellerUIHelper.resetAllButtons(allButtons); // Bỏ active ở các nút sidebar
+        currentView = registerProductView;
+        SellerUIHelper.showView(registerProductView, allViews);
     }
 
     @FXML
     private void handleBackToListings(ActionEvent event) {
-        // Quay lại trang danh sách
-        setActiveStyle(btnMyListings);
-        showView(myListingsView);
+        if (lastView != null) {
+            // 1. Cập nhật UI Sidebar
+            SellerUIHelper.resetAllButtons(allButtons);
+            if (lastButton != null) {
+                setActiveStyle(lastButton);
+            }
+            // 2. Quay lại view cũ
+            SellerUIHelper.showView(lastView, allViews);
+            // 3. Cập nhật lại currentView
+            currentView = lastView;
+        }
     }
 
-    private void initRegistrationLogic() {
+    public void loadMyListingView() {
+        // 1. Xóa sạch các card cũ trong lưới để tránh trùng lặp
+        contentGrid.getChildren().clear();
 
-        // Xử lý nút xác nhận đăng ký
-        submitButton.setOnAction(e -> {
-            System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText());
-            // TODO: Triển khai logic lưu dữ liệu vào database
-        });
 
-        // Xử lý nút thêm ảnh
-        addImageButton.setOnAction(e -> {
-            System.out.println("Mở FileChooser để chọn ảnh...");
-        });
+
+        // 2. Giả lập danh sách dữ liệu (Sau này bạn sẽ thay bằng List<AuctionItem> từ database)
+        for (int i = 0; i < auctionItems.size(); i++) {
+            AuctionItemMock item = auctionItems.get(i);
+
+            // Gọi Factory đúc Card truyền đầy đủ thuộc tính từ đối tượng Mock
+            VBox productCard = ProductCardFactory.createProductCard(
+                    item.getId(),
+                    item.getName(),
+                    item.getDesc(),
+                    item.getStartPrice(),
+                    item.getAttributeKey(),
+                    item.getAttributeValue(),
+                    item.getStatus(),
+                    item.getImageUrl(),
+                    (cardNode) -> {
+                        // HÀM CALLBACK: Đoạn code này chỉ chạy khi người dùng bấm "Đồng ý" ở Alert bên kia
+                        this.contentGrid.getChildren().remove(cardNode);
+
+                        // Cập nhật lại nhãn đếm tổng số lượng sản phẩm
+                        int currentCount = Integer.parseInt(totalProductsLabel.getText());
+                        CalculatorView.updateCount(totalProductsLabel, currentCount - 1);
+
+                        System.out.println("Controller đã xóa card thành công!");
+                    }
+            );
+
+            // 3. Tính toán vị trí cột và hàng cho GridPane (3 cột)
+            int column = i % 3;
+            int row = i / 3;
+
+            contentGrid.add(productCard, column, row);
+        }
+
+        // 4. Cập nhật nhãn tổng số lượng sản phẩm trên giao diện
+        CalculatorView.updateCount(totalProductsLabel, 6);
     }
-
-    private void loadMyListingView () {
-        // TODO: LOGIC DATABASE
-        int count = 12500;
-
-        EquilibriumAnimation.updateCount(totalProductsLabel, count);
-    }
-
 
     // TÍNH NĂNG: Load dữ liệu biểu đồ
-    private void loadAnalyticsData() {
+    public void loadAnalyticsData() {
         // TODO: LOGIC DATABASE
         // 1. Viết Query lấy doanh thu theo tháng (Sum giá chốt của các đơn hàng Status=PAID)
         // 2. Loop kết quả và add vào Series
@@ -294,7 +376,7 @@ public class SellerAuctionListController implements Initializable {
             totalRevenue += data.getYValue().doubleValue();
         }
 
-        EquilibriumAnimation.updateCurrency(totalRevenueLabel, totalRevenue);
+        CalculatorView.updateCurrency(totalRevenueLabel, totalRevenue);
 
         // 4. Đưa tất cả series vào biểu đồ
         revenueChart.getData().addAll(totalSeries, electronicsSeries, artSeries, vehicleSeries);
@@ -311,47 +393,78 @@ public class SellerAuctionListController implements Initializable {
 
         System.out.println("Đang tải dữ liệu lịch sử đơn hàng...");
     }
-    // Hiển thị một Pane và ẩn tất cả các Pane khác trong StackPane
 
-    private void showView(VBox viewToShow) {
-        hideAllViews();
-        viewToShow.setVisible(true);
-        viewToShow.setManaged(true);
+    /**
+     * Cài đặt các danh mục bên trong MenuButton và lắng nghe sự kiện tuyển chọn
+     */
+    private void setupCategoryMenuItems() {
+        MenuItem menuItemElectronics = new MenuItem("Electronics");
+        MenuItem menuItemVehicle = new MenuItem("Vehicle");
+        MenuItem menuItemArt = new MenuItem("Art");
+
+        // Gắn logic xử lý hiển thị nhãn & gợi ý nhập dựa trên file thiết kế của bạn
+        menuItemElectronics.setOnAction(e -> handleCategorySelection("Electronics", "THƯƠNG HIỆU (BRAND)", "Ví dụ: ASUS, Apple, Samsung..."));
+        menuItemVehicle.setOnAction(e -> handleCategorySelection("Vehicle", "NĂM SẢN XUẤT (YEAR)", "Ví dụ: 2024, 2025..."));
+        menuItemArt.setOnAction(e -> handleCategorySelection("Art", "NGHỆ SĨ (ARTIST)", "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh..."));
+
+        // Nạp các MenuItem này vào trong MenuButton giao diện
+        categoryMenuButton.getItems().setAll(menuItemElectronics, menuItemVehicle, menuItemArt);
     }
 
-    private void hideAllViews() {
-        myListingsView.setVisible(false);
-        myListingsView.setManaged(false);
-        analyticsPane.setVisible(false);
-        analyticsPane.setManaged(false);
-        registerProductView.setVisible(false);
-        registerProductView.setManaged(false);
-        orderHistoryView.setVisible(false);
-        orderHistoryView.setManaged(false);
-        // Thêm các Pane khác vào đây nếu có (shippingPane, settingsPane...)
+    /**
+     * Xử lý thay đổi giao diện form nhập động tương ứng với danh mục được chọn
+     */
+    private void handleCategorySelection(String categoryName, String labelText, String promptText) {
+        // 1. Cập nhật text hiển thị trên MenuButton
+        categoryMenuButton.setText(categoryName);
+
+        // 2. Xóa các thuộc tính cũ đang hiển thị (nếu có)
+        if (dynamicAttributesContainer != null) {
+            dynamicAttributesContainer.getChildren().clear();
+
+            // 3. Tạo VBox nhỏ để bọc Label và TextField mới
+            VBox fieldGroup = new VBox(5.0); // spacing = 5
+
+            // 4. Tạo Label (Áp dụng đúng style thiết kế)
+            Label dynamicLabel = new Label(labelText.toUpperCase());
+            dynamicLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+            // 5. Tạo TextField (Áp dụng đúng style input fields dark-theme của hệ thống)
+            TextField dynamicTextField = new TextField();
+            dynamicTextField.setPromptText(promptText);
+            dynamicTextField.setPrefHeight(45.0);
+            dynamicTextField.setStyle("-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8;");
+
+            // Đặt ID cố định để sau này dễ dàng gọi hàm .lookup() lấy dữ liệu ra
+            dynamicTextField.setId("customAttributeField");
+
+            // 6. Đưa Label và TextField vào nhóm, rồi đẩy vào container chính
+            fieldGroup.getChildren().addAll(dynamicLabel, dynamicTextField);
+            dynamicAttributesContainer.getChildren().add(fieldGroup);
+        }
     }
 
-    // Reset style cho toàn bộ các nút điều hướng của Seller
-    private void resetAllButtons() {
-        String inactiveStyle = "-fx-background-color: transparent; " +
-                "-fx-text-fill: #94A3B8; " +
-                "-fx-font-weight: bold; " +
-                "-fx-border-width: 0;";
+    @FXML
+    private void handleSubmitProduct(ActionEvent event) {
+        // 1. Gọi các hàm kiểm tra dữ liệu
+        if (!ProductRegistrationValidator.validateAll(productNameField, categoryMenuButton, startingPriceField,
+                minimumBidIncrementField, startDatePicker, endDatePicker,
+                descriptionArea, selectedImageFile, imageDropzone)) return;
 
-        btnMyListings.setStyle(inactiveStyle);
-        btnAnalytics.setStyle(inactiveStyle);
-        btnOrderHistory.setStyle(inactiveStyle);
-        btnSettings.setStyle(inactiveStyle);
-    }
+        // 2. Nếu hợp lệ thì xử lý đăng ký
+        System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText().trim());
 
-    // Làm nổi bật nút đang được chọn (Active)
-    private void setActiveStyle(Button button) {
-        String activeStyle = "-fx-background-color: #112240; " +
-                "-fx-text-fill: #FFD700; " +
-                "-fx-font-weight: bold; " +
-                "-fx-border-color: transparent #FFD700 transparent transparent; " +
-                "-fx-border-width: 0 4 0 0;";
-        button.setStyle(activeStyle);
+        // TODO: Logic Database của bạn ở đây...
+        NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+
+        // Đánh dấu cần làm mới danh sách cho lần chuyển tab sau
+        SellerUIHelper.setNeedsRefresh(true);
+
+        // 1. XÓA SẠCH DỮ LIỆU TRÊN FORM ĐĂNG KÝ VỪA NHẬP
+        clearRegistrationForm();
+
+        // 2. Quay lại giao diện danh sách sản phẩm
+        handleBackToListings(null);
     }
 
     // Bấm vào nút Chuông -> Ẩn hoặc hiện khung thông báo (Chỉ xử lý UI mượt mà)
@@ -395,12 +508,65 @@ public class SellerAuctionListController implements Initializable {
     // Hàm xử lý khi nhấn "Đăng xuất"
     @FXML
     private void handleLogout(ActionEvent event) {
-        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "login-view.fxml", "Đăng xuất");
+        boolean confirm = NotificationController.showConfirmation(
+                "Xác nhận đăng xuất",
+                "Bạn có chắc chắn muốn đăng xuất không?",
+                "Hệ thống sẽ kết thúc phiên làm việc hiện tại của bạn.",
+                "Có, Đăng xuất",
+                "Không, Ở lại"
+        );
+        if (confirm) {
+            System.out.println("Đang thực hiện đăng xuất...");
+            FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng xuất");
 
-        if (loader != null) {
-            LoginController controller = loader.getController();
+            if (loader != null) {
+                LoginController controller = loader.getController();
+            } else {
+                System.out.println("Đã hủy yêu cầu đăng xuất.");
+            }
         }
+    }
 
-        System.out.println("Đang thực hiện đăng xuất...");
+    /**
+     * Xóa sạch toàn bộ dữ liệu đã nhập trên form đăng ký sản phẩm
+     */
+    private void clearRegistrationForm() {
+        // 1. Xóa văn bản trong các ô TextField và TextArea
+        productNameField.clear();
+        startingPriceField.clear();
+        minimumBidIncrementField.clear();
+        descriptionArea.clear();
+
+        // 2. Đặt lại chữ mặc định cho MenuButton danh mục
+        categoryMenuButton.setText("Chọn danh mục"); // Thay bằng chữ mặc định ban đầu của bạn nếu khác
+
+        // 3. Xóa ngày đã chọn trong các ô DatePicker
+        startDatePicker.setValue(null);
+        endDatePicker.setValue(null);
+
+        // 4. Khôi phục lại trạng thái khung chọn ảnh ban đầu
+        selectedImageFile = null;
+        productImageView.setImage(null);
+        productImageView.setVisible(false); // Ẩn khung hiển thị ảnh đi
+        uploadPrompt.setVisible(true);      // Hiện lại dòng chữ hướng dẫn "Bấm để chọn ảnh"
+    }
+
+    @FXML
+    private void handleSelectImage(Event event) {
+        if (selectedImageFile == null) {
+            // Trường hợp chưa có ảnh: Mở trình chọn file
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Chọn ảnh sản phẩm");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg"));
+
+            File file = fileChooser.showOpenDialog(imageDropzone.getScene().getWindow());
+            if (file != null) {
+                selectedImageFile = file;
+                ImagesController.displayImage(file, productImageView, uploadPrompt);
+            }
+        } else {
+            // Trường hợp đã có ảnh: Hỏi xác nhận xóa để chọn lại
+            selectedImageFile = ImagesController.confirmRemoveImage(selectedImageFile, productImageView, uploadPrompt);
+        }
     }
 }

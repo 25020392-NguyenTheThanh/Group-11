@@ -73,7 +73,6 @@ public class LoginController implements Initializable {
 
     private UserManager userManager;
 
-
     @FXML
     private TextField visiblePassword;
 
@@ -88,11 +87,11 @@ public class LoginController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         //Thiết lập mô hình chuyển động.
-        EquilibriumAnimation.startEquilibriumAnimation(scaleBar, boxContainer, coinContainer);
+        LoginEffectHelper.startEquilibriumAnimation(scaleBar, boxContainer, coinContainer);
 
         // Thiết lập hiệu ứng gạch chân khi di chuột.
-        EquilibriumAnimation.setupHoverEffect(termsLink);
-        EquilibriumAnimation.setupHoverEffect(privacyLink);
+        LoginEffectHelper.setupHoverEffect(termsLink);
+        LoginEffectHelper.setupHoverEffect(privacyLink);
 
         createAccountLabel.setOnMouseClicked(event -> showSignUp());
 
@@ -122,11 +121,21 @@ public class LoginController implements Initializable {
             ServerConnection.getInstance().startListening();
             User LoggedInuser = (User) response.getData();
             errorLabel.setVisible(false);
-            FXMLLoader loader = switch (loggedInUser.getRole()) {
-                case "BIDDER" -> EquilibriumAnimation.changeScene(event , "bidderAuctionList-view.fxml" , "Auction.floor");
-                case "SELLER" -> EquilibriumAnimation.changeScene(event , "sellerAuctionList-view.fxml" , "Auction.floor");
-                default -> null ;
-            };
+
+            String role = loggedInUser.getRole();
+            FXMLLoader loader;
+
+            switch (role) {
+                case "BIDDER":
+                    loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
+                    break;
+
+                case "SELLER":
+                    loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
+                    break;
+                default:
+                    throw new AuthenticationException("Role " + role + " is not recognized.");
+            }
 
             if (loader != null){
                 Object controller = loader.getController();
@@ -146,20 +155,20 @@ public class LoginController implements Initializable {
 
     @FXML
     void handleOpenTerms(ActionEvent event) {
-        EquilibriumAnimation.openFile("documents/terms.pdf");
+        LoginEffectHelper.openFile("documents/terms.pdf");
     }
 
     //Phương thức xử lý khi nhấn vào Chính sách bảo mật
 
     @FXML
     void handleOpenPrivacy(ActionEvent event) {
-        EquilibriumAnimation.openFile("documents/privacy.pdf");
+        LoginEffectHelper.openFile("documents/privacy.pdf");
     }
 
     private void showSignUp() {
         VBox signUpDialog = createSignUpDialog();
         // Tráo đổi vị trí: SignUp bên trái, Door bên phải
-        EquilibriumAnimation.playSwitchAnimation(door, loginDialog, () -> {
+        LoginEffectHelper.playSwitchAnimation(door, loginDialog, () -> {
             rootHBox.getChildren().setAll(signUpDialog, door);
         }, rootHBox);
 
@@ -244,14 +253,13 @@ public class LoginController implements Initializable {
 
             User user = userManager.register(userName, password, email, role);
             if (user != null) {
-                EquilibriumAnimation.playSwitchAnimation(signUp, door, () -> {
+                LoginEffectHelper.playSwitchAnimation(signUp, door, () -> {
                     rootHBox.getChildren().setAll(door, loginDialog);
                 }, rootHBox);
 
             }
 
         });
-
 
         // --- Nút Quay lại Login ---
         HBox footer = new HBox(5);
@@ -261,7 +269,7 @@ public class LoginController implements Initializable {
         labLink.setStyle("-fx-text-fill: #4169E1; -fx-font-weight: bold; -fx-cursor: hand;");
         labLink.setOnMouseClicked(e -> rootHBox.getChildren().setAll(door, loginDialog));
         labLink.setOnMouseClicked(e -> {
-            EquilibriumAnimation.playSwitchAnimation(signUp, door, () -> {
+            LoginEffectHelper.playSwitchAnimation(signUp, door, () -> {
                 rootHBox.getChildren().setAll(door, loginDialog);
             }, rootHBox);
         });
@@ -309,7 +317,7 @@ public class LoginController implements Initializable {
     // Quên mật khẩu
     @FXML
     private void hanleClickForgotPassword(ActionEvent event) {
-        FXMLLoader loader = EquilibriumAnimation.changeScene(event, "forgotPassword-view.fxml", "Quên mật khẩu!");
+        FXMLLoader loader = GenerationSupport.changeScene(event, "forgotPassword-view.fxml", "Quên mật khẩu!");
 
         if (loader != null) {
             ForgotPasswordController controller = loader.getController();

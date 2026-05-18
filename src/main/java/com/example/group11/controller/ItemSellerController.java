@@ -1,6 +1,7 @@
 package com.example.group11.controller;
 
 import com.auction.manager.ItemManager;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
@@ -17,15 +18,10 @@ import java.net.URL;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
-import static com.example.group11.controller.ForgotPasswordController.showSimpleAlert;
-
 public class ItemSellerController implements Initializable {
 
     @FXML
     private Label auctionIdLabel;
-
-    @FXML
-    private Label currentPriceLabel;
 
     @FXML
     private Button deleteButton;
@@ -35,9 +31,6 @@ public class ItemSellerController implements Initializable {
 
     @FXML
     private Button detailsButton;
-
-    @FXML
-    private Label endTimeLabel;
 
     @FXML
     private StackPane imageContainer;
@@ -52,9 +45,6 @@ public class ItemSellerController implements Initializable {
     private Label productNameLabel;
 
     @FXML
-    private Label startTimeLabel;
-
-    @FXML
     private Label startingPriceLabel;
 
     @FXML
@@ -66,9 +56,6 @@ public class ItemSellerController implements Initializable {
     @FXML
     private Label statusLabel;
 
-    @FXML
-    private Label timerLabel;
-
     private ItemManager itemManager;
 
     @Override
@@ -76,7 +63,9 @@ public class ItemSellerController implements Initializable {
 
     }
 
-    private void handleDeleteAction() {
+    //public void addItem (String)
+    @FXML
+    private void handleDeleteAuction(ActionEvent event) {
         // 1. Tạo một Alert xác nhận
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Xác nhận xóa");
@@ -105,7 +94,7 @@ public class ItemSellerController implements Initializable {
         System.out.println("Đang xóa mục: " + auctionIdLabel.getText());
 
         // Ví dụ: Thông báo sau khi xóa thành công
-        showSimpleAlert("Thông báo", "Đã xóa thành công!");
+        NotificationController.showAlert("Thông báo", "Đã xóa thành công!");
 
         // Có thể thêm logic ẩn/xóa mainCardContainer khỏi UI cha tại đây
     }
