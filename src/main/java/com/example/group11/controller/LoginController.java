@@ -85,7 +85,7 @@ public class LoginController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        //Thiết lập mô hình chuyển động.
+        // Thiết lập mô hình chuyển động.
         LoginEffectHelper.startEquilibriumAnimation(scaleBar, boxContainer, coinContainer);
 
         // Thiết lập hiệu ứng gạch chân khi di chuột.
@@ -97,7 +97,6 @@ public class LoginController implements Initializable {
         userManager = UserManager.getInstance();
 
         visiblePassword.textProperty().bindBidirectional(enterPassword.textProperty());
-
     }
 
     @FXML
@@ -118,13 +117,13 @@ public class LoginController implements Initializable {
             ServerConnection.getInstance().startListening();
             User loggedInUser = (User) response.getData();
 
-            String role = loggedInUser.getRole();
-            FXMLLoader loader;
+        String role = loggedInUser.getRole();
+        FXMLLoader loader;
 
-            switch (role) {
-                case "BIDDER":
-                    loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
-                    break;
+        switch (role) {
+            case "BIDDER":
+                loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
+                break;
 
                 case "SELLER":
                     loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");

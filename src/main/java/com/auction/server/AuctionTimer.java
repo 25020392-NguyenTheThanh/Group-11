@@ -1,5 +1,6 @@
 package com.auction.server;
 
+import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
@@ -32,7 +33,13 @@ public class AuctionTimer {
             if (auction.getStatus() == AuctionStatus.RUNNING && LocalDateTime.now().isAfter(auction.getEndTime())){
                 try {
                     auction.finish(); // chuyển sang FINISHED hoặc CANCELLED
-                    AuctionManager.getInstance().saveToDisk();
+                    AuctionManager.getInstance().finishAuction(auction.getId());
+                    if (auction.getCurrentWinner() != null) {
+                        DataManager.getInstance().updateSellerRevenue(
+                                auction.getItem().getOwnerId(),
+                                auction.getCurrentHighestBid()
+                        );
+                    }
 
                     // thông báo cho tất cả client
                     String msg = "Phiên " + auction.getId() + " [" + auction.getItem().getName() + "] đã kết thúc" ;
@@ -44,7 +51,6 @@ public class AuctionTimer {
             }
         }
     }
-
     public void stop(){
         scheduler.shutdown();
     }

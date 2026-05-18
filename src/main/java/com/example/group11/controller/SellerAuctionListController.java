@@ -1,7 +1,11 @@
 package com.example.group11.controller;
 
+import com.auction.client.ServerConnection;
 import com.auction.model.item.Item;
 import com.auction.model.user.User;
+import com.auction.network.CreateItemPayload;
+import com.auction.network.RequestType;
+import com.auction.network.Response;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
@@ -192,6 +196,11 @@ public class SellerAuctionListController implements Initializable {
 
     private User user;
 
+    private  String attributeKey;
+    private  String attributeValue;
+    private String imageUrl;
+
+
     // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
     private final List<AuctionItemMock> auctionItems = new ArrayList<>(AuctionItemMock.getMockList());
 
@@ -289,7 +298,6 @@ public class SellerAuctionListController implements Initializable {
         contentGrid.getChildren().clear();
 
 
-
         // 2. Giả lập danh sách dữ liệu (Sau này bạn sẽ thay bằng List<AuctionItem> từ database)
         for (int i = 0; i < auctionItems.size(); i++) {
             AuctionItemMock item = auctionItems.get(i);
@@ -324,7 +332,7 @@ public class SellerAuctionListController implements Initializable {
         }
 
         // 4. Cập nhật nhãn tổng số lượng sản phẩm trên giao diện
-        CalculatorView.updateCount(totalProductsLabel, 6);
+        CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
     }
 
     // TÍNH NĂNG: Load dữ liệu biểu đồ
@@ -411,9 +419,8 @@ public class SellerAuctionListController implements Initializable {
         categoryMenuButton.getItems().setAll(menuItemElectronics, menuItemVehicle, menuItemArt);
     }
 
-    /**
-     * Xử lý thay đổi giao diện form nhập động tương ứng với danh mục được chọn
-     */
+
+    // Xử lý thay đổi giao diện form nhập động tương ứng với danh mục được chọn
     private void handleCategorySelection(String categoryName, String labelText, String promptText) {
         // 1. Cập nhật text hiển thị trên MenuButton
         categoryMenuButton.setText(categoryName);
@@ -451,7 +458,83 @@ public class SellerAuctionListController implements Initializable {
                 minimumBidIncrementField, startDatePicker, endDatePicker,
                 descriptionArea, selectedImageFile, imageDropzone)) return;
 
-        // 2. Nếu hợp lệ thì xử lý đăng ký
+//        CreateItemPayload createItemPayload = new CreateItemPayload();
+//        createItemPayload.name = productNameField.getText().trim();
+//        createItemPayload.type = categoryMenuButton.getText();
+//        createItemPayload.startingPrice = Double.parseDouble(startingPriceField.getText());
+//        createItemPayload.description = descriptionArea.getText().trim();
+        String finalAttributeValue = "";
+        // 2. LẤY GIÁ TRỊ THUỘC TÍNH ĐỘNG DỰA VÀO DANH MỤC (MỚI CẬP NHẬT)
+        if (dynamicAttributesContainer != null) {
+            // Tìm kiếm TextField động bằng ID thông qua phương thức lookup
+            TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
+
+            if (customField != null && !customField.getText().trim().isEmpty()) {
+                String attributeValue = customField.getText().trim();
+                finalAttributeValue=attributeValue;
+                switch (categoryMenuButton.getText()) {
+                    case "Electronics":
+                        attributeKey = "THƯƠNG HIỆU: ";
+                        break;
+
+                    case "Art":
+                        attributeKey = "TÁC GIẢ: ";
+                        break;
+
+                    case "Vehicle":
+                        try {
+                            attributeKey = "NĂM SX: ";
+                        } catch (NumberFormatException e) {
+                            // Trường hợp người dùng nhập năm sản xuất không phải là số hợp lệ
+                            NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
+                            return; // Dừng xử lý submit nếu có lỗi định dạng
+                        }
+                        break;
+
+                    default:
+                        break;
+
+
+                // Phân loại danh mục để gán đúng thuộc tính vào Payload
+//                switch (createItemPayload.type) {
+//                    case "Electronics":
+//                        createItemPayload.brand = attributeValue;
+//                        attributeKey="THƯƠNG HIỆU: ";
+//                        break;
+//
+//                    case "Art":
+//                        createItemPayload.artist = attributeValue;
+//                        attributeKey="TÁC GIẢ: ";
+//                        break;
+//
+//                    case "Vehicle":
+//                        try {
+//                            createItemPayload.year = Integer.parseInt(attributeValue);
+//                            attributeKey="NĂM SX: ";
+//                        } catch (NumberFormatException e) {
+//                            // Trường hợp người dùng nhập năm sản xuất không phải là số hợp lệ
+//                            NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
+//                            return; // Dừng xử lý submit nếu có lỗi định dạng
+//                        }
+//                        break;
+//
+//                    default:
+//                        break;
+                }
+            }
+        }
+    // 2. LẤY GIÁ TRỊ THUỘC TÍNH ĐỘNG DỰA VÀO DANH MỤC (MỚI CẬP NHẬT)
+                // ĐÃ THAY ĐỔI: Sử dụng trực tiếp categoryMenuButton.getText() theo yêu cầu của bạn
+
+
+        auctionItems.add(new AuctionItemMock("OKOK",
+                productNameField.getText(), descriptionArea.getText(),
+                startingPriceField.getText(), attributeKey, finalAttributeValue, "ACTION", imageUrl
+                ));
+
+        //Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
+        //if (response != null && response.isSuccess()) {
+            // Nếu hợp lệ thì xử lý đăng ký}
         System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText().trim());
 
         // TODO: Logic Database của bạn ở đây...
@@ -465,6 +548,9 @@ public class SellerAuctionListController implements Initializable {
 
         // 2. Quay lại giao diện danh sách sản phẩm
         handleBackToListings(null);
+
+        loadMyListingView();
+
     }
 
     // Bấm vào nút Chuông -> Ẩn hoặc hiện khung thông báo (Chỉ xử lý UI mượt mà)
@@ -516,6 +602,7 @@ public class SellerAuctionListController implements Initializable {
                 "Không, Ở lại"
         );
         if (confirm) {
+
             System.out.println("Đang thực hiện đăng xuất...");
             FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng xuất");
 
@@ -548,7 +635,8 @@ public class SellerAuctionListController implements Initializable {
         selectedImageFile = null;
         productImageView.setImage(null);
         productImageView.setVisible(false); // Ẩn khung hiển thị ảnh đi
-        uploadPrompt.setVisible(true);      // Hiện lại dòng chữ hướng dẫn "Bấm để chọn ảnh"
+        uploadPrompt.setVisible(true);// Hiện lại dòng chữ hướng dẫn "Bấm để chọn ảnh"
+        imageUrl=null;
     }
 
     @FXML
@@ -563,6 +651,9 @@ public class SellerAuctionListController implements Initializable {
             if (file != null) {
                 selectedImageFile = file;
                 ImagesController.displayImage(file, productImageView, uploadPrompt);
+                // TRÍCH XUẤT LINK TẠI ĐÂY
+                imageUrl = file.toURI().toString();
+                System.out.println("Link ảnh đã chọn là: " + imageUrl);
             }
         } else {
             // Trường hợp đã có ảnh: Hỏi xác nhận xóa để chọn lại
