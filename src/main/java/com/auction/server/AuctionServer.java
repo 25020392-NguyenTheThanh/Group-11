@@ -1,6 +1,7 @@
 package com.auction.server;
 
 import com.auction.manager.AuctionManager;
+import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
 import com.auction.network.Notification;
 
@@ -20,9 +21,6 @@ public class AuctionServer {
     private final ExecutorService threadPool = Executors.newCachedThreadPool();
 
     public void start() {
-        // Load dữ liệu từ file khi server khởi động
-        AuctionManager.getInstance().loadFromDisk();
-        UserManager.getInstance().loadFromDisk();
 
         new AuctionTimer(this).start();
 

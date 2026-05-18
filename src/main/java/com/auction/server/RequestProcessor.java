@@ -4,6 +4,7 @@ import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
+import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
@@ -82,7 +83,13 @@ public class RequestProcessor {
             Bidder bidder = (Bidder) user;
             auction.placeBid(bidder, payload.amount);
 
-            AuctionManager.getInstance().saveToDisk();
+            // Ghi lịch sử bid vào MySQL
+            AuctionManager.getInstance().recordBid(
+                    payload.auctionId,
+                    bidder.getId(),
+                    bidder.getUsername(),
+                    payload.amount
+            );
             return Response.ok("Đặt giá thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
@@ -127,7 +134,8 @@ public class RequestProcessor {
         if (auction == null) return Response.error("Không thể tạo phiên - sản phẩm không ở trạng thái AVAILABLE");
 
         auction.start(); // chuyển sang RUNNING
-        AuctionManager.getInstance().saveToDisk();
+        // Đồng bộ trạng thái RUNNING vào DB
+        com.auction.data.DataManager.getInstance().startAuction(auction.getId());
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại
