@@ -1,10 +1,12 @@
 package com.example.group11.controller;
 
 import com.auction.client.ServerConnection;
+import com.auction.data.DataManager;
 import com.auction.exception.AuthenticationException;
 import com.auction.manager.UserManager;
 import com.auction.model.user.User;
 import com.auction.network.LoginPayload;
+import com.auction.network.RegisterPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
 import javafx.collections.FXCollections;
@@ -79,9 +81,6 @@ public class LoginController implements Initializable {
     @FXML
     private Text togglePasswordIcon;
 
-    @FXML
-    private Label errorLabel;
-
     private boolean isPasswordVisible = false;
 
     @Override
@@ -103,24 +102,21 @@ public class LoginController implements Initializable {
 
     @FXML
     void handleLogin(ActionEvent event) {
-        String userName = username.getText();
+        String userName = username.getText().trim();
         String passWord = enterPassword.getText();
 
-        User loggedInUser = userManager.login(userName, passWord);
         // 1. Kiểm tra nếu để trống trường nhập liệu
         if (userName.isEmpty() || passWord.isEmpty()) {
-            errorLabel.setText("Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
-            errorLabel.setVisible(true);
+            NotificationController.showAlert("Đăng nhập thất bại", "Vui lòng nhập đầy đủ cả tên đăng nhập và mật khẩu!");
             return;
         }
 
-        LoginPayload payload = new LoginPayload(userName , passWord);
+        LoginPayload payload = new LoginPayload(userName, passWord);
 
-        Response response = ServerConnection.getInstance().send(RequestType.LOGIN , payload);
-        if (response.isSuccess()){
+        Response response = ServerConnection.getInstance().send(RequestType.LOGIN, payload);
+        if (response.isSuccess()) {
             ServerConnection.getInstance().startListening();
-            User LoggedInuser = (User) response.getData();
-            errorLabel.setVisible(false);
+            User loggedInUser = (User) response.getData();
 
             String role = loggedInUser.getRole();
             FXMLLoader loader;
@@ -137,32 +133,21 @@ public class LoginController implements Initializable {
                     throw new AuthenticationException("Role " + role + " is not recognized.");
             }
 
-            if (loader != null){
+            if (loader != null) {
                 Object controller = loader.getController();
                 if (controller instanceof BidderAuctionListController c) {
                     c.setUser(loggedInUser);
-                } else if (controller instanceof SellerAuctionListController c){
+                } else if (controller instanceof SellerAuctionListController c) {
                     c.setUser(loggedInUser);
                 } else {
-                    errorLabel.setText(response.getMessage());
-                    errorLabel.setVisible(true);
+                    NotificationController.showAlert("Lỗi khởi tạo", "Lỗi tải giao diện hệ thống!");
                 }
             }
+        } else {
+            // BẮT BUỘC PHẢI CÓ: Hiển thị lỗi từ server trả về
+            String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối đến máy chủ!";
+            NotificationController.showAlert("Lỗi xác thực", errorMsg);
         }
-    }
-
-    //Phương thức xử lý khi nhấn vào Điều khoản dịch vụ
-
-    @FXML
-    void handleOpenTerms(ActionEvent event) {
-        LoginEffectHelper.openFile("documents/terms.pdf");
-    }
-
-    //Phương thức xử lý khi nhấn vào Chính sách bảo mật
-
-    @FXML
-    void handleOpenPrivacy(ActionEvent event) {
-        LoginEffectHelper.openFile("documents/privacy.pdf");
     }
 
     private void showSignUp() {
@@ -245,18 +230,38 @@ public class LoginController implements Initializable {
         Button btnSignUp = new Button("Create Account");
         btnSignUp.setMaxWidth(Double.MAX_VALUE);
         btnSignUp.setStyle("-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 15px; -fx-background-radius: 8px; -fx-font-size: 16px; -fx-cursor: hand;");
-        btnSignUp.onMouseClickedProperty().set(event -> {
+        btnSignUp.setOnAction(event -> {
             String userName = usernameField.getText();
             String email = emailField.getText();
             String password = passwordField.getText();
             String role = roleCombo.getValue();
 
-            User user = userManager.register(userName, password, email, role);
-            if (user != null) {
+            if (userName.isEmpty() || email.isEmpty() || password.isEmpty() || role == null) {
+                NotificationController.showAlert("Đăng ký không hợp lệ", "Vui lòng điền đầy đủ toàn bộ các trường thông tin đăng ký!");
+                return;
+            }
+
+            RegisterPayload signUpPayload = new RegisterPayload();
+            signUpPayload.username = userName;
+            signUpPayload.password = password;
+            signUpPayload.email = email;
+            signUpPayload.role = role.toUpperCase();
+
+            Response response = ServerConnection.getInstance().send(RequestType.REGISTER, signUpPayload);
+
+            if (response != null && response.isSuccess()) {
+                NotificationController.showNotification("Đăng ký thành công", "Tài khoản của bạn đã được khởi tạo thành công trên hệ thống!");
+
+                System.out.println("Đăng ký thành công!");
+
                 LoginEffectHelper.playSwitchAnimation(signUp, door, () -> {
                     rootHBox.getChildren().setAll(door, loginDialog);
                 }, rootHBox);
 
+            } else {
+                // Hiển thị thông báo lỗi từ Server trả về (Ví dụ: "Tên tài khoản hoặc email đã tồn tại")
+                String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối đến máy chủ!";
+                NotificationController.showAlert("Đăng ký thất bại", errorMsg);
             }
 
         });
@@ -267,7 +272,6 @@ public class LoginController implements Initializable {
         Label lab1 = new Label("Already have an account?");
         Label labLink = new Label("Login");
         labLink.setStyle("-fx-text-fill: #4169E1; -fx-font-weight: bold; -fx-cursor: hand;");
-        labLink.setOnMouseClicked(e -> rootHBox.getChildren().setAll(door, loginDialog));
         labLink.setOnMouseClicked(e -> {
             LoginEffectHelper.playSwitchAnimation(signUp, door, () -> {
                 rootHBox.getChildren().setAll(door, loginDialog);
@@ -306,11 +310,17 @@ public class LoginController implements Initializable {
             togglePasswordIcon.setText("🙈"); // Đổi icon sang nhắm mắt
             visiblePassword.setVisible(true);
             enterPassword.setVisible(false);
+            // Đưa con trỏ chuột về cuối dòng văn bản
+            visiblePassword.requestFocus();
+            visiblePassword.selectEnd();
         } else {
             // Ẩn mật khẩu
             togglePasswordIcon.setText("👁"); // Đổi icon sang mở mắt
             visiblePassword.setVisible(false);
             enterPassword.setVisible(true);
+            // Đưa con trỏ chuột về cuối dòng văn bản
+            visiblePassword.requestFocus();
+            visiblePassword.selectEnd();
         }
     }
 
@@ -323,6 +333,18 @@ public class LoginController implements Initializable {
             ForgotPasswordController controller = loader.getController();
         }
 
+    }
+
+    //Phương thức xử lý khi nhấn vào Điều khoản dịch vụ
+    @FXML
+    void handleOpenTerms(ActionEvent event) {
+        LoginEffectHelper.openFile("documents/terms.pdf");
+    }
+
+    //Phương thức xử lý khi nhấn vào Chính sách bảo mật
+    @FXML
+    void handleOpenPrivacy(ActionEvent event) {
+        LoginEffectHelper.openFile("documents/privacy.pdf");
     }
 }
 

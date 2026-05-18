@@ -1,11 +1,10 @@
 package com.example.group11;
 
 import com.auction.client.ServerConnection;
+import com.example.group11.controller.NotificationController;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -18,9 +17,10 @@ public class MainApplication extends Application {
             ServerConnection.getInstance().connect();
         } catch (IOException e) {
             // Server chưa chạy — hiện thông báo lỗi
-            Alert alert = new Alert(Alert.AlertType.ERROR,
-                    "Không thể kết nối tới server!\nHãy chạy AuctionServer trước.", ButtonType.OK);
-            alert.showAndWait();
+            NotificationController.showError(
+                    "Lỗi Kết Nối Server!",
+                    "Không thể kết nối tới server!\nHãy chắc chắn rằng AuctionServer đã được chạy trước."
+            );
             return; // thoát app
         }
 

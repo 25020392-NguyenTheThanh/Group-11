@@ -53,6 +53,16 @@ public class NotificationController {
         Optional<ButtonType> response = alert.showAndWait();
         return response.isPresent() && response.get() == buttonYes;
     }
+    // Hiển thị thông báo lỗi nghiêm trọng (Error)
+    public static void showError(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("HANK AUCTIONS");
+        alert.setHeaderText("❌ " + title); // Sử dụng emoji icon lỗi
+        alert.setContentText(content);
+
+        applyDarkTheme(alert);
+        alert.showAndWait();
+    }
 
     // Chuỗi CSS đồng bộ hoàn hảo với bộ màu mã nguồn HANK AUCTIONS
     private static final String DARK_THEME_CSS = "data:text/css," + (
