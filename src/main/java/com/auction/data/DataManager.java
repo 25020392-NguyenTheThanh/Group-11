@@ -83,4 +83,11 @@ public class DataManager {
     public List<BidTransaction> getBidHistory(int auctionId) {
         return bidRepo.findByAuction(auctionId);
     }
+
+    public boolean updateSellerRevenue(int sellerId, double amount) {
+        return userRepo.addSellerRevenue(sellerId, amount);
+    }
+    public boolean updateBidderBalance(int bidderId, double newBalance) {
+        return userRepo.updateBidderBalance(bidderId, newBalance);
+    }
 }
