@@ -34,9 +34,9 @@ public class ItemManager {
      * return Item vừa tạo (id là id thật từ DB).
      */
     public Item createItem(ItemFactory factory, int ownerId,
-                           String name, String description, double startingPrice) {
+                           String name, String description, double startingPrice, String imageUrl) {
         // Tạo tạm với id=0 để factory build đúng kiểu
-        Item temp = factory.createItem(0, ownerId, name, description, startingPrice);
+        Item temp = factory.createItem(0, ownerId, name, description, startingPrice, imageUrl);
 
         // Lưu vào MySQL — nhận id thật
         int dbId = DataManager.getInstance().addItem(temp);
@@ -46,7 +46,7 @@ public class ItemManager {
         }
 
         // Tạo lại với id thật
-        Item item = factory.createItem(dbId, ownerId, name, description, startingPrice);
+        Item item = factory.createItem(dbId, ownerId, name, description, startingPrice, imageUrl );
         items.put(dbId, item);
 
         System.out.println("Sản phẩm mới: " + item.getInfo());

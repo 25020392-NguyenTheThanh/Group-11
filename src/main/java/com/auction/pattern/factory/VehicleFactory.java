@@ -9,7 +9,7 @@ public class VehicleFactory extends ItemFactory {
         this.year = year ;
     }
     @Override
-    public Item createItem(int id,int ownerId , String name , String description , double startingPrice ){
-        return new Vehicle(id ,ownerId, name , description , startingPrice , year);
+    public Item createItem(int id,int ownerId , String name , String description , double startingPrice , String imageUrl ){
+        return new Vehicle(id ,ownerId, name , description , startingPrice , imageUrl, year);
     }
 }

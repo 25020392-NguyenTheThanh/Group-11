@@ -25,7 +25,7 @@ public class ItemRepository {
      */
     public int add(Item item) {
         String sql = "INSERT INTO items "
-                + "(owner_id, name, description, starting_price, category, artist, brand, manufacture_year) "
+                + "(owner_id, name, description, starting_price, category, imageUrl, artist, brand, manufacture_year) "
                 + "VALUES (?,?,?,?,?,?,?,?)";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {

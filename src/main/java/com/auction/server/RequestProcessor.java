@@ -34,6 +34,11 @@ public class RequestProcessor {
 
     // kiểm tra danh tính
     private static Response handleLogin(Request request , ClientHandler handler){
+        // Kiểm tra payload hợp lệ
+        if (request.getPayload() == null || !(request.getPayload() instanceof LoginPayload)) {
+            return Response.error("Dữ liệu đăng nhập không hợp lệ!");
+        }
+
         LoginPayload payload = (LoginPayload) request.getPayload();
         try {
             User user = UserManager.getInstance().login(payload.username , payload.password);
@@ -58,10 +63,17 @@ public class RequestProcessor {
 
     // xử lý đăng xuất
     private static Response handleLogout(ClientHandler handler){
-        User user = handler.getLoggedInUser();
-        if (user != null) user.logout();
-        handler.setLoggedInUser(null);
-        return Response.ok("Đăng xuất thành công");
+        try {
+            User user = handler.getLoggedInUser();
+            if (user != null) {
+                user.logout();
+                // TODO: Nếu có thể, hãy gọi AuctionManager.getInstance().removeObserverFromAllAuctions(handler);
+            }
+            handler.setLoggedInUser(null); // Giải phóng user ngắt kết nối logic
+            return Response.ok("Đăng xuất thành công");
+        } catch (Exception e) {
+            return Response.error("Lỗi xóa phiên đăng nhập: " + e.getMessage());
+        }
     }
     // lấy danh sách
     private static Response handleGetAuctions() {
@@ -119,7 +131,7 @@ public class RequestProcessor {
             case "VEHICLE" -> new VehicleFactory(p.year);
             default        -> new ElectronicsFactory(p.brand);
         }; // code smell , ở createItem
-        Item item = ItemManager.getInstance().createItem(factory , user.getId() , p.name , p.description , p.startingPrice);
+        Item item = ItemManager.getInstance().createItem(factory , user.getId() , p.name , p.description , p.startingPrice, p.imageUrl);
         return Response.ok(item);
     }
     // Seller tạo phiên đấu giá từ item

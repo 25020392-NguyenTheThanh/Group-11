@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
 
 // Class quản lý kết nối client tới server
@@ -38,6 +40,9 @@ public class ServerConnection {
 
     // Hàm xử lý notification
     private Consumer<Notification> notificationHandler;
+
+    // HÀNG ĐỢI: Dùng để tuồn Response từ listenerThread sang hàm send()
+    private final BlockingQueue<Response> responseQueue = new LinkedBlockingQueue<>();
 
     // Constructor private để dùng Singleton
     private ServerConnection() {}
@@ -91,48 +96,33 @@ public class ServerConnection {
     ) {
 
         try {
-
-            // Gửi request
-            out.writeObject(
-                    new Request(type, payload)
-            );
-
-            out.flush();
-
-            out.reset();
-
-            // Đọc dữ liệu trả về
-            while (true) {
-
-                Object obj = in.readObject();
-
-                if (obj instanceof Response r)
-                    return r;
-
-                if (obj instanceof Notification n
-                        && notificationHandler != null) {
-
-                    final Notification notif = n;
-
-                    // Chạy trên JavaFX thread
-                    javafx.application.Platform.runLater(
-
-                            () -> notificationHandler.accept(notif)
-                    );
-                }
+            // 1. Chỉ đồng bộ việc ghi dữ liệu để các thread không tranh nhau ghi
+            synchronized (out) {
+                out.writeObject(new Request(type, payload));
+                out.flush();
+                out.reset();
             }
 
-        } catch (IOException | ClassNotFoundException e) {
+            // 2. Đọc dữ liệu trả về
+            if (listenerThread != null && listenerThread.isAlive()) {
+                // KỊCH BẢN 1: Đã login, listener đang chạy.
+                // Ta đứng đợi ở Queue chờ Listener nhặt Response quăng vào.
+                return responseQueue.take();
+            } else {
+                // KỊCH BẢN 2: Chưa login, listener chưa chạy.
+                // Hàm send tự mình đọc trực tiếp.
+                while (true) {
+                    Object obj = in.readObject();
+                    if (obj instanceof Response r) return r;
 
-            // Báo lỗi kết nối
-            System.err.println(
-                    "Lỗi gửi request: "
-                            + e.getMessage()
-            );
-
-            return Response.error(
-                    "Mất kết nối tới server"
-            );
+                    if (obj instanceof Notification n && notificationHandler != null) {
+                        javafx.application.Platform.runLater(() -> notificationHandler.accept(n));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi request: " + e.getMessage());
+            return Response.error("Mất kết nối tới server");
         }
     }
 
@@ -165,6 +155,9 @@ public class ServerConnection {
 
                                 () -> notificationHandler.accept(n)
                         );
+                    }// Nếu nhặt được Response thì ném vào queue
+                    else if (obj instanceof Response r) {
+                        responseQueue.offer(r);
                     }
 
                 } catch (IOException | ClassNotFoundException e) {

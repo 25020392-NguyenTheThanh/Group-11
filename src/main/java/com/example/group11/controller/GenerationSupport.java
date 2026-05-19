@@ -32,6 +32,42 @@ public class GenerationSupport {
         }
     }
 
+    public static FXMLLoader changeScene(javafx.scene.Node node, String fxmlFile, String title) {
+        try {
+            FXMLLoader loader = new FXMLLoader(GenerationSupport.class.getResource("/com/example/group11/" + fxmlFile));
+            Parent root = loader.load();
+
+            // Lấy Stage trực tiếp từ linh kiện (Node) đang hiển thị một cách an toàn
+            Stage stage = null;
+            if (node != null && node.getScene() != null) {
+                stage = (Stage) node.getScene().getWindow();
+            }
+
+            // Nếu vẫn không lấy được (trường hợp cực kỳ hiếm), lấy cửa sổ đầu tiên đang hiển thị của ứng dụng
+            if (stage == null) {
+                stage = (Stage) Stage.getWindows().stream()
+                        .filter(javafx.stage.Window::isShowing)
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            if (stage == null) {
+                throw new NullPointerException("Không tìm thấy cửa sổ (Stage) hợp lệ để chuyển cảnh!");
+            }
+
+            stage.setScene(new Scene(root));
+            stage.setTitle(title);
+            stage.sizeToScene();
+            stage.centerOnScreen();
+            stage.show();
+
+            return loader;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     // Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong
     public static void setupMenuButtonUpdate(MenuButton menuButton) {
         for (MenuItem item : menuButton.getItems()) {

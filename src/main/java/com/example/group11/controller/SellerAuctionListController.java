@@ -12,6 +12,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
@@ -602,15 +603,31 @@ public class SellerAuctionListController implements Initializable {
                 "Không, Ở lại"
         );
         if (confirm) {
-
+            // Lấy đối tượng Node của nút bấm ngay khi vừa click (Lúc này Node chắc chắn tồn tại)
+            final Node sourceNode = (Node) event.getSource();
             System.out.println("Đang thực hiện đăng xuất...");
-            FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng xuất");
+            // TẠO THREAD PHỤ ĐỂ CHẠY NGẦM, KHÔNG CHẶN UI
+            new Thread(() -> {
+                try {
+                    System.out.println("Đang gửi lệnh đăng xuất tới server...");
+                    // 1. Gửi lệnh logout lên server
+                    ServerConnection.getInstance().send(RequestType.LOGOUT, null);
+                    // 2. CHỦ ĐỘNG ĐÓNG SOCKET: Để giải phóng listenerThread đang chạy ngầm
+                    ServerConnection.getInstance().disconnect();
+                    System.out.println("Đã ngắt kết nối socket cũ.");
+                } catch (Exception e) {
+                    System.err.println("Lỗi gửi request logout: " + e.getMessage());
+                }
 
-            if (loader != null) {
-                LoginController controller = loader.getController();
-            } else {
-                System.out.println("Đã hủy yêu cầu đăng xuất.");
-            }
+                // Sau khi server xử lý xong và trả về, quay lại UI Thread để chuyển màn hình
+                javafx.application.Platform.runLater(() -> {
+                    FXMLLoader loader = GenerationSupport.changeScene(sourceNode, "login-view.fxml", "Đăng nhập");;
+                    if (loader == null) {
+                        System.out.println("Lỗi: Không load được login-view.fxml");
+                    }
+
+                });
+            }).start(); // Kích hoạt thread phụ
         }
     }
 

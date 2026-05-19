@@ -3,8 +3,8 @@ package com.auction.model.item;
 public class Art extends Item{
     private String artist ; // họa sĩ
 
-    public Art(int id, int ownerId , String name , String description , double startingPrice , String artist){
-        super(id, ownerId , name , description , startingPrice);
+    public Art(int id, int ownerId , String name , String description , double startingPrice , String imageUrl, String artist){
+        super(id, ownerId , name , description , startingPrice, imageUrl);
         this.artist = artist ;
     }
 

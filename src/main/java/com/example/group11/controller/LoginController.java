@@ -10,6 +10,7 @@ import com.auction.network.RegisterPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
 import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -24,6 +25,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -102,7 +104,7 @@ public class LoginController implements Initializable {
     @FXML
     void handleLogin(ActionEvent event) {
         String userName = username.getText().trim();
-        String passWord = enterPassword.getText();
+        String passWord = isPasswordVisible ? visiblePassword.getText() : enterPassword.getText();
 
         // 1. Kiểm tra nếu để trống trường nhập liệu
         if (userName.isEmpty() || passWord.isEmpty()) {
@@ -110,43 +112,66 @@ public class LoginController implements Initializable {
             return;
         }
 
-        LoginPayload payload = new LoginPayload(userName, passWord);
-
-        Response response = ServerConnection.getInstance().send(RequestType.LOGIN, payload);
-        if (response.isSuccess()) {
-            ServerConnection.getInstance().startListening();
-            User loggedInUser = (User) response.getData();
-
-        String role = loggedInUser.getRole();
-        FXMLLoader loader;
-
-        switch (role) {
-            case "BIDDER":
-                loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
-                break;
-
-                case "SELLER":
-                    loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
-                    break;
-                default:
-                    throw new AuthenticationException("Role " + role + " is not recognized.");
+        try {
+            if (!ServerConnection.getInstance().isConnected()) {
+                ServerConnection.getInstance().connect(); // Mở lại socket mới sạch sẽ
             }
 
-            if (loader != null) {
-                Object controller = loader.getController();
-                if (controller instanceof BidderAuctionListController c) {
-                    c.setUser(loggedInUser);
-                } else if (controller instanceof SellerAuctionListController c) {
-                    c.setUser(loggedInUser);
-                } else {
-                    NotificationController.showAlert("Lỗi khởi tạo", "Lỗi tải giao diện hệ thống!");
+            LoginPayload payload = new LoginPayload(userName, passWord);
+
+            Response response = ServerConnection.getInstance().send(RequestType.LOGIN, payload);
+
+            if (response != null && response.isSuccess()) {
+                ServerConnection.getInstance().startListening();
+                User loggedInUser = (User) response.getData();
+
+                String role = loggedInUser.getRole();
+                FXMLLoader loader;
+
+                switch (role) {
+                    case "BIDDER":
+                        loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
+                        break;
+
+                    case "SELLER":
+                        loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
+                        break;
+                    default:
+                        throw new AuthenticationException("Role " + role + " is not recognized.");
                 }
+
+                if (loader != null) {
+                    Object controller = loader.getController();
+                    if (controller instanceof BidderAuctionListController c) {
+                        c.setUser(loggedInUser);
+                    } else if (controller instanceof SellerAuctionListController c) {
+                        c.setUser(loggedInUser);
+                    } else {
+                        NotificationController.showAlert("Lỗi khởi tạo", "Lỗi tải giao diện hệ thống!");
+                    }
+                }
+            } else {
+                // BẮT BUỘC PHẢI CÓ: Hiển thị lỗi từ server trả về
+                String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối đến máy chủ!";
+                NotificationController.showAlert("Lỗi xác thực", errorMsg);
             }
-        } else {
-            // BẮT BUỘC PHẢI CÓ: Hiển thị lỗi từ server trả về
-            String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối đến máy chủ!";
-            NotificationController.showAlert("Lỗi xác thực", errorMsg);
+        } catch (IOException e) {
+            // 1. Ghi nhận chi tiết lỗi vào log hệ thống để tiện debug
+            System.err.println("Lỗi kết nối Socket tới Server: " + e.getMessage());
+            // 2. Đẩy thông báo cảnh báo trực quan lên luồng giao diện (UI Thread)
+            javafx.application.Platform.runLater(() -> {
+                NotificationController.showAlert(
+                        "Mất Kết Nối Máy Chủ",
+                        "Không thể thiết lập kết nối tới máy chủ Hank Auctions.\n" +
+                                "Vui lòng đảm bảo Server đang chạy và thử lại sau ít phút!"
+                );
+            });
+        } catch (AuthenticationException e) {
+            // Bắt lỗi vai trò (Role) không hợp lệ
+            System.err.println("Lỗi xác thực vai trò: " + e.getMessage());
+            NotificationController.showAlert("Lỗi phân quyền", e.getMessage());
         }
+
     }
 
     private void showSignUp() {
@@ -305,21 +330,25 @@ public class LoginController implements Initializable {
         isPasswordVisible = !isPasswordVisible;
 
         if (isPasswordVisible) {
+            // Lấy vị trí con trỏ hiện tại của trường Ẩn để chuyển sang trường Hiện
+            int caretPosition = enterPassword.getCaretPosition();
             // Hiển thị mật khẩu
             togglePasswordIcon.setText("🙈"); // Đổi icon sang nhắm mắt
             visiblePassword.setVisible(true);
             enterPassword.setVisible(false);
             // Đưa con trỏ chuột về cuối dòng văn bản
             visiblePassword.requestFocus();
-            visiblePassword.selectEnd();
+            visiblePassword.positionCaret(caretPosition);
         } else {
+            // Lấy vị trí con trỏ hiện tại của trường Ẩn để chuyển sang trường Hiện
+            int caretPosition = enterPassword.getCaretPosition();
             // Ẩn mật khẩu
             togglePasswordIcon.setText("👁"); // Đổi icon sang mở mắt
             visiblePassword.setVisible(false);
             enterPassword.setVisible(true);
             // Đưa con trỏ chuột về cuối dòng văn bản
             visiblePassword.requestFocus();
-            visiblePassword.selectEnd();
+            visiblePassword.positionCaret(caretPosition);
         }
     }
 
