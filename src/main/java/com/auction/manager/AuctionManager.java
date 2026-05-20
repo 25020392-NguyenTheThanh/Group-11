@@ -91,6 +91,19 @@ public class AuctionManager {
         return a;
     }
 
+    public void loadAuctionsFromDatabase() {
+        List<Auction> dbAuctions = DataManager.getInstance().getAllAuctions();
+        for (Auction a : dbAuctions) {
+            List<BidTransaction> history = DataManager.getInstance().getBidHistory(a.getId());
+            a.getBidHistory().clear();
+            a.getBidHistory().addAll(history);
+            auctions.put(a.getId(), a);
+        }
+        int maxId = dbAuctions.stream().mapToInt(Auction::getId).max().orElse(0);
+        auctionCounter.set(maxId + 1);
+        System.out.println("Loaded " + dbAuctions.size() + " auctions from database.");
+    }
+
     @Deprecated
     public void loadFromDisk() {
         System.out.println("[AuctionManager] loadFromDisk() đã bị bỏ — dữ liệu lấy từ MySQL.");

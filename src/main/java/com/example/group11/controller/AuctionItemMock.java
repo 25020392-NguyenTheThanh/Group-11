@@ -66,7 +66,7 @@ public class AuctionItemMock {
                 "55.000.000",
                 "Category", "Electronics",
                 "RUNNING",
-                "https://your-image-url.com/laptop.png"
+                ""
         ));
 
         list.add(new AuctionItemMock(

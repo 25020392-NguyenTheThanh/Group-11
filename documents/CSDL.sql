@@ -46,6 +46,7 @@ CREATE TABLE items (
     starting_price DECIMAL(18,2) NOT NULL,
     category ENUM('ART', 'ELECTRONICS', 'VEHICLE') NOT NULL,
     status ENUM('AVAILABLE','IN_AUCTION','SOLD') NOT NULL DEFAULT 'AVAILABLE',
+    image_url VARCHAR(255) DEFAULT NULL,
 -- Thuộc tính riêng của từng loại
 	artist VARCHAR(100),  -- chỉ art
     brand VARCHAR(100),  -- chỉ electronics

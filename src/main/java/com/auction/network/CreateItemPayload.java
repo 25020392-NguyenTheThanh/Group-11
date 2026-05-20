@@ -7,6 +7,7 @@ public class CreateItemPayload implements Serializable {
     public String name ;
     public String description ;
     public double startingPrice ;
+    public String imageUrl;
 
     public String artist;        // cho ART
     public String brand;         // cho ELECTRONICS

@@ -31,6 +31,11 @@ public class UserRepository {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return mapper.map(con, rs);
             }
+            finally {
+                ps.close();
+                con.close();
+
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -98,10 +103,28 @@ public class UserRepository {
     }
 
     public boolean addSellerRevenue(int sellerId, double amount) {
-        return false;
+        String sql = "UPDATE sellers SET revenue = revenue + ? WHERE user_id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setInt(2, sellerId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi cộng doanh thu seller: " + e.getMessage());
+            return false;
+        }
     }
 
     public boolean updateBidderBalance(int bidderId, double newBalance) {
-        return false;
+        String sql = "UPDATE bidders SET balance = ? WHERE user_id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, newBalance);
+            ps.setInt(2, bidderId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Lỗi cập nhật số dư bidder: " + e.getMessage());
+            return false;
+        }
     }
 }

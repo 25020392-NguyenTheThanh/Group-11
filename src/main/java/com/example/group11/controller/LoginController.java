@@ -10,6 +10,7 @@ import com.auction.network.RegisterPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
 import javafx.collections.FXCollections;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -24,6 +25,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -83,6 +85,7 @@ public class LoginController implements Initializable {
 
     private boolean isPasswordVisible = false;
 
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Thiết lập mô hình chuyển động.
@@ -100,7 +103,8 @@ public class LoginController implements Initializable {
     }
 
     @FXML
-    void handleLogin(ActionEvent event) {
+    void handleLogin(ActionEvent event) throws IOException {
+        ServerConnection connection = ServerConnection.getInstance();
         String userName = username.getText().trim();
         String passWord = enterPassword.getText();
 
@@ -112,21 +116,29 @@ public class LoginController implements Initializable {
 
         LoginPayload payload = new LoginPayload(userName, passWord);
 
-        Response response = ServerConnection.getInstance().send(RequestType.LOGIN, payload);
+        // BẮT BUỘC: Nếu chưa kết nối hoặc kết nối cũ đã đóng (do đăng xuất) -> Kết nối lại
+        if (!connection.isConnected()) {
+            System.out.println("Đang kết nối lại tới Server...");
+            connection.connect();
+        }
+
+        Response response = connection.send(RequestType.LOGIN, payload);
         if (response.isSuccess()) {
             ServerConnection.getInstance().startListening();
             User loggedInUser = (User) response.getData();
 
-        String role = loggedInUser.getRole();
-        FXMLLoader loader;
+            String role = loggedInUser.getRole();
+            FXMLLoader loader;
 
-        switch (role) {
-            case "BIDDER":
-                loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
-                break;
+            switch (role) {
+                case "BIDDER":
+                    loader = GenerationSupport.changeScene(event, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
+                    break;
 
                 case "SELLER":
                     loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
+                    SellerAuctionListController controller=loader.getController();
+                    controller.setUser(loggedInUser);
                     break;
                 default:
                     throw new AuthenticationException("Role " + role + " is not recognized.");
@@ -148,6 +160,7 @@ public class LoginController implements Initializable {
             NotificationController.showAlert("Lỗi xác thực", errorMsg);
         }
     }
+
 
     private void showSignUp() {
         VBox signUpDialog = createSignUpDialog();
@@ -305,21 +318,25 @@ public class LoginController implements Initializable {
         isPasswordVisible = !isPasswordVisible;
 
         if (isPasswordVisible) {
+            // Lấy vị trí con trỏ hiện tại của trường Ẩn để chuyển sang trường Hiện
+            int caretPosition = enterPassword.getCaretPosition();
             // Hiển thị mật khẩu
             togglePasswordIcon.setText("🙈"); // Đổi icon sang nhắm mắt
             visiblePassword.setVisible(true);
             enterPassword.setVisible(false);
             // Đưa con trỏ chuột về cuối dòng văn bản
             visiblePassword.requestFocus();
-            visiblePassword.selectEnd();
+            visiblePassword.positionCaret(caretPosition);
         } else {
+            // Lấy vị trí con trỏ hiện tại của trường Ẩn để chuyển sang trường Hiện
+            int caretPosition = enterPassword.getCaretPosition();
             // Ẩn mật khẩu
             togglePasswordIcon.setText("👁"); // Đổi icon sang mở mắt
             visiblePassword.setVisible(false);
             enterPassword.setVisible(true);
             // Đưa con trỏ chuột về cuối dòng văn bản
             visiblePassword.requestFocus();
-            visiblePassword.selectEnd();
+            visiblePassword.positionCaret(caretPosition);
         }
     }
 

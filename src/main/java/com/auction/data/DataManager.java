@@ -1,5 +1,6 @@
 package com.auction.data;
 
+import com.auction.model.auction.Auction;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.user.User;
@@ -72,6 +73,10 @@ public class DataManager {
 
     public boolean finishAuction(int auctionId) {
         return auctionRepo.finish(auctionId);
+    }
+
+    public List<Auction> getAllAuctions() {
+        return auctionRepo.findAll();
     }
 
     // BidTransaction

@@ -21,6 +21,8 @@ public class AuctionServer {
     private final ExecutorService threadPool = Executors.newCachedThreadPool();
 
     public void start() {
+        // Load auctions from database at server startup
+        AuctionManager.getInstance().loadAuctionsFromDatabase();
 
         new AuctionTimer(this).start();
 

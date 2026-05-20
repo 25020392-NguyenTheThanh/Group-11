@@ -20,13 +20,14 @@ public class ItemMapper {
         String description = rs.getString("description");
         double startPrice = rs.getDouble("starting_price");
         String category = rs.getString("category");
+        String imageUrl = rs.getString("imageUrl");
 
         return switch (category) {
-            case "ART" -> new Art(id, ownerId, name, description, startPrice,
+            case "ART" -> new Art(id, ownerId, name, description, startPrice, imageUrl,
                     rs.getString("artist"));
-            case "ELECTRONICS" -> new Electronics(id, ownerId, name, description, startPrice,
+            case "ELECTRONICS" -> new Electronics(id, ownerId, name, description, startPrice, imageUrl,
                     rs.getString("brand"));
-            case "VEHICLE" -> new Vehicle(id, ownerId, name, description, startPrice,
+            case "VEHICLE" -> new Vehicle(id, ownerId, name, description, startPrice, imageUrl,
                     rs.getInt("manufacture_year"));
             default -> throw new IllegalStateException("Category không hợp lệ: " + category);
         };

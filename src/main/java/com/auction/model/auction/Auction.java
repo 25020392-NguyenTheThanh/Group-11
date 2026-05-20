@@ -153,7 +153,14 @@ public class Auction implements Subject {
                     "Giá đặt phải >= %,.0f₫  (giá cao nhất %,.0f₫ + bước tối thiểu %,.0f₫)",
                     minAccepted, currentHighestBid, minBidStep));
 
+        if (currentWinner != null) {
+            currentWinner.topUp(currentHighestBid);
+            com.auction.data.DataManager.getInstance().updateBidderBalance(currentWinner.getId(), currentWinner.getBalance());
+        }
+
         bidder.deduct(amount);
+        com.auction.data.DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
+
         // FIX: lưu vào lịch sử — phiên bản gốc bỏ sót hoàn toàn
         BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount);
         bidHistory.add(tx);
@@ -178,6 +185,9 @@ public class Auction implements Subject {
     }
     public void restoreHighestBid(double bid){
         this.currentHighestBid = bid ;
+    }
+    public void restoreCurrentWinner(Bidder bidder){
+        this.currentWinner = bidder ;
     }
     //  Getters
 

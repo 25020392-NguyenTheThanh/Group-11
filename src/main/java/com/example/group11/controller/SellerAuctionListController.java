@@ -1,7 +1,11 @@
 package com.example.group11.controller;
 
 import com.auction.client.ServerConnection;
+import com.auction.data.ItemRepository;
+import com.auction.model.item.Art;
+import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
+import com.auction.model.item.Vehicle;
 import com.auction.model.user.User;
 import com.auction.network.CreateItemPayload;
 import com.auction.network.RequestType;
@@ -12,6 +16,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
@@ -24,11 +29,10 @@ import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.ResourceBundle;
+import java.util.*;
 
 import static com.example.group11.controller.ImagesController.confirmRemoveImage;
 import static com.example.group11.controller.ImagesController.displayImage;
@@ -196,13 +200,11 @@ public class SellerAuctionListController implements Initializable {
 
     private User user;
 
-    private  String attributeKey;
-    private  String attributeValue;
-    private String imageUrl;
+    private String linkImageUrl;
 
 
     // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
-    private final List<AuctionItemMock> auctionItems = new ArrayList<>(AuctionItemMock.getMockList());
+    private List<Item> auctionItems = new ArrayList<>();
 
     public void setUser(User user) {
         this.user = user;
@@ -294,44 +296,126 @@ public class SellerAuctionListController implements Initializable {
     }
 
     public void loadMyListingView() {
-        // 1. Xóa sạch các card cũ trong lưới để tránh trùng lặp
+//        // 1. ƯU TIÊN ỨNG DỤNG TRƯỚC: Xóa sạch lưới UI cũ và đưa số lượng về 0 ngay lập tức
+//        contentGrid.getChildren().clear();
+//        CalculatorView.updateCount(totalProductsLabel, 0);
+//
+//        // Hiển thị một nhãn thông báo trạng thái đang tải tạm thời để người dùng không cảm thấy ứng dụng bị "đơ"
+//        Label loadingLabel = new Label("Đang kết nối máy chủ để tải danh sách...");
+//        loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
+//        contentGrid.add(loadingLabel, 0, 0);
+//
+//        System.out.println("Đang gửi yêu cầu lấy danh sách sản phẩm cá nhân từ Server ở Luồng Ngầm...");
+//
+//        // 2. KHỞI TẠO TÁC VỤ CHẠY NGẦM (BACKGROUND TASK)
+//        javafx.concurrent.Task<Response> fetchTask = new javafx.concurrent.Task<>() {
+//            @Override
+//            protected Response call() throws Exception {
+//                // Thực hiện tác vụ tốn thời gian (Network Call đồng bộ) tại luồng nền này
+//                return ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
+//            }
+//        };
+//
+//        // 3. XỬ LÝ KHI TẢI DỮ LIỆU THÀNH CÔNG (Tự động chuyển về luồng giao diện JavaFX)
+//        fetchTask.setOnSucceeded(event -> {
+//            contentGrid.getChildren().remove(loadingLabel); // Xóa bỏ dòng chữ "Đang tải"
+//            Response response = fetchTask.getValue();
+//
+//            if (response != null && response.isSuccess()) {
+//                auctionItems = (List<Item>) response.getData();
+//
+//                if (auctionItems == null || auctionItems.isEmpty()) {
+//                    Label noProductLabel = new Label("Bạn chưa đăng ký sản phẩm đấu giá nào.");
+//                    noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
+//                    contentGrid.getChildren().add(noProductLabel);
+//                    return;
+//                }
+//
+//                // Duyệt qua danh sách thực tế lấy từ server để render Card
+//                for (int i = 0; i < auctionItems.size(); i++) {
+//                    Item item = auctionItems.get(i);
+//
+//                    VBox productCard = ProductCardFactory.createProductCard(item, true,
+//                            (itemData, cardNode) -> {
+//                                if (cardNode != null) {
+//                                    this.contentGrid.getChildren().remove(cardNode);
+//                                    auctionItems.remove(itemData);
+//
+//                                    // Gọi lại chính hàm này (chạy ngầm tiếp) để đồng bộ lại lưới sau khi xóa
+//                                    loadMyListingView();
+//
+//                                    CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
+//                                    System.out.println("Controller đã xóa CardNode thành công.");
+//                                }
+//                            }
+//                    );
+//
+//                    // Tính toán vị trí dựa theo chỉ số vòng lặp `i` (Tránh dùng indexOf giảm hiệu năng)
+//                    int column = i % 3;
+//                    int row = i / 3;
+//                    contentGrid.add(productCard, column, row);
+//                }
+//
+//                // Cập nhật nhãn tổng số lượng sản phẩm realtime
+//                CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
+//            } else {
+//                String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối tới máy chủ!";
+//                NotificationController.showError(
+//                        "Lỗi tải dữ liệu",
+//                        "Hệ thống gặp sự cố khi đồng bộ danh sách sản phẩm.\nChi tiết: " + errorMsg
+//                );
+//            }
+//        });
+//
+//        // 4. XỬ LÝ KHI GẶP LỖI HỆ THỐNG TRONG LUỒNG NGẦM
+//        fetchTask.setOnFailed(e -> {
+//            contentGrid.getChildren().remove(loadingLabel);
+//            NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi bất ngờ khi tải dữ liệu từ luồng nền.");
+//        });
+//
+//        // 5. KÍCH HOẠT VÀ CHẠY THREAD KHÔNG BLOCKING
+//        Thread thread = new Thread(fetchTask);
+//        thread.setDaemon(true); // Đảm bảo tiểu trình tự đóng khi ứng dụng tắt
+//        thread.start();
+        // 1. Xóa sạch lưới UI cũ để chuẩn bị render mới
         contentGrid.getChildren().clear();
 
+        System.out.println("Đang tải danh sách sản phẩm cục bộ (Đơn luồng) - Số lượng: " + auctionItems.size());
 
-        // 2. Giả lập danh sách dữ liệu (Sau này bạn sẽ thay bằng List<AuctionItem> từ database)
+        if (auctionItems == null || auctionItems.isEmpty()) {
+            Label noProductLabel = new Label("Bạn chưa đăng ký sản phẩm đấu giá nào.");
+            noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
+            contentGrid.add(noProductLabel, 0, 0);
+            CalculatorView.updateCount(totalProductsLabel, 0);
+            return;
+        }
+
+        // 2. Duyệt qua danh sách cục bộ auctionItems để render Card trực tiếp trên Main Thread
         for (int i = 0; i < auctionItems.size(); i++) {
-            AuctionItemMock item = auctionItems.get(i);
+            Item item = auctionItems.get(i);
 
-            // Gọi Factory đúc Card truyền đầy đủ thuộc tính từ đối tượng Mock
-            VBox productCard = ProductCardFactory.createProductCard(
-                    item.getId(),
-                    item.getName(),
-                    item.getDesc(),
-                    item.getStartPrice(),
-                    item.getAttributeKey(),
-                    item.getAttributeValue(),
-                    item.getStatus(),
-                    item.getImageUrl(),
-                    (cardNode) -> {
-                        // HÀM CALLBACK: Đoạn code này chỉ chạy khi người dùng bấm "Đồng ý" ở Alert bên kia
-                        this.contentGrid.getChildren().remove(cardNode);
+            VBox productCard = ProductCardFactory.createProductCard(item, true,
+                    (itemData, cardNode) -> {
+                        if (cardNode != null) {
+                            this.contentGrid.getChildren().remove(cardNode);
+                            auctionItems.remove(itemData);
 
-                        // Cập nhật lại nhãn đếm tổng số lượng sản phẩm
-                        int currentCount = Integer.parseInt(totalProductsLabel.getText());
-                        CalculatorView.updateCount(totalProductsLabel, currentCount - 1);
+                            // Gọi lại chính hàm này để đồng bộ lại lưới sau khi xóa cục bộ
+                            loadMyListingView();
 
-                        System.out.println("Controller đã xóa card thành công!");
+                            CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
+                            System.out.println("Đã xóa sản phẩm cục bộ thành công.");
+                        }
                     }
             );
 
-            // 3. Tính toán vị trí cột và hàng cho GridPane (3 cột)
+            // Tính toán vị trí dựa theo chỉ số vòng lặp
             int column = i % 3;
             int row = i / 3;
-
             contentGrid.add(productCard, column, row);
         }
 
-        // 4. Cập nhật nhãn tổng số lượng sản phẩm trên giao diện
+        // 3. Cập nhật nhãn tổng số lượng sản phẩm realtime
         CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
     }
 
@@ -458,12 +542,14 @@ public class SellerAuctionListController implements Initializable {
                 minimumBidIncrementField, startDatePicker, endDatePicker,
                 descriptionArea, selectedImageFile, imageDropzone)) return;
 
-//        CreateItemPayload createItemPayload = new CreateItemPayload();
-//        createItemPayload.name = productNameField.getText().trim();
-//        createItemPayload.type = categoryMenuButton.getText();
-//        createItemPayload.startingPrice = Double.parseDouble(startingPriceField.getText());
-//        createItemPayload.description = descriptionArea.getText().trim();
-        String finalAttributeValue = "";
+        CreateItemPayload createItemPayload = new CreateItemPayload();
+        createItemPayload.name = productNameField.getText().trim();
+        createItemPayload.type = categoryMenuButton.getText();
+        createItemPayload.startingPrice = Double.parseDouble(startingPriceField.getText());
+        createItemPayload.description = descriptionArea.getText().trim();
+        createItemPayload.imageUrl = linkImageUrl;
+
+
         // 2. LẤY GIÁ TRỊ THUỘC TÍNH ĐỘNG DỰA VÀO DANH MỤC (MỚI CẬP NHẬT)
         if (dynamicAttributesContainer != null) {
             // Tìm kiếm TextField động bằng ID thông qua phương thức lookup
@@ -471,19 +557,19 @@ public class SellerAuctionListController implements Initializable {
 
             if (customField != null && !customField.getText().trim().isEmpty()) {
                 String attributeValue = customField.getText().trim();
-                finalAttributeValue=attributeValue;
-                switch (categoryMenuButton.getText()) {
+                //   Phân loại danh mục để gán đúng thuộc tính vào Payload
+                switch (createItemPayload.type) {
                     case "Electronics":
-                        attributeKey = "THƯƠNG HIỆU: ";
+                        createItemPayload.brand = attributeValue;
                         break;
 
                     case "Art":
-                        attributeKey = "TÁC GIẢ: ";
+                        createItemPayload.artist = attributeValue;
                         break;
 
                     case "Vehicle":
                         try {
-                            attributeKey = "NĂM SX: ";
+                            createItemPayload.year = Integer.parseInt(attributeValue);
                         } catch (NumberFormatException e) {
                             // Trường hợp người dùng nhập năm sản xuất không phải là số hợp lệ
                             NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
@@ -493,63 +579,72 @@ public class SellerAuctionListController implements Initializable {
 
                     default:
                         break;
-
-
-                // Phân loại danh mục để gán đúng thuộc tính vào Payload
-//                switch (createItemPayload.type) {
-//                    case "Electronics":
-//                        createItemPayload.brand = attributeValue;
-//                        attributeKey="THƯƠNG HIỆU: ";
-//                        break;
-//
-//                    case "Art":
-//                        createItemPayload.artist = attributeValue;
-//                        attributeKey="TÁC GIẢ: ";
-//                        break;
-//
-//                    case "Vehicle":
-//                        try {
-//                            createItemPayload.year = Integer.parseInt(attributeValue);
-//                            attributeKey="NĂM SX: ";
-//                        } catch (NumberFormatException e) {
-//                            // Trường hợp người dùng nhập năm sản xuất không phải là số hợp lệ
-//                            NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
-//                            return; // Dừng xử lý submit nếu có lỗi định dạng
-//                        }
-//                        break;
-//
-//                    default:
-//                        break;
                 }
             }
         }
-    // 2. LẤY GIÁ TRỊ THUỘC TÍNH ĐỘNG DỰA VÀO DANH MỤC (MỚI CẬP NHẬT)
-                // ĐÃ THAY ĐỔI: Sử dụng trực tiếp categoryMenuButton.getText() theo yêu cầu của bạn
-
-
-        auctionItems.add(new AuctionItemMock("OKOK",
-                productNameField.getText(), descriptionArea.getText(),
-                startingPriceField.getText(), attributeKey, finalAttributeValue, "ACTION", imageUrl
-                ));
-
         //Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
-        //if (response != null && response.isSuccess()) {
-            // Nếu hợp lệ thì xử lý đăng ký}
-        System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText().trim());
+//        if (response != null && response.isSuccess()) {
+//            System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
+            Item newItem = null;
+            String itemType = createItemPayload.type;
 
-        // TODO: Logic Database của bạn ở đây...
-        NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+            // Kiểm tra Type để khởi tạo lớp con hoặc gán thuộc tính đặc trưng
+            switch (itemType) {
+                case "Electronics":
+                    newItem = new Electronics(
+                            1, 100,
+                            createItemPayload.name,
+                            createItemPayload.description,
+                            createItemPayload.startingPrice,
+                            createItemPayload.imageUrl,
+                            createItemPayload.brand
+                    );
+                    break;
 
-        // Đánh dấu cần làm mới danh sách cho lần chuyển tab sau
-        SellerUIHelper.setNeedsRefresh(true);
+                case "Art":
+                    newItem = new Art(
+                            2,
+                            100,
+                            createItemPayload.name,
+                            createItemPayload.description,
+                            createItemPayload.startingPrice,
+                            createItemPayload.imageUrl,
+                            createItemPayload.artist
+                    );
+                    break;
 
-        // 1. XÓA SẠCH DỮ LIỆU TRÊN FORM ĐĂNG KÝ VỪA NHẬP
-        clearRegistrationForm();
+                case "Vehicle":
+                    newItem = new Vehicle(
+                            3,
+                            100,
+                            createItemPayload.name,
+                            createItemPayload.description,
+                            createItemPayload.startingPrice,
+                            createItemPayload.imageUrl,
+                            createItemPayload.year
+                    );
+                    break;
 
-        // 2. Quay lại giao diện danh sách sản phẩm
-        handleBackToListings(null);
-
-        loadMyListingView();
+                default:
+                    newItem = null;
+                    break;
+            }
+            auctionItems.add(newItem);
+            NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+            // Nếu hợp lệ thì xử lý đăng ký
+            System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText().trim());
+            // Đánh dấu cần làm mới danh sách cho lần chuyển tab sau
+            SellerUIHelper.setNeedsRefresh(true);
+            // XÓA SẠCH DỮ LIỆU TRÊN FORM ĐĂNG KÝ VỪA NHẬP
+            clearRegistrationForm();
+            // Quay lại giao diện danh sách sản phẩm
+            handleBackToListings(null);
+            loadMyListingView();
+//        } else {
+//            // Hiển thị lỗi nếu server từ chối hoặc lỗi mạng
+//            String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
+//            NotificationController.showError("Lỗi đăng ký", errorMsg);
+//        }
 
     }
 
@@ -602,14 +697,34 @@ public class SellerAuctionListController implements Initializable {
                 "Không, Ở lại"
         );
         if (confirm) {
+            try {
+                System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
 
-            System.out.println("Đang thực hiện đăng xuất...");
-            FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng xuất");
+//                Response response = ServerConnection.getInstance().send(RequestType.LOGOUT, null);
 
-            if (loader != null) {
-                LoginController controller = loader.getController();
-            } else {
-                System.out.println("Đã hủy yêu cầu đăng xuất.");
+                // 3. KIỂM TRA PHẢN HỒI TỪ SERVER
+//                if (response != null && response.isSuccess()) {
+//                    System.out.println("Server xác nhận: " + response.getMessage());
+
+                ServerConnection.getInstance().stopListening();
+                ServerConnection.getInstance().disconnect();
+                FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng nhập");
+
+                if (loader != null) {
+                    user = null;
+                    LoginController controller = loader.getController();
+                    // (Tùy chọn) hiển thị thông báo đăng xuất thành công bên màn hình Login
+                } else {
+                    System.err.println("Lỗi: Không thể tải giao diện login-view.fxml");
+                }
+//                } else {
+//                    // Trường hợp Server trả về lỗi (Ví dụ: "Chưa đăng nhập" hoặc lỗi DB)
+//                    String errorMsg = (response != null) ? response.getMessage() : "Không nhận được phản hồi từ Server.";
+//                    NotificationController.showError("Lỗi đăng xuất", errorMsg);
+//                }
+            } catch (Exception e) {
+                System.err.println("Lỗi kết nối khi đăng xuất: " + e.getMessage());
+                NotificationController.showError("Lỗi kết nối", "Không thể kết nối tới Server để đăng xuất.");
             }
         }
     }
@@ -636,28 +751,58 @@ public class SellerAuctionListController implements Initializable {
         productImageView.setImage(null);
         productImageView.setVisible(false); // Ẩn khung hiển thị ảnh đi
         uploadPrompt.setVisible(true);// Hiện lại dòng chữ hướng dẫn "Bấm để chọn ảnh"
-        imageUrl=null;
+        linkImageUrl = null;
     }
 
     @FXML
     private void handleSelectImage(Event event) {
         if (selectedImageFile == null) {
-            // Trường hợp chưa có ảnh: Mở trình chọn file
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Chọn ảnh sản phẩm");
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg"));
 
             File file = fileChooser.showOpenDialog(imageDropzone.getScene().getWindow());
             if (file != null) {
-                selectedImageFile = file;
-                ImagesController.displayImage(file, productImageView, uploadPrompt);
-                // TRÍCH XUẤT LINK TẠI ĐÂY
-                imageUrl = file.toURI().toString();
-                System.out.println("Link ảnh đã chọn là: " + imageUrl);
+                try {
+                    // 1. Định nghĩa đường dẫn đến package lưu trữ trong src/main/resources
+                    // Sử dụng "resources/uploads" để đảm bảo ứng dụng tìm thấy thư mục cục bộ
+                    File packageDir = new File("src/main/resources/com/example/group11/ImageProduct");
+                    if (!packageDir.exists()) {
+                        packageDir.mkdirs(); // Tự động tạo thư mục/package nếu chưa có
+                    }
+
+                    // 2. Tạo tên file ngẫu nhiên bằng UUID để tránh trùng tên ảnh trong package
+                    String extension = file.getName().substring(file.getName().lastIndexOf("."));
+                    String uniqueFileName = UUID.randomUUID().toString() + extension;
+
+                    // 3. Đường dẫn file đích nằm trong package hệ thống
+                    File destFile = new File(packageDir, uniqueFileName);
+
+                    // 4. Thực hiện copy file từ máy người dùng vào package của dự án
+                    Files.copy(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                    // 5. Gán giá trị file để quản lý UI lúc đó
+                    selectedImageFile = destFile;
+
+                    // ĐÂY CHÍNH LÀ CHUỖI STRING THUỘC TÍNH: Lưu đường dẫn tương đối trong package
+                    // Chuỗi này sẽ được gửi lên database giống như thuộc tính Name, Desc...
+                    linkImageUrl = "/com/example/group11/ImageProduct/" + uniqueFileName;
+
+                    // 6. Hiển thị ảnh preview lên giao diện JavaFX
+                    ImagesController.displayImage(destFile, productImageView, uploadPrompt);
+                    System.out.println("Đã lưu ảnh. Đường dẫn DB: " + linkImageUrl);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    NotificationController.showError("Lỗi hệ thống", "Không thể copy và lưu file ảnh vào package!");
+                }
             }
         } else {
             // Trường hợp đã có ảnh: Hỏi xác nhận xóa để chọn lại
             selectedImageFile = ImagesController.confirmRemoveImage(selectedImageFile, productImageView, uploadPrompt);
+            if (selectedImageFile == null) {
+                linkImageUrl = null; // Xóa chuỗi String đường dẫn nếu hủy chọn ảnh
+            }
         }
     }
 }

@@ -168,18 +168,13 @@ public class ServerConnection {
                     }
 
                 } catch (IOException | ClassNotFoundException e) {
-
-                    // Nếu socket chưa đóng thì báo lỗi
-                    if (socket != null
-                            && !socket.isClosed()) {
-
-                        System.err.println(
-                                "Listener lỗi: "
-                                        + e.getMessage()
-                        );
+                    // Kiểm tra xem lỗi xảy ra do ta chủ động đóng kết nối/dừng luồng hay lỗi mạng thật
+                    if (Thread.currentThread().isInterrupted() || socket == null || socket.isClosed()) {
+                        System.out.println("Luồng lắng nghe đã kết thúc an toàn (Đăng xuất/Ngắt kết nối chủ động).");
+                    } else {
+                        System.err.println("Listener lỗi kết nối đột ngột: " + e.getMessage());
                     }
-
-                    break;
+                    break; // Thoát khỏi vòng lặp, kết thúc Thread
                 }
             }
         });
@@ -189,6 +184,19 @@ public class ServerConnection {
 
         // Start thread
         listenerThread.start();
+    }
+
+    public void stopListening() {
+        System.out.println("Đang dừng luồng lắng nghe (listenerThread)...");
+
+        if (listenerThread != null && listenerThread.isAlive()) {
+            // Gửi tín hiệu ngắt (interrupt) tới thread
+            listenerThread.interrupt();
+        }
+
+        // Hủy bỏ handler để tránh rò rỉ bộ nhớ hoặc xử lý nhầm dữ liệu cũ
+        this.notificationHandler = null;
+        System.out.println("Đã dừng luồng lắng nghe thành công.");
     }
 
     // Gán hàm xử lý notification
