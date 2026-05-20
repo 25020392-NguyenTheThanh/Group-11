@@ -37,11 +37,14 @@ public class RequestProcessor {
         LoginPayload payload = (LoginPayload) request.getPayload();
         try {
             User user = UserManager.getInstance().login(payload.username , payload.password);
+            if (user == null) {
+                return Response.error("Tên đăng nhập hoặc mật khẩu không đúng!");
+            }
             // lưu User vào handler để biết ai đang gửi request
             handler.setLoggedInUser(user);
             return Response.ok(user);
         } catch (Exception e){
-            return Response.error("Đăng nhập thất bại : " + e.getMessage());
+            return Response.error("Đăng nhập thất bại: " + e.getMessage());
         }
     }
 
@@ -83,21 +86,26 @@ public class RequestProcessor {
             Bidder bidder = (Bidder) user;
             auction.placeBid(bidder, payload.amount);
 
-            BidTransaction tx = auction.getBidHistory().get(auction.getBidHistory().size() - 1);
-            AuctionManager.getInstance().onBidPlaced(auction , tx);
+            // Ghi lịch sử bid vào MySQL
+            AuctionManager.getInstance().recordBid(
+                    payload.auctionId,
+                    bidder.getId(),
+                    bidder.getUsername(),
+                    payload.amount
+            );
             return Response.ok("Đặt giá thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
         }
     }
-   // Lấy chi tiết 1 phiên đấu giá
+    // Lấy chi tiết 1 phiên đấu giá
     private static Response handleGetAuctionDetail(Request request){
-            int auctionId = (Integer) request.getPayload();
-            Auction a = AuctionManager.getInstance().findAuctionById(auctionId);
-            if (a == null ){
-                return Response.error("Không tìm thấy phiên đấu giá " + auctionId);
-            }
-            return Response.ok(a);
+        int auctionId = (Integer) request.getPayload();
+        Auction a = AuctionManager.getInstance().findAuctionById(auctionId);
+        if (a == null ){
+            return Response.error("Không tìm thấy phiên đấu giá " + auctionId);
+        }
+        return Response.ok(a);
     }
     // Seller tạo sản phẩm mới
     private static Response handleCreateItem(Request request , ClientHandler handler){
@@ -129,7 +137,8 @@ public class RequestProcessor {
         if (auction == null) return Response.error("Không thể tạo phiên - sản phẩm không ở trạng thái AVAILABLE");
 
         auction.start(); // chuyển sang RUNNING
-        AuctionManager.getInstance().saveAuction(auction);
+        // Đồng bộ trạng thái RUNNING vào DB
+        com.auction.data.DataManager.getInstance().startAuction(auction.getId());
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại

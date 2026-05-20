@@ -1,22 +1,15 @@
 package com.example.group11.controller;
 
-import com.auction.client.ServerConnection;
-import com.auction.model.auction.Auction;
 import com.auction.model.user.User;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 
 import java.net.URL;
-import java.util.List;
 import java.util.ResourceBundle;
 
 public class BidderAuctionListController implements Initializable {
@@ -79,22 +72,8 @@ public class BidderAuctionListController implements Initializable {
 
     public void setUser(User user) {
         this.user = user;
-        loadAuctions();
     }
 
-    private void loadAuctions(){
-        Response response = ServerConnection.getInstance().send(RequestType.GET_AUCTIONS , null);
-        if (!response.isSuccess()) return ;
-
-        List<Auction> auctions = (List<Auction>) response.getData();
-        totalAuctionsLabel.setText(String.valueOf(auctions.size()));
-
-        // hiển thij từng auction lên contentGrid
-        contentGrid.getChildren().clear();
-        int col = 0 ;
-        int row = 0 ;
-        for (Auction auction : auctions){}
-    } // còn
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -120,7 +99,6 @@ public class BidderAuctionListController implements Initializable {
             });
         }
     }
-
 
     @FXML
     void handleSwitchTab(ActionEvent event) {
@@ -177,5 +155,4 @@ public class BidderAuctionListController implements Initializable {
                 "-fx-border-width: 0 4 0 0;";
         button.setStyle(activeStyle);
     }
-
 }

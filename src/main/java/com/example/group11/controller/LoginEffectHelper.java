@@ -1,23 +1,17 @@
 package com.example.group11.controller;
 
 import javafx.animation.*;
-import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
-import javafx.stage.Stage;
 import javafx.util.Duration;
-
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 
-public class EquilibriumAnimation {
+public class LoginEffectHelper {
 
     public static void startEquilibriumAnimation(Rectangle scaleBar, VBox boxContainer, VBox coinContainer) {
         Duration speed = Duration.seconds(1.8);
@@ -95,9 +89,7 @@ public class EquilibriumAnimation {
         pt.play();
     }
 
-    /*
-     * Hàm dùng chung để mở tệp bằng ứng dụng mặc định của hệ thống
-     */
+    // Hàm dùng chung để mở tệp bằng ứng dụng mặc định của hệ thống
     public static void openFile(String filePath) {
         try {
             File file = new File(filePath);
@@ -116,33 +108,12 @@ public class EquilibriumAnimation {
 
     }
 
-    /*
-     * Hiệu ứng gạch chân khi di chuột (Hover)
-     */
+    // Hiệu ứng gạch chân khi di chuột (Hover)
     public static void setupHoverEffect(Hyperlink link) {
         link.setOnMouseEntered(e -> link.setUnderline(true));
         link.setOnMouseExited(e -> link.setUnderline(false));
     }
 
-    public static FXMLLoader changeScene(ActionEvent event, String fxmlFile, String title) {
-        try {
-            FXMLLoader loader = new FXMLLoader(EquilibriumAnimation.class.getResource("/com/example/group11/" + fxmlFile));
-            Parent root = loader.load();
-
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.setTitle(title);
-
-            stage.sizeToScene();
-            stage.centerOnScreen();
-            stage.show();
-
-            return loader; // Trả về loader để lấy controller bên ngoài
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-
 }
+
+

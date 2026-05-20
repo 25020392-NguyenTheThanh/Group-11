@@ -15,11 +15,20 @@
 <VBox alignment="CENTER" spacing="10" style="-fx-background-color: #131313;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
     <children>
         <!-- Main Auction Card -->
-        <VBox fx:id="mainCardContainer" maxWidth="350.0" style="-fx-background-color: #1A1A1A; -fx-border-color: #262626; -fx-border-width: 1;">
+        <VBox fx:id="mainCardContainer" maxWidth="350.0"
+              style="-fx-background-color: #1A1A1A;
+             -fx-border-color: #262626;
+             -fx-border-width: 1;
+             -fx-background-radius: 15;
+             -fx-border-radius: 15;">
             <children>
 
                 <!-- Header Bar -->
-                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0" style="-fx-background-color: #0A0A0A; -fx-border-color: transparent transparent #262626 transparent;">
+                <HBox alignment="CENTER_LEFT" prefHeight="35.0" spacing="10.0"
+                      style="-fx-background-color: #0A0A0A;
+             -fx-border-color: transparent transparent #262626 transparent;
+             -fx-background-radius: 15 15 0 0;
+             -fx-border-radius: 15 15 0 0;">
                     <padding>
                         <Insets left="15.0" right="15.0" />
                     </padding>
