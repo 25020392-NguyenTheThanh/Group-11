@@ -81,13 +81,24 @@ public class BidderAuctionListController implements Initializable {
         setActiveStyle(btnDashboardS);
 
         // Xử lý cho MenuButton Trạng thái
-        GenerationSupport.setupMenuButtonUpdate(auctionStatus);
+        setupMenuButtonUpdate(auctionStatus);
 
         // Xử lý cho MenuButton Sản phẩm
-        GenerationSupport.setupMenuButtonUpdate(auctionProduct);
+        setupMenuButtonUpdate(auctionProduct);
 
     }
 
+
+    //  Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong
+    private void setupMenuButtonUpdate(MenuButton menuButton) {
+        for (MenuItem item : menuButton.getItems()) {
+            item.setOnAction(event -> {
+                menuButton.setText(item.getText().toUpperCase());
+                // Gọi logic lọc dữ liệu tại đây
+                System.out.println("Bidder đang lọc theo: " + item.getText());
+            });
+        }
+    }
 
     @FXML
     void handleSwitchTab(ActionEvent event) {

@@ -9,10 +9,10 @@ import java.util.List;
 public class UserRepository {
 
     private final DatabaseConnection db;
-    private final UserMapper         mapper;
+    private final UserMapper mapper;
 
     public UserRepository() {
-        this.db     = DatabaseConnection.getInstance();
+        this.db = DatabaseConnection.getInstance();
         this.mapper = new UserMapper();
     }
 
@@ -95,5 +95,13 @@ public class UserRepository {
             ps.setInt(1, userId);
             ps.executeUpdate();
         }
+    }
+
+    public boolean addSellerRevenue(int sellerId, double amount) {
+        return false;
+    }
+
+    public boolean updateBidderBalance(int bidderId, double newBalance) {
+        return false;
     }
 }
