@@ -68,33 +68,30 @@ public class ServerConnection {
 
     // Kết nối tới server
     public void connect() throws IOException {
-
+        if (isConnected()) return; // Đã kết nối rồi thì thôi
         // Tạo socket
         socket = new Socket(HOST, PORT);
-
         // Tạo output stream trước
         // tránh deadlock
         out = new ObjectOutputStream(
                 socket.getOutputStream()
         );
-
         out.flush();
-
         // Tạo input stream
         in = new ObjectInputStream(
                 socket.getInputStream()
         );
 
         System.out.println("Đã kết nối tới server");
+        // KHỞI CHẠY LISTENER NGAY KHI KẾT NỐI ĐỂ ĐÓN ĐẦU DỮ LIỆU
+        startListening();
     }
-
     // Gửi request lên server
     // synchronized để tránh nhiều thread đọc ghi cùng lúc
     public synchronized Response send(
             RequestType type,
             Object payload
     ) {
-
         try {
             // 1. Chỉ đồng bộ việc ghi dữ liệu để các thread không tranh nhau ghi
             synchronized (out) {
@@ -102,24 +99,24 @@ public class ServerConnection {
                 out.flush();
                 out.reset();
             }
-
-            // 2. Đọc dữ liệu trả về
-            if (listenerThread != null && listenerThread.isAlive()) {
-                // KỊCH BẢN 1: Đã login, listener đang chạy.
-                // Ta đứng đợi ở Queue chờ Listener nhặt Response quăng vào.
-                return responseQueue.take();
-            } else {
-                // KỊCH BẢN 2: Chưa login, listener chưa chạy.
-                // Hàm send tự mình đọc trực tiếp.
-                while (true) {
-                    Object obj = in.readObject();
-                    if (obj instanceof Response r) return r;
-
-                    if (obj instanceof Notification n && notificationHandler != null) {
-                        javafx.application.Platform.runLater(() -> notificationHandler.accept(n));
-                    }
-                }
-            }
+//            // 2. Đọc dữ liệu trả về
+//            if (listenerThread != null && listenerThread.isAlive()) {
+//                // KỊCH BẢN 1: Đã login, listener đang chạy.
+//                // Ta đứng đợi ở Queue chờ Listener nhặt Response quăng vào.
+//                return responseQueue.take();
+//            } else {
+//                // KỊCH BẢN 2: Chưa login, listener chưa chạy.
+//                // Hàm send tự mình đọc trực tiếp.
+//                while (true) {
+//                    Object obj = in.readObject();
+//                    if (obj instanceof Response r) return r;
+//
+//                    if (obj instanceof Notification n && notificationHandler != null) {
+//                        javafx.application.Platform.runLater(() -> notificationHandler.accept(n));
+//                    }
+//                }
+//            }
+            return responseQueue.take();
         } catch (Exception e) {
             System.err.println("Lỗi gửi request: " + e.getMessage());
             return Response.error("Mất kết nối tới server");
@@ -128,40 +125,29 @@ public class ServerConnection {
 
     // Bắt đầu thread lắng nghe notification
     public void startListening() {
-
         if (listenerThread != null
                 && listenerThread.isAlive())
             return;
-
         // Tạo thread listener
         listenerThread = new Thread(() -> {
-
             // Chạy khi socket còn mở
             while (socket != null
                     && !socket.isClosed()) {
-
                 try {
-                    Object obj;
-                    synchronized (this) {
-                        obj = in.readObject();
-                    }
+                    Object obj=in.readObject();
 
                     // Nếu nhận notification
                     if (obj instanceof Notification n
                             && notificationHandler != null) {
-
                         // Chạy trên JavaFX thread
                         javafx.application.Platform.runLater(
-
                                 () -> notificationHandler.accept(n)
                         );
                     }// Nếu nhặt được Response thì ném vào queue
                     else if (obj instanceof Response r) {
                         responseQueue.offer(r);
                     }
-
                 } catch (IOException | ClassNotFoundException e) {
-
                     // Nếu socket chưa đóng thì báo lỗi
                     if (socket != null
                             && !socket.isClosed()) {

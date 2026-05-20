@@ -122,7 +122,7 @@ public class LoginController implements Initializable {
             Response response = ServerConnection.getInstance().send(RequestType.LOGIN, payload);
 
             if (response != null && response.isSuccess()) {
-                ServerConnection.getInstance().startListening();
+                //ServerConnection.getInstance().startListening();
                 User loggedInUser = (User) response.getData();
 
                 String role = loggedInUser.getRole();
