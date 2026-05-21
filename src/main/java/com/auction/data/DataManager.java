@@ -57,6 +57,10 @@ public class DataManager {
         return itemRepo.findAll();
     }
 
+    public boolean deleteItem(int id) {
+        return itemRepo.delete(id);
+    }
+
     // Auction
 
     public int createAuction(int itemId, LocalDateTime endTime, double minBidStep) {

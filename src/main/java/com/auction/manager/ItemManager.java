@@ -84,4 +84,13 @@ public class ItemManager {
         fromDb.forEach(i -> items.put(i.getId(), i));
         return fromDb;
     }
+
+    // Xóa sản phẩm theo id khỏi database và cache.
+    public boolean deleteItem(int id) {
+        boolean success = DataManager.getInstance().deleteItem(id);
+        if (success) {
+            items.remove(id);
+        }
+        return success;
+    }
 }

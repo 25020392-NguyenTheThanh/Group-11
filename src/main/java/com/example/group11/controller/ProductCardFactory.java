@@ -28,7 +28,7 @@ public class ProductCardFactory {
      *  isSeller Nếu là true thì hiện nút XÓA/SỬA, nếu là false (Bidder) thì hiện nút ĐẤU GIÁ
      *  onActionClick Hành động xử lý khi nhấn nút tương ứng
      */
-    public static VBox createProductCard(Item item, boolean isSeller, BiConsumer<Item, VBox> onActionClick) {
+    public static VBox createProductCard(Item item, boolean isSeller, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onActionClick) {
         // 1. Lấy thông tin chung từ DB
         String id = String.valueOf(item.getId());
         String name = item.getName();
@@ -170,9 +170,8 @@ public class ProductCardFactory {
         HBox.setHgrow(btnDetails, javafx.scene.layout.Priority.ALWAYS);
         btnDetails.setStyle("-fx-background-color: #334155; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
         btnDetails.setOnAction(e -> {
-            if (onActionClick != null) {
-                // Gửi tín hiệu hành động là "DETAILS" về Controller xử lý
-                onActionClick.accept(item, card);
+            if (onDetailsClick != null) {
+                onDetailsClick.accept(item, card);
             }
         });
         actions.getChildren().add(btnDetails);

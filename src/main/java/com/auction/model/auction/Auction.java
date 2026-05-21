@@ -11,6 +11,7 @@ import com.auction.pattern.observer.Subject;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 // Auction đóng vai trò là Subject — notify tất cả observer khi có thay đổi
 // sửa thêm một số chỗ tránh race condition!!
@@ -23,7 +24,7 @@ public class Auction implements Subject {
     private AuctionStatus status;
     private LocalDateTime endTime;
     private List<BidTransaction> bidHistory;
-    private transient List<Observer> observers; // không lưu vào file
+    private transient CopyOnWriteArrayList<Observer> observers; // không lưu vào file
     private final double minBidStep; // bước giá tối thiểu
 
     public Auction(int id, Item item, LocalDateTime endTime, double minBidStep) {
@@ -34,7 +35,7 @@ public class Auction implements Subject {
         this.endTime = endTime;
         this.minBidStep = minBidStep; // bước giá tối thiểu
         this.bidHistory = new ArrayList<>();
-        this.observers = new ArrayList<>();
+        this.observers = new CopyOnWriteArrayList<>();
     }
 
 
@@ -153,14 +154,7 @@ public class Auction implements Subject {
                     "Giá đặt phải >= %,.0f₫  (giá cao nhất %,.0f₫ + bước tối thiểu %,.0f₫)",
                     minAccepted, currentHighestBid, minBidStep));
 
-        if (currentWinner != null) {
-            currentWinner.topUp(currentHighestBid);
-            com.auction.data.DataManager.getInstance().updateBidderBalance(currentWinner.getId(), currentWinner.getBalance());
-        }
-
         bidder.deduct(amount);
-        com.auction.data.DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
-
         // FIX: lưu vào lịch sử — phiên bản gốc bỏ sót hoàn toàn
         BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount);
         bidHistory.add(tx);
@@ -177,7 +171,7 @@ public class Auction implements Subject {
     private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException , ClassNotFoundException{
         ois.defaultReadObject();
         if (observers == null){
-            observers = new java.util.ArrayList<>();
+            observers = new CopyOnWriteArrayList<>();
         }
     }
     public void restoreStatus(AuctionStatus status){
@@ -186,8 +180,9 @@ public class Auction implements Subject {
     public void restoreHighestBid(double bid){
         this.currentHighestBid = bid ;
     }
-    public void restoreCurrentWinner(Bidder bidder){
-        this.currentWinner = bidder ;
+
+    public boolean hasObserver(Observer observer){
+        return observers.contains(observer);
     }
     //  Getters
 
@@ -200,4 +195,5 @@ public class Auction implements Subject {
     public List<BidTransaction> getBidHistory()        { return bidHistory; }
     public double               getMinBidStep()        { return minBidStep; }
     public boolean              isExpired()            { return LocalDateTime.now().isAfter(endTime); }
+    public void                 setStatus(AuctionStatus status_) {status = status_;}
 }

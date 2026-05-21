@@ -327,10 +327,6 @@
                                                                             <Label text="BƯỚC GIÁ TỐI THIỂU ($)" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
                                                                             <TextField fx:id="minimumBidIncrementField" prefHeight="40.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45;" />
                                                                         </VBox>
-                                                                        <VBox spacing="5.0">
-                                                                            <Label text="TIỀN ĐẶT CỌC ($)" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
-                                                                            <TextField fx:id="depositField" prefHeight="40.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45;" />
-                                                                        </VBox>
                                                                     </children>
                                                                 </VBox>
                                                             </children>

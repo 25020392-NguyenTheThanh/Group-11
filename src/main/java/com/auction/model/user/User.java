@@ -24,6 +24,7 @@ public abstract class User extends Entity {
     public String getEmail() { return email; }
     public boolean isActive() { return active; }
     public boolean isAuthenticated() { return authenticated; }
+    public void setAuthenticated(boolean state){ this.authenticated = state ;}
     public void setEmail(String email) { this.email = email ; }
     public void setPassWord(String password) { this.password = password ;}
 

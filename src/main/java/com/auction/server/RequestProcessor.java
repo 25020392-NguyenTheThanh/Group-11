@@ -24,11 +24,12 @@ public class RequestProcessor {
             case REGISTER       -> handleRegister(request);
             case LOGOUT         -> handleLogout(handler);
             case GET_AUCTIONS   -> handleGetAuctions();
-            case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request);
+            case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request, handler);
             case PLACE_BID      -> handlePlaceBid(request, handler);
             case CREATE_ITEM    -> handleCreateItem(request, handler);
             case CREATE_AUCTION -> handleCreateAuction(request, handler);
             case GET_MY_ITEMS   -> handleGetMyItems(handler);
+            case DELETE_ITEM    -> handleDeleteItem(request, handler);
         };
     } // vi phạm OCP
 
@@ -94,7 +95,6 @@ public class RequestProcessor {
         try {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
             if (auction == null) return Response.error("Phiên không tồn tại");
-            auction.addObserver(handler); // đăng ký nhận thông báo realtime
             Bidder bidder = (Bidder) user;
             auction.placeBid(bidder, payload.amount);
 
@@ -111,11 +111,14 @@ public class RequestProcessor {
         }
     }
     // Lấy chi tiết 1 phiên đấu giá
-    private static Response handleGetAuctionDetail(Request request){
+    private static Response handleGetAuctionDetail(Request request , ClientHandler handler){
         int auctionId = (Integer) request.getPayload();
         Auction a = AuctionManager.getInstance().findAuctionById(auctionId);
         if (a == null ){
             return Response.error("Không tìm thấy phiên đấu giá " + auctionId);
+        }
+        if (!a.hasObserver(handler)) {
+            a.addObserver(handler);
         }
         return Response.ok(a);
     }
@@ -158,6 +161,38 @@ public class RequestProcessor {
         User user = handler.getLoggedInUser();
         if (user == null) return Response.error("Chưa đăng nhập");
         return Response.ok(ItemManager.getInstance().getByOwner(user.getId()));
+    }
+
+    // Xóa sản phẩm
+    private static Response handleDeleteItem(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Chưa đăng nhập");
+        if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể xóa sản phẩm");
+
+        if (request.getPayload() == null || !(request.getPayload() instanceof Integer)) {
+            return Response.error("Dữ liệu xóa sản phẩm không hợp lệ!");
+        }
+
+        int itemId = (Integer) request.getPayload();
+        Item item = ItemManager.getInstance().findItem(itemId);
+        if (item == null) {
+            return Response.error("Sản phẩm không tồn tại");
+        }
+
+        if (item.getOwnerId() != user.getId()) {
+            return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
+        }
+
+        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+            return Response.error("Chỉ có thể xóa sản phẩm ở trạng thái AVAILABLE");
+        }
+
+        boolean success = ItemManager.getInstance().deleteItem(itemId);
+        if (success) {
+            return Response.ok("Xóa sản phẩm thành công");
+        } else {
+            return Response.error("Không thể xóa sản phẩm khỏi cơ sở dữ liệu");
+        }
     }
 
 }

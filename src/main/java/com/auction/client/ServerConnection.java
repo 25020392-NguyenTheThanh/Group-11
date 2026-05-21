@@ -39,6 +39,12 @@ public class ServerConnection {
     // Hàm xử lý notification
     private Consumer<Notification> notificationHandler;
 
+    // Flag đánh dấu có request đang gửi đi và chờ response
+    private boolean requestInProgress = false;
+
+    // Buffer lưu trữ response nhận được từ listenerThread truyền qua cho send()
+    private Response responseBuffer = null;
+
     // Constructor private để dùng Singleton
     private ServerConnection() {}
 
@@ -84,14 +90,23 @@ public class ServerConnection {
     }
 
     // Gửi request lên server
-    // synchronized để tránh nhiều thread đọc ghi cùng lúc
     public synchronized Response send(
             RequestType type,
             Object payload
     ) {
+        // Chờ nếu có một request khác đang được xử lý
+        while (requestInProgress) {
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return Response.error("Yêu cầu bị ngắt quãng");
+            }
+        }
+
+        requestInProgress = true;
 
         try {
-
             // Gửi request
             out.writeObject(
                     new Request(type, payload)
@@ -101,29 +116,34 @@ public class ServerConnection {
 
             out.reset();
 
-            // Đọc dữ liệu trả về
-            while (true) {
+            // Nếu listener thread đang chạy, ta đợi nó đọc và thông báo
+            if (listenerThread != null && listenerThread.isAlive()) {
+                while (responseBuffer == null) {
+                    this.wait();
+                }
+                Response r = responseBuffer;
+                responseBuffer = null; // consume
+                return r;
+            } else {
+                // Nếu listener thread chưa chạy, ta tự đọc trực tiếp
+                while (true) {
+                    Object obj = in.readObject();
 
-                Object obj = in.readObject();
+                    if (obj instanceof Response r)
+                        return r;
 
-                if (obj instanceof Response r)
-                    return r;
-
-                if (obj instanceof Notification n
-                        && notificationHandler != null) {
-
-                    final Notification notif = n;
-
-                    // Chạy trên JavaFX thread
-                    javafx.application.Platform.runLater(
-
-                            () -> notificationHandler.accept(notif)
-                    );
+                    if (obj instanceof Notification n
+                            && notificationHandler != null) {
+                        final Notification notif = n;
+                        // Chạy trên JavaFX thread
+                        javafx.application.Platform.runLater(
+                                () -> notificationHandler.accept(notif)
+                        );
+                    }
                 }
             }
 
-        } catch (IOException | ClassNotFoundException e) {
-
+        } catch (IOException | ClassNotFoundException | InterruptedException e) {
             // Báo lỗi kết nối
             System.err.println(
                     "Lỗi gửi request: "
@@ -133,6 +153,9 @@ public class ServerConnection {
             return Response.error(
                     "Mất kết nối tới server"
             );
+        } finally {
+            requestInProgress = false;
+            this.notifyAll(); // Đánh thức các thread khác đang chờ để gửi request tiếp theo
         }
     }
 
@@ -151,20 +174,21 @@ public class ServerConnection {
                     && !socket.isClosed()) {
 
                 try {
-                    Object obj;
+                    // Đọc mạng KHÔNG giữ lock đồng bộ
+                    Object obj = in.readObject();
+
+                    // Chỉ đồng bộ khi lưu responseBuffer và gọi handler
                     synchronized (this) {
-                        obj = in.readObject();
-                    }
-
-                    // Nếu nhận notification
-                    if (obj instanceof Notification n
-                            && notificationHandler != null) {
-
-                        // Chạy trên JavaFX thread
-                        javafx.application.Platform.runLater(
-
-                                () -> notificationHandler.accept(n)
-                        );
+                        if (obj instanceof Response r) {
+                            responseBuffer = r;
+                            this.notifyAll();
+                        } else if (obj instanceof Notification n
+                                && notificationHandler != null) {
+                            // Chạy trên JavaFX thread
+                            javafx.application.Platform.runLater(
+                                    () -> notificationHandler.accept(n)
+                            );
+                        }
                     }
 
                 } catch (IOException | ClassNotFoundException e) {

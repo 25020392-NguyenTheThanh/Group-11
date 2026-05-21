@@ -69,7 +69,9 @@ public class ClientHandler implements Runnable , Observer {
     }
 
     @Override
-    public void send(String message){}
+    public void send(String message){
+        sendNotification(new Notification("BID_UPDATE" , message));
+    }
 
     public synchronized void sendNotification(Notification notification){
         try {

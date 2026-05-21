@@ -10,6 +10,7 @@ import com.auction.model.user.User;
 import com.auction.network.CreateItemPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
@@ -98,9 +99,6 @@ public class SellerAuctionListController implements Initializable {
 
     @FXML
     private GridPane contentGrid;
-
-    @FXML
-    private TextField depositField;
 
     @FXML
     private TextArea descriptionArea;
@@ -296,127 +294,109 @@ public class SellerAuctionListController implements Initializable {
     }
 
     public void loadMyListingView() {
-//        // 1. ƯU TIÊN ỨNG DỤNG TRƯỚC: Xóa sạch lưới UI cũ và đưa số lượng về 0 ngay lập tức
-//        contentGrid.getChildren().clear();
-//        CalculatorView.updateCount(totalProductsLabel, 0);
-//
-//        // Hiển thị một nhãn thông báo trạng thái đang tải tạm thời để người dùng không cảm thấy ứng dụng bị "đơ"
-//        Label loadingLabel = new Label("Đang kết nối máy chủ để tải danh sách...");
-//        loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
-//        contentGrid.add(loadingLabel, 0, 0);
-//
-//        System.out.println("Đang gửi yêu cầu lấy danh sách sản phẩm cá nhân từ Server ở Luồng Ngầm...");
-//
-//        // 2. KHỞI TẠO TÁC VỤ CHẠY NGẦM (BACKGROUND TASK)
-//        javafx.concurrent.Task<Response> fetchTask = new javafx.concurrent.Task<>() {
-//            @Override
-//            protected Response call() throws Exception {
-//                // Thực hiện tác vụ tốn thời gian (Network Call đồng bộ) tại luồng nền này
-//                return ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
-//            }
-//        };
-//
-//        // 3. XỬ LÝ KHI TẢI DỮ LIỆU THÀNH CÔNG (Tự động chuyển về luồng giao diện JavaFX)
-//        fetchTask.setOnSucceeded(event -> {
-//            contentGrid.getChildren().remove(loadingLabel); // Xóa bỏ dòng chữ "Đang tải"
-//            Response response = fetchTask.getValue();
-//
-//            if (response != null && response.isSuccess()) {
-//                auctionItems = (List<Item>) response.getData();
-//
-//                if (auctionItems == null || auctionItems.isEmpty()) {
-//                    Label noProductLabel = new Label("Bạn chưa đăng ký sản phẩm đấu giá nào.");
-//                    noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
-//                    contentGrid.getChildren().add(noProductLabel);
-//                    return;
-//                }
-//
-//                // Duyệt qua danh sách thực tế lấy từ server để render Card
-//                for (int i = 0; i < auctionItems.size(); i++) {
-//                    Item item = auctionItems.get(i);
-//
-//                    VBox productCard = ProductCardFactory.createProductCard(item, true,
-//                            (itemData, cardNode) -> {
-//                                if (cardNode != null) {
-//                                    this.contentGrid.getChildren().remove(cardNode);
-//                                    auctionItems.remove(itemData);
-//
-//                                    // Gọi lại chính hàm này (chạy ngầm tiếp) để đồng bộ lại lưới sau khi xóa
-//                                    loadMyListingView();
-//
-//                                    CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
-//                                    System.out.println("Controller đã xóa CardNode thành công.");
-//                                }
-//                            }
-//                    );
-//
-//                    // Tính toán vị trí dựa theo chỉ số vòng lặp `i` (Tránh dùng indexOf giảm hiệu năng)
-//                    int column = i % 3;
-//                    int row = i / 3;
-//                    contentGrid.add(productCard, column, row);
-//                }
-//
-//                // Cập nhật nhãn tổng số lượng sản phẩm realtime
-//                CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
-//            } else {
-//                String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối tới máy chủ!";
-//                NotificationController.showError(
-//                        "Lỗi tải dữ liệu",
-//                        "Hệ thống gặp sự cố khi đồng bộ danh sách sản phẩm.\nChi tiết: " + errorMsg
-//                );
-//            }
-//        });
-//
-//        // 4. XỬ LÝ KHI GẶP LỖI HỆ THỐNG TRONG LUỒNG NGẦM
-//        fetchTask.setOnFailed(e -> {
-//            contentGrid.getChildren().remove(loadingLabel);
-//            NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi bất ngờ khi tải dữ liệu từ luồng nền.");
-//        });
-//
-//        // 5. KÍCH HOẠT VÀ CHẠY THREAD KHÔNG BLOCKING
-//        Thread thread = new Thread(fetchTask);
-//        thread.setDaemon(true); // Đảm bảo tiểu trình tự đóng khi ứng dụng tắt
-//        thread.start();
-        // 1. Xóa sạch lưới UI cũ để chuẩn bị render mới
+        // 1. ƯU TIÊN ỨNG DỤNG TRƯỚC: Xóa sạch lưới UI cũ và đưa số lượng về 0 ngay lập tức
         contentGrid.getChildren().clear();
+        CalculatorView.updateCount(totalProductsLabel, 0);
 
-        System.out.println("Đang tải danh sách sản phẩm cục bộ (Đơn luồng) - Số lượng: " + auctionItems.size());
+        // Hiển thị một nhãn thông báo trạng thái đang tải tạm thời để người dùng không cảm thấy ứng dụng bị "đơ"
+        Label loadingLabel = new Label("Đang kết nối máy chủ để tải danh sách...");
+        loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
+        contentGrid.add(loadingLabel, 0, 0);
 
-        if (auctionItems == null || auctionItems.isEmpty()) {
-            Label noProductLabel = new Label("Bạn chưa đăng ký sản phẩm đấu giá nào.");
-            noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
-            contentGrid.add(noProductLabel, 0, 0);
-            CalculatorView.updateCount(totalProductsLabel, 0);
-            return;
-        }
+        System.out.println("Đang gửi yêu cầu lấy danh sách sản phẩm cá nhân từ Server ở Luồng Ngầm...");
 
-        // 2. Duyệt qua danh sách cục bộ auctionItems để render Card trực tiếp trên Main Thread
-        for (int i = 0; i < auctionItems.size(); i++) {
-            Item item = auctionItems.get(i);
+        // 2. KHỞI TẠO TÁC VỤ CHẠY NGẦM (BACKGROUND TASK)
+        Task<Response> fetchTask = new javafx.concurrent.Task<>() {
+            @Override
+            protected Response call() throws Exception {
+                // Thực hiện tác vụ tốn thời gian (Network Call đồng bộ) tại luồng nền này
+                return ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
+            }
+        };
 
-            VBox productCard = ProductCardFactory.createProductCard(item, true,
-                    (itemData, cardNode) -> {
-                        if (cardNode != null) {
-                            this.contentGrid.getChildren().remove(cardNode);
-                            auctionItems.remove(itemData);
+        // 3. XỬ LÝ KHI TẢI DỮ LIỆU THÀNH CÔNG (Tự động chuyển về luồng giao diện JavaFX)
+        fetchTask.setOnSucceeded(event -> {
+            contentGrid.getChildren().remove(loadingLabel); // Xóa bỏ dòng chữ "Đang tải"
+            Response response = fetchTask.getValue();
 
-                            // Gọi lại chính hàm này để đồng bộ lại lưới sau khi xóa cục bộ
-                            loadMyListingView();
+            if (response != null && response.isSuccess()) {
+                auctionItems = (List<Item>) response.getData();
 
-                            CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
-                            System.out.println("Đã xóa sản phẩm cục bộ thành công.");
-                        }
-                    }
-            );
+                if (auctionItems == null || auctionItems.isEmpty()) {
+                    Label noProductLabel = new Label("Bạn chưa đăng ký sản phẩm đấu giá nào.");
+                    noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
+                    contentGrid.getChildren().add(noProductLabel);
+                    return;
+                }
 
-            // Tính toán vị trí dựa theo chỉ số vòng lặp
-            int column = i % 3;
-            int row = i / 3;
-            contentGrid.add(productCard, column, row);
-        }
+                // Duyệt qua danh sách thực tế lấy từ server để render Card
+                for (int i = 0; i < auctionItems.size(); i++) {
+                    Item item = auctionItems.get(i);
 
-        // 3. Cập nhật nhãn tổng số lượng sản phẩm realtime
-        CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
+                    VBox productCard = ProductCardFactory.createProductCard(item, true,
+                            (itemData, cardNode) -> {
+                                System.out.println("Xem chi tiết sản phẩm: " + itemData.getName());
+                            },
+                            (itemData, cardNode) -> {
+                                if (cardNode != null) {
+                                    javafx.concurrent.Task<Response> deleteTask = new javafx.concurrent.Task<>() {
+                                        @Override
+                                        protected Response call() throws Exception {
+                                            return ServerConnection.getInstance().send(RequestType.DELETE_ITEM, itemData.getId());
+                                        }
+                                    };
+
+                                    deleteTask.setOnSucceeded(evt -> {
+                                        Response res = deleteTask.getValue();
+                                        if (res != null && res.isSuccess()) {
+                                            NotificationController.showNotification("Thành công", "Đã xóa sản phẩm thành công!");
+                                            this.contentGrid.getChildren().remove(cardNode);
+                                            auctionItems.remove(itemData);
+                                            loadMyListingView();
+                                        } else {
+                                            String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                                            NotificationController.showError("Lỗi xóa sản phẩm", "Không thể xóa sản phẩm.\nChi tiết: " + errMsg);
+                                        }
+                                    });
+
+                                    deleteTask.setOnFailed(evt -> {
+                                        NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi kết nối khi gửi yêu cầu xóa.");
+                                    });
+
+                                    Thread t = new Thread(deleteTask);
+                                    t.setDaemon(true);
+                                    t.start();
+                                }
+                            }
+                    );
+
+                    // Tính toán vị trí dựa theo chỉ số vòng lặp `i` (Tránh dùng indexOf giảm hiệu năng)
+                    int column = i % 3;
+                    int row = i / 3;
+                    contentGrid.add(productCard, column, row);
+                }
+
+                // Cập nhật nhãn tổng số lượng sản phẩm realtime
+                CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
+            } else {
+                String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối tới máy chủ!";
+                NotificationController.showError(
+                        "Lỗi tải dữ liệu",
+                        "Hệ thống gặp sự cố khi đồng bộ danh sách sản phẩm.\nChi tiết: " + errorMsg
+                );
+            }
+        });
+
+        // 4. XỬ LÝ KHI GẶP LỖI HỆ THỐNG TRONG LUỒNG NGẦM
+        fetchTask.setOnFailed(e -> {
+            contentGrid.getChildren().remove(loadingLabel);
+            NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi bất ngờ khi tải dữ liệu từ luồng nền.");
+        });
+
+        // 5. KÍCH HOẠT VÀ CHẠY THREAD KHÔNG BLOCKING
+        Thread thread = new Thread(fetchTask);
+        thread.setDaemon(true); // Đảm bảo tiểu trình tự đóng khi ứng dụng tắt
+        thread.start();
     }
 
     // TÍNH NĂNG: Load dữ liệu biểu đồ
@@ -549,7 +529,6 @@ public class SellerAuctionListController implements Initializable {
         createItemPayload.description = descriptionArea.getText().trim();
         createItemPayload.imageUrl = linkImageUrl;
 
-
         // 2. LẤY GIÁ TRỊ THUỘC TÍNH ĐỘNG DỰA VÀO DANH MỤC (MỚI CẬP NHẬT)
         if (dynamicAttributesContainer != null) {
             // Tìm kiếm TextField động bằng ID thông qua phương thức lookup
@@ -582,54 +561,9 @@ public class SellerAuctionListController implements Initializable {
                 }
             }
         }
-        //Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
-//        if (response != null && response.isSuccess()) {
-//            System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
-            Item newItem = null;
-            String itemType = createItemPayload.type;
-
-            // Kiểm tra Type để khởi tạo lớp con hoặc gán thuộc tính đặc trưng
-            switch (itemType) {
-                case "Electronics":
-                    newItem = new Electronics(
-                            1, 100,
-                            createItemPayload.name,
-                            createItemPayload.description,
-                            createItemPayload.startingPrice,
-                            createItemPayload.imageUrl,
-                            createItemPayload.brand
-                    );
-                    break;
-
-                case "Art":
-                    newItem = new Art(
-                            2,
-                            100,
-                            createItemPayload.name,
-                            createItemPayload.description,
-                            createItemPayload.startingPrice,
-                            createItemPayload.imageUrl,
-                            createItemPayload.artist
-                    );
-                    break;
-
-                case "Vehicle":
-                    newItem = new Vehicle(
-                            3,
-                            100,
-                            createItemPayload.name,
-                            createItemPayload.description,
-                            createItemPayload.startingPrice,
-                            createItemPayload.imageUrl,
-                            createItemPayload.year
-                    );
-                    break;
-
-                default:
-                    newItem = null;
-                    break;
-            }
-            auctionItems.add(newItem);
+        Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
+        if (response != null && response.isSuccess()) {
+            System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
             NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
             // Nếu hợp lệ thì xử lý đăng ký
             System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText().trim());
@@ -640,11 +574,11 @@ public class SellerAuctionListController implements Initializable {
             // Quay lại giao diện danh sách sản phẩm
             handleBackToListings(null);
             loadMyListingView();
-//        } else {
-//            // Hiển thị lỗi nếu server từ chối hoặc lỗi mạng
-//            String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
-//            NotificationController.showError("Lỗi đăng ký", errorMsg);
-//        }
+        } else {
+            // Hiển thị lỗi nếu server từ chối hoặc lỗi mạng
+            String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
+            NotificationController.showError("Lỗi đăng ký", errorMsg);
+        }
 
     }
 
