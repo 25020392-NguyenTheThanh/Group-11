@@ -22,16 +22,18 @@ public class Auction implements Subject {
     private double currentHighestBid;
     private Bidder currentWinner;
     private AuctionStatus status;
+    private LocalDateTime startTime;
     private LocalDateTime endTime;
     private List<BidTransaction> bidHistory;
     private transient CopyOnWriteArrayList<Observer> observers; // không lưu vào file
     private final double minBidStep; // bước giá tối thiểu
 
-    public Auction(int id, Item item, LocalDateTime endTime, double minBidStep) {
+    public Auction(int id, Item item, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
         this.id = id;
         this.item = item;
         this.currentHighestBid = item.getStartingPrice();
         this.status = AuctionStatus.OPEN;
+        this.startTime = startTime;
         this.endTime = endTime;
         this.minBidStep = minBidStep; // bước giá tối thiểu
         this.bidHistory = new ArrayList<>();
@@ -163,37 +165,73 @@ public class Auction implements Subject {
         currentWinner = bidder;
 
         String msg = String.format(
-                "🔔 Phiên "+id+" — "+bidder.getUsername()+" vừa đặt "+amount+"₫ | Giá cao nhất hiện tại: "+ currentHighestBid);
+                "🔔 Phiên " + id + " — " + bidder.getUsername() + " vừa đặt " + amount + "₫ | Giá cao nhất hiện tại: " + currentHighestBid);
         System.out.println(msg);
         notifyObservers(msg);
     }
 
-    private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException , ClassNotFoundException{
+    private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException, ClassNotFoundException {
         ois.defaultReadObject();
-        if (observers == null){
+        if (observers == null) {
             observers = new CopyOnWriteArrayList<>();
         }
     }
-    public void restoreStatus(AuctionStatus status){
-        this.status = status ;
-    }
-    public void restoreHighestBid(double bid){
-        this.currentHighestBid = bid ;
+
+    public void restoreStatus(AuctionStatus status) {
+        this.status = status;
     }
 
-    public boolean hasObserver(Observer observer){
+    public void restoreHighestBid(double bid) {
+        this.currentHighestBid = bid;
+    }
+
+    public boolean hasObserver(Observer observer) {
         return observers.contains(observer);
     }
     //  Getters
 
-    public int                  getId()                { return id; }
-    public Item                 getItem()              { return item; }
-    public AuctionStatus        getStatus()            { return status; }
-    public double               getCurrentHighestBid() { return currentHighestBid; }
-    public Bidder               getCurrentWinner()     { return currentWinner; }
-    public LocalDateTime        getEndTime()           { return endTime; }
-    public List<BidTransaction> getBidHistory()        { return bidHistory; }
-    public double               getMinBidStep()        { return minBidStep; }
-    public boolean              isExpired()            { return LocalDateTime.now().isAfter(endTime); }
-    public void                 setStatus(AuctionStatus status_) {status = status_;}
+    public int getId() {
+        return id;
+    }
+
+    public Item getItem() {
+        return item;
+    }
+
+    public AuctionStatus getStatus() {
+        return status;
+    }
+
+    public double getCurrentHighestBid() {
+        return currentHighestBid;
+    }
+
+    public Bidder getCurrentWinner() {
+        return currentWinner;
+    }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+
+    }
+
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+
+    public List<BidTransaction> getBidHistory() {
+        return bidHistory;
+    }
+
+    public double getMinBidStep() {
+        return minBidStep;
+    }
+
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(endTime);
+    }
+
+    public void setStatus(AuctionStatus status_) {
+        status = status_;
+    }
 }

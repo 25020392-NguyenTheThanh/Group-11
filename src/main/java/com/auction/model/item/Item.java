@@ -33,6 +33,10 @@ public abstract class Item extends Entity {
         return startingPrice;
     }
 
+    public void setStartingPrice(double startingPrice) {
+        this.startingPrice = startingPrice;
+    }
+
     public ItemStatus getStatus() {
         return status;
     }

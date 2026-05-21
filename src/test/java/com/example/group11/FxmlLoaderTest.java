@@ -1,3 +1,5 @@
+package com.example.group11;
+
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,7 +17,7 @@ public class FxmlLoaderTest {
     @Test
     public void testLoadBidderAuctionList() throws Exception {
         try {
-            FXMLLoader loader = new FXMLLoader(FxmlLoaderTest.class.getResource("/com/example/group11/bidderAuctionList-view.fxml"));
+            FXMLLoader loader = new FXMLLoader(com.example.group11.MainApplication.class.getResource("bidderAuctionList-view.fxml"));
             loader.load();
             System.out.println("--- SUCCESS: loaded bidderAuctionList-view.fxml successfully ---");
         } catch (Exception e) {

@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 public class CreateAuctionPayload implements Serializable {
     public int itemId ;
+    public LocalDateTime startTime;
     public LocalDateTime endTime ;
     public double minBidStep ;
 }

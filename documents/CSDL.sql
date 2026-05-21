@@ -64,6 +64,7 @@ CREATE TABLE auctions (
     current_highest_bid DECIMAL(18,2) NOT NULL, -- Giá đấu cao nhất hiện tại
     current_winner_id INT DEFAULT NULL, -- Mới tạo là null
     status ENUM('OPEN', 'RUNNING', 'FINISHED', 'PAID', 'CANCELED') NOT NULL DEFAULT 'OPEN',
+    start_time DATETIME NOT NULL, -- Thời gian bắt đầu đấu giá
 	end_time DATETIME NOT NULL, -- Thời gian kết thúc đấu giá
     min_bid_step DECIMAL(18,2) NOT NULL DEFAULT 0.00, -- Giá đấu đặt tối thiểu
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 

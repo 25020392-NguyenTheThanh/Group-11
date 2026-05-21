@@ -22,7 +22,8 @@ public class AuctionManager {
     private final ConcurrentHashMap<Integer, Auction> auctions = new ConcurrentHashMap<>();
     private final AtomicInteger auctionCounter = new AtomicInteger(1);
 
-    private AuctionManager() {}
+    private AuctionManager() {
+    }
 
     public static AuctionManager getInstance() {
         if (instance == null) {
@@ -39,14 +40,14 @@ public class AuctionManager {
      * Tạo phiên đấu giá mới, lưu vào MySQL, giữ trong RAM.
      * return Auction vừa tạo, hoặc null nếu item không ở trạng thái AVAILABLE.
      */
-    public Auction createAuction(Item item, LocalDateTime endTime, double minBidStep) {
+    public Auction createAuction(Item item, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
         if (item.getStatus() != ItemStatus.AVAILABLE) {
             System.out.println("Sản phẩm không ở trạng thái AVAILABLE: " + item.getName());
             return null;
         }
 
         // Lưu vào MySQL — lấy id thật từ DB
-        int dbId = DataManager.getInstance().createAuction(item.getId(), endTime, minBidStep);
+        int dbId = DataManager.getInstance().createAuction(item.getId(), startTime, endTime, minBidStep);
         if (dbId == -1) {
             System.out.println("Lỗi tạo phiên trong DB cho item: " + item.getName());
             return null;
@@ -54,7 +55,7 @@ public class AuctionManager {
 
         item.setStatus(ItemStatus.IN_AUCTION);
 
-        Auction auction = new Auction(dbId, item, endTime, minBidStep);
+        Auction auction = new Auction(dbId, item, startTime, endTime, minBidStep);
         auctions.put(dbId, auction);
 
         System.out.printf("Phiên #%d tạo cho [%s] — kết thúc: %s%n",

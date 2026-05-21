@@ -149,7 +149,7 @@ public class RequestProcessor {
         if (item  == null) return Response.error("Sản phẩm không tồn tại : " + p.itemId);
         if (item.getOwnerId() != user.getId()) return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
 
-        Auction auction = AuctionManager.getInstance().createAuction(item , p.endTime , p.minBidStep);
+        Auction auction = AuctionManager.getInstance().createAuction(item , p.startTime , p.endTime , p.minBidStep);
         if (auction == null) return Response.error("Không thể tạo phiên - sản phẩm không ở trạng thái AVAILABLE");
 
         auction.start(); // chuyển sang RUNNING

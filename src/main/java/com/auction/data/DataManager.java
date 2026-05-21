@@ -12,16 +12,16 @@ public class DataManager {
 
     private static DataManager instance;
 
-    private final UserRepository           userRepo;
-    private final ItemRepository           itemRepo;
-    private final AuctionRepository        auctionRepo;
+    private final UserRepository userRepo;
+    private final ItemRepository itemRepo;
+    private final AuctionRepository auctionRepo;
     private final BidTransactionRepository bidRepo;
 
     private DataManager() {
-        this.userRepo    = new UserRepository();
-        this.itemRepo    = new ItemRepository();
+        this.userRepo = new UserRepository();
+        this.itemRepo = new ItemRepository();
         this.auctionRepo = new AuctionRepository();
-        this.bidRepo     = new BidTransactionRepository();
+        this.bidRepo = new BidTransactionRepository();
     }
 
     public static synchronized DataManager getInstance() {
@@ -72,8 +72,8 @@ public class DataManager {
 
     // Auction
 
-    public int createAuction(int itemId, LocalDateTime endTime, double minBidStep) {
-        return auctionRepo.create(itemId, endTime, minBidStep);
+    public int createAuction(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
+        return auctionRepo.create(itemId, startTime, endTime, minBidStep);
     }
 
     public boolean updateAuctionBid(int auctionId, int bidderId, double amount) {
@@ -105,6 +105,7 @@ public class DataManager {
     public boolean updateSellerRevenue(int sellerId, double amount) {
         return userRepo.addSellerRevenue(sellerId, amount);
     }
+
     public boolean updateBidderBalance(int bidderId, double newBalance) {
         return userRepo.updateBidderBalance(bidderId, newBalance);
     }
