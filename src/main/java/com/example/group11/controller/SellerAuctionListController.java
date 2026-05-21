@@ -11,6 +11,9 @@ import com.auction.network.CreateItemPayload;
 import com.auction.network.UpdateItemPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
+import com.auction.model.auction.Auction;
+import com.auction.model.auction.AuctionStatus;
+import com.auction.model.item.ItemStatus;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -34,6 +37,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static com.example.group11.controller.ImagesController.confirmRemoveImage;
@@ -215,6 +219,7 @@ public class SellerAuctionListController implements Initializable {
 
     // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
     private List<Item> auctionItems = new ArrayList<>();
+    private Map<Integer, Auction> itemAuctionMap = new HashMap<>();
 
     public void setUser(User user) {
         this.user = user;
@@ -246,8 +251,7 @@ public class SellerAuctionListController implements Initializable {
         // Gọi executeTabLogic với ID của tab mặc định
         SellerUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
 
-        GenerationSupport.setupMenuButtonUpdate(filterSort);
-        GenerationSupport.setupMenuButtonUpdate(filterStatus);
+        setupFilters();
         GenerationSupport.setupMenuButtonUpdate(categoryMenuButton);
 
         setupCategoryMenuItems();
@@ -311,6 +315,137 @@ public class SellerAuctionListController implements Initializable {
 
         // Đưa thông báo mới lên đầu danh sách
         notificationListContainer.getChildren().add(0, notifBox);
+    }
+
+    private void setupFilters() {
+        filterSearchId.textProperty().addListener((observable, oldValue, newValue) -> {
+            applyFiltersAndSort();
+        });
+
+        for (MenuItem item : filterStatus.getItems()) {
+            item.setOnAction(e -> {
+                filterStatus.setText(item.getText().toUpperCase());
+                applyFiltersAndSort();
+            });
+        }
+
+        for (MenuItem item : filterSort.getItems()) {
+            item.setOnAction(e -> {
+                filterSort.setText(item.getText().toUpperCase());
+                applyFiltersAndSort();
+            });
+        }
+    }
+
+    private void applyFiltersAndSort() {
+        if (auctionItems == null) return;
+
+        String query = filterSearchId.getText() != null ? filterSearchId.getText().trim().toLowerCase() : "";
+        String selectedStatus = filterStatus.getText() != null ? filterStatus.getText().trim().toUpperCase() : "TRẠNG THÁI";
+
+        List<Item> filteredItems = new ArrayList<>();
+        for (Item item : auctionItems) {
+            boolean matchesSearch = query.isEmpty() ||
+                    String.valueOf(item.getId()).contains(query) ||
+                    (item.getName() != null && item.getName().toLowerCase().contains(query)) ||
+                    (item.getDescription() != null && item.getDescription().toLowerCase().contains(query));
+
+            if (!matchesSearch) continue;
+
+            boolean matchesStatus = true;
+            if (!selectedStatus.equals("TẤT CẢ") && !selectedStatus.equals("TRẠNG THÁI")) {
+                if (selectedStatus.equals("AVAILABLE")) {
+                    matchesStatus = (item.getStatus() == ItemStatus.AVAILABLE);
+                } else {
+                    Auction auction = itemAuctionMap.get(item.getId());
+                    matchesStatus = (auction != null && auction.getStatus() != null &&
+                            auction.getStatus().name().equalsIgnoreCase(selectedStatus));
+                }
+            }
+
+            if (matchesStatus) {
+                filteredItems.add(item);
+            }
+        }
+
+        String selectedSort = filterSort.getText() != null ? filterSort.getText().trim().toUpperCase() : "SẮP XẾP";
+        if (selectedSort.equals("GIÁ: THẤP ĐẾN CAO")) {
+            filteredItems.sort(Comparator.comparingDouble(Item::getStartingPrice));
+        } else if (selectedSort.equals("GIÁ: CAO ĐẾN THẤP")) {
+            filteredItems.sort((a, b) -> Double.compare(b.getStartingPrice(), a.getStartingPrice()));
+        } else if (selectedSort.equals("KẾT THÚC SỚM NHẤT")) {
+            filteredItems.sort((a, b) -> {
+                Auction auctionA = itemAuctionMap.get(a.getId());
+                Auction auctionB = itemAuctionMap.get(b.getId());
+                LocalDateTime timeA = (auctionA != null && auctionA.getEndTime() != null) ? auctionA.getEndTime() : LocalDateTime.MAX;
+                LocalDateTime timeB = (auctionB != null && auctionB.getEndTime() != null) ? auctionB.getEndTime() : LocalDateTime.MAX;
+                return timeA.compareTo(timeB);
+            });
+        } else {
+            // Default "MỚI NHẤT": Sort by ID descending
+            filteredItems.sort((a, b) -> Integer.compare(b.getId(), a.getId()));
+        }
+
+        renderProductCards(filteredItems);
+    }
+
+    private void renderProductCards(List<Item> items) {
+        contentGrid.getChildren().clear();
+        CalculatorView.updateCount(totalProductsLabel, items.size());
+
+        if (items.isEmpty()) {
+            Label noProductLabel = new Label("Không tìm thấy sản phẩm nào khớp bộ lọc.");
+            noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
+            contentGrid.add(noProductLabel, 0, 0);
+            return;
+        }
+
+        for (int i = 0; i < items.size(); i++) {
+            Item item = items.get(i);
+            VBox productCard = ProductCardFactory.createProductCard(item, true,
+                    (itemData, cardNode) -> {
+                        System.out.println("Xem chi tiết sản phẩm: " + itemData.getName());
+                    },
+                    (itemData, cardNode) -> {
+                        handleStartEditProduct(itemData);
+                    },
+                    (itemData, cardNode) -> {
+                        if (cardNode != null) {
+                            javafx.concurrent.Task<Response> deleteTask = new javafx.concurrent.Task<>() {
+                                @Override
+                                protected Response call() throws Exception {
+                                    return ServerConnection.getInstance().send(RequestType.DELETE_ITEM, itemData.getId());
+                                }
+                            };
+
+                            deleteTask.setOnSucceeded(evt -> {
+                                Response res = deleteTask.getValue();
+                                if (res != null && res.isSuccess()) {
+                                    NotificationController.showNotification("Thành công", "Đã xóa sản phẩm thành công!");
+                                    this.contentGrid.getChildren().remove(cardNode);
+                                    auctionItems.remove(itemData);
+                                    applyFiltersAndSort();
+                                } else {
+                                    String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                                    NotificationController.showError("Lỗi xóa sản phẩm", "Không thể xóa sản phẩm.\nChi tiết: " + errMsg);
+                                }
+                            });
+
+                            deleteTask.setOnFailed(evt -> {
+                                NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi kết nối khi gửi yêu cầu xóa.");
+                            });
+
+                            Thread t = new Thread(deleteTask);
+                            t.setDaemon(true);
+                            t.start();
+                        }
+                    }
+            );
+
+            int column = i % 3;
+            int row = i / 3;
+            contentGrid.add(productCard, column, row);
+        }
     }
 
     @FXML
@@ -387,86 +522,47 @@ public class SellerAuctionListController implements Initializable {
         loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
         contentGrid.add(loadingLabel, 0, 0);
 
-        System.out.println("Đang gửi yêu cầu lấy danh sách sản phẩm cá nhân từ Server ở Luồng Ngầm...");
+        System.out.println("Đang gửi yêu cầu lấy danh sách sản phẩm cá nhân và phiên đấu giá từ Server ở Luồng Ngầm...");
 
         // 2. KHỞI TẠO TÁC VỤ CHẠY NGẦM (BACKGROUND TASK)
-        Task<Response> fetchTask = new javafx.concurrent.Task<>() {
+        Task<Map<String, Response>> fetchTask = new Task<>() {
             @Override
-            protected Response call() throws Exception {
-                // Thực hiện tác vụ tốn thời gian (Network Call đồng bộ) tại luồng nền này
-                return ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
+            protected Map<String, Response> call() throws Exception {
+                Response itemsRes = ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
+                Response auctionsRes = ServerConnection.getInstance().send(RequestType.GET_AUCTIONS, null);
+                Map<String, Response> map = new HashMap<>();
+                map.put("items", itemsRes);
+                map.put("auctions", auctionsRes);
+                return map;
             }
         };
 
         // 3. XỬ LÝ KHI TẢI DỮ LIỆU THÀNH CÔNG (Tự động chuyển về luồng giao diện JavaFX)
         fetchTask.setOnSucceeded(event -> {
             contentGrid.getChildren().remove(loadingLabel); // Xóa bỏ dòng chữ "Đang tải"
-            Response response = fetchTask.getValue();
+            Map<String, Response> results = fetchTask.getValue();
+            Response itemsResponse = results.get("items");
+            Response auctionsResponse = results.get("auctions");
 
-            if (response != null && response.isSuccess()) {
-                auctionItems = (List<Item>) response.getData();
+            if (itemsResponse != null && itemsResponse.isSuccess()) {
+                auctionItems = (List<Item>) itemsResponse.getData();
+                itemAuctionMap.clear();
 
-                if (auctionItems == null || auctionItems.isEmpty()) {
-                    Label noProductLabel = new Label("Bạn chưa đăng ký sản phẩm đấu giá nào.");
-                    noProductLabel.setStyle("-fx-text-fill: #8c8c8c; -fx-font-size: 14px; -fx-font-style: italic;");
-                    contentGrid.getChildren().add(noProductLabel);
-                    return;
-                }
-
-                // Duyệt qua danh sách thực tế lấy từ server để render Card
-                for (int i = 0; i < auctionItems.size(); i++) {
-                    Item item = auctionItems.get(i);
-
-                    VBox productCard = ProductCardFactory.createProductCard(item, true,
-                            (itemData, cardNode) -> {
-                                System.out.println("Xem chi tiết sản phẩm: " + itemData.getName());
-                            },
-                            (itemData, cardNode) -> {
-                                handleStartEditProduct(itemData);
-                            },
-                            (itemData, cardNode) -> {
-                                if (cardNode != null) {
-                                    javafx.concurrent.Task<Response> deleteTask = new javafx.concurrent.Task<>() {
-                                        @Override
-                                        protected Response call() throws Exception {
-                                            return ServerConnection.getInstance().send(RequestType.DELETE_ITEM, itemData.getId());
-                                        }
-                                    };
-
-                                    deleteTask.setOnSucceeded(evt -> {
-                                        Response res = deleteTask.getValue();
-                                        if (res != null && res.isSuccess()) {
-                                            NotificationController.showNotification("Thành công", "Đã xóa sản phẩm thành công!");
-                                            this.contentGrid.getChildren().remove(cardNode);
-                                            auctionItems.remove(itemData);
-                                            loadMyListingView();
-                                        } else {
-                                            String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
-                                            NotificationController.showError("Lỗi xóa sản phẩm", "Không thể xóa sản phẩm.\nChi tiết: " + errMsg);
-                                        }
-                                    });
-
-                                    deleteTask.setOnFailed(evt -> {
-                                        NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi kết nối khi gửi yêu cầu xóa.");
-                                    });
-
-                                    Thread t = new Thread(deleteTask);
-                                    t.setDaemon(true);
-                                    t.start();
-                                }
+                if (auctionsResponse != null && auctionsResponse.isSuccess()) {
+                    List<Auction> auctions = (List<Auction>) auctionsResponse.getData();
+                    if (auctions != null) {
+                        for (Auction auction : auctions) {
+                            if (auction.getItem() != null) {
+                                itemAuctionMap.put(auction.getItem().getId(), auction);
                             }
-                    );
-
-                    // Tính toán vị trí dựa theo chỉ số vòng lặp `i` (Tránh dùng indexOf giảm hiệu năng)
-                    int column = i % 3;
-                    int row = i / 3;
-                    contentGrid.add(productCard, column, row);
+                        }
+                    }
                 }
 
-                // Cập nhật nhãn tổng số lượng sản phẩm realtime
-                CalculatorView.updateCount(totalProductsLabel, auctionItems.size());
+                // Thực hiện lọc, sắp xếp và render các card sản phẩm
+                applyFiltersAndSort();
             } else {
-                String errorMsg = (response != null) ? response.getMessage() : "Không thể kết nối tới máy chủ!";
+                String errorMsg = (itemsResponse != null) ? itemsResponse.getMessage() : "Không thể kết nối tới máy chủ!";
                 NotificationController.showError(
                         "Lỗi tải dữ liệu",
                         "Hệ thống gặp sự cố khi đồng bộ danh sách sản phẩm.\nChi tiết: " + errorMsg
