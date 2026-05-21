@@ -61,6 +61,15 @@ public class DataManager {
         return itemRepo.delete(id);
     }
 
+    public boolean updateItem(Item item) {
+        return itemRepo.update(item);
+    }
+
+    public boolean updateItemStatus(int itemId, com.auction.model.item.ItemStatus status) {
+        return itemRepo.updateStatus(itemId, status);
+    }
+
+
     // Auction
 
     public int createAuction(int itemId, LocalDateTime endTime, double minBidStep) {

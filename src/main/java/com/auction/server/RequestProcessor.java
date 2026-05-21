@@ -30,6 +30,7 @@ public class RequestProcessor {
             case CREATE_AUCTION -> handleCreateAuction(request, handler);
             case GET_MY_ITEMS   -> handleGetMyItems(handler);
             case DELETE_ITEM    -> handleDeleteItem(request, handler);
+            case UPDATE_ITEM    -> handleUpdateItem(request, handler);
         };
     } // vi phạm OCP
 
@@ -195,4 +196,44 @@ public class RequestProcessor {
         }
     }
 
+    // Sửa sản phẩm
+    private static Response handleUpdateItem(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Chưa đăng nhập");
+        if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể sửa sản phẩm");
+
+        if (request.getPayload() == null || !(request.getPayload() instanceof UpdateItemPayload)) {
+            return Response.error("Dữ liệu sửa sản phẩm không hợp lệ!");
+        }
+
+        UpdateItemPayload p = (UpdateItemPayload) request.getPayload();
+        Item existingItem = ItemManager.getInstance().findItem(p.id);
+        if (existingItem == null) {
+            return Response.error("Sản phẩm không tồn tại");
+        }
+
+        if (existingItem.getOwnerId() != user.getId()) {
+            return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
+        }
+
+        if (existingItem.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+            return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE");
+        }
+
+        ItemFactory factory = switch (p.type.toUpperCase()) {
+            case "ART"     -> new ArtFactory(p.artist);
+            case "VEHICLE" -> new VehicleFactory(p.year);
+            default        -> new ElectronicsFactory(p.brand);
+        };
+
+        // Tạo item mới dựa trên factory để thay thế
+        Item updatedItem = factory.createItem(p.id, user.getId(), p.name, p.description, p.startingPrice, p.imageUrl);
+
+        boolean success = ItemManager.getInstance().updateItem(updatedItem);
+        if (success) {
+            return Response.ok("Cập nhật sản phẩm thành công");
+        } else {
+            return Response.error("Không thể cập nhật sản phẩm trong cơ sở dữ liệu");
+        }
+    }
 }

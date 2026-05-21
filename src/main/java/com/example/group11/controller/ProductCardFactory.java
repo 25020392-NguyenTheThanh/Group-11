@@ -28,7 +28,7 @@ public class ProductCardFactory {
      *  isSeller Nếu là true thì hiện nút XÓA/SỬA, nếu là false (Bidder) thì hiện nút ĐẤU GIÁ
      *  onActionClick Hành động xử lý khi nhấn nút tương ứng
      */
-    public static VBox createProductCard(Item item, boolean isSeller, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onActionClick) {
+    public static VBox createProductCard(Item item, boolean isSeller, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onEditClick, BiConsumer<Item, VBox> onActionClick) {
         // 1. Lấy thông tin chung từ DB
         String id = String.valueOf(item.getId());
         String name = item.getName();
@@ -73,9 +73,34 @@ public class ProductCardFactory {
 
         HBox statusBox = new HBox(4);
         statusBox.setAlignment(javafx.geometry.Pos.CENTER);
-        Circle dot = new Circle(3.0, javafx.scene.paint.Color.web("#00e475"));
-        Label lblStatus = new Label("AVAILABLE");
-        lblStatus.setStyle("-fx-text-fill: #00e475; -fx-font-weight: bold;");
+        
+        String statusText = "AVAILABLE";
+        String statusColor = "#00e475"; // Green
+        
+        if (item.getStatus() != null) {
+            switch (item.getStatus()) {
+                case IN_AUCTION -> {
+                    statusText = "IN AUCTION";
+                    statusColor = "#ff5722"; // Red-orange
+                }
+                case SOLD -> {
+                    statusText = "SOLD";
+                    statusColor = "#2196f3"; // Blue
+                }
+                case UNSOLD -> {
+                    statusText = "UNSOLD";
+                    statusColor = "#757575"; // Gray
+                }
+                default -> {
+                    statusText = "AVAILABLE";
+                    statusColor = "#00e475"; // Green
+                }
+            }
+        }
+        
+        Circle dot = new Circle(3.0, javafx.scene.paint.Color.web(statusColor));
+        Label lblStatus = new Label(statusText);
+        lblStatus.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-weight: bold;");
         lblStatus.setFont(new Font(9.0));
         statusBox.getChildren().addAll(dot, lblStatus);
 
@@ -180,10 +205,30 @@ public class ProductCardFactory {
 
         if (isSeller) {
             // Giao diện phía Seller: Hiện nút quản lý
-            Button btnDelete = new Button("XÓA ");
+            Button btnEdit = new Button("SỬA");
+            btnEdit.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(btnEdit, javafx.scene.layout.Priority.ALWAYS);
+            if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+                btnEdit.setDisable(true);
+                btnEdit.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
+            } else {
+                btnEdit.setStyle("-fx-background-color: #f57c00; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
+            }
+            btnEdit.setOnAction(e -> {
+                if (onEditClick != null) {
+                    onEditClick.accept(item, card);
+                }
+            });
+
+            Button btnDelete = new Button("XÓA");
             btnDelete.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(btnDelete, javafx.scene.layout.Priority.ALWAYS);
-            btnDelete.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8;");
+            if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+                btnDelete.setDisable(true);
+                btnDelete.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
+            } else {
+                btnDelete.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
+            }
             btnDelete.setOnAction(e -> {
                 handleDeleteAuctionAction(id, card, (confirmedCardNode) -> {
                     if (onActionClick != null) {
@@ -192,10 +237,10 @@ public class ProductCardFactory {
                     }
                 });
             });
-            actions.getChildren().add(btnDelete);
+            actions.getChildren().addAll(btnEdit, btnDelete);
         } else {
             // Giao diện phía Bidder: Hiện nút tham gia đấu giá
-            Button btnBid = new Button("RA GIÁ / ĐẤU GIÁ");
+            Button btnBid = new Button("ĐẤU GIÁ");
             btnBid.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(btnBid, javafx.scene.layout.Priority.ALWAYS);
             btnBid.setStyle("-fx-background-color: #ffd700; -fx-text-fill: black; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand;");

@@ -34,6 +34,12 @@ public class AuctionTimer {
                 try {
                     auction.finish(); // chuyển sang FINISHED hoặc CANCELLED
                     AuctionManager.getInstance().finishAuction(auction.getId());
+                    
+                    com.auction.model.item.ItemStatus newStatus = (auction.getCurrentWinner() != null)
+                            ? com.auction.model.item.ItemStatus.SOLD
+                            : com.auction.model.item.ItemStatus.UNSOLD;
+                    com.auction.manager.ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
+
                     if (auction.getCurrentWinner() != null) {
                         DataManager.getInstance().updateSellerRevenue(
                                 auction.getItem().getOwnerId(),
@@ -44,9 +50,10 @@ public class AuctionTimer {
                     // thông báo cho tất cả client
                     String msg = "Phiên " + auction.getId() + " [" + auction.getItem().getName() + "] đã kết thúc" ;
                     server.broadcast(new Notification("AUCTION_ENDED" , msg));
-                    System.out.println("Timer kết thúc phiên " + auction.getId());
+                    server.broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
+                    System.out.println("Timer kết thúc phiên " + auction.getId() + ", cập nhật trạng thái sản phẩm thành " + newStatus);
                 } catch(Exception e){
-                    System.err.println("Lỗi khi kết thúc ở phiên " + auction.getId());
+                    System.err.println("Lỗi khi kết thúc ở phiên " + auction.getId() + ": " + e.getMessage());
                 }
             }
         }

@@ -93,4 +93,25 @@ public class ItemManager {
         }
         return success;
     }
+
+    // Cập nhật sản phẩm.
+    public boolean updateItem(Item item) {
+        boolean success = DataManager.getInstance().updateItem(item);
+        if (success) {
+            items.put(item.getId(), item);
+        }
+        return success;
+    }
+
+    // Cập nhật trạng thái sản phẩm (đồng bộ cache và DB).
+    public boolean updateItemStatus(int itemId, ItemStatus status) {
+        boolean success = DataManager.getInstance().updateItemStatus(itemId, status);
+        if (success) {
+            Item item = findItem(itemId);
+            if (item != null) {
+                item.setStatus(status);
+            }
+        }
+        return success;
+    }
 }

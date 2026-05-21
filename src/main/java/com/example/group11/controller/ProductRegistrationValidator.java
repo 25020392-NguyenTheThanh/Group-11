@@ -151,4 +151,60 @@ public class ProductRegistrationValidator {
 
         return true; // Thời gian hoàn toàn hợp lệ
     }
+
+    // Kiểm tra tổng thể khi sửa sản phẩm
+    public static boolean validateEdit(TextField productNameField, MenuButton categoryMenuButton, TextField startingPriceField,
+                                       TextArea descriptionArea, boolean hasExistingImage, File selectedImageFile, StackPane imageDropzone) {
+        // Kiểm tra tên
+        if (productNameField.getText().trim().isEmpty()) {
+            showAlert("Lỗi nhập liệu", "Tên sản phẩm không được để trống!");
+            productNameField.requestFocus();
+            return false;
+        }
+
+        // Kiểm tra danh mục
+        String category = categoryMenuButton.getText();
+        if (category == null || category.isEmpty() || category.equals("Chọn danh mục")) {
+            showAlert("Lỗi nhập liệu", "Vui lòng chọn danh mục cho sản phẩm!");
+            categoryMenuButton.requestFocus();
+            return false;
+        }
+
+        // Kiểm tra chuỗi nhập giá khởi điểm
+        if (startingPriceField.getText().trim().isEmpty()) {
+            showAlert("Lỗi nhập liệu", "Giá khởi điểm không được để trống!");
+            startingPriceField.requestFocus();
+            return false;
+        }
+
+        double startingPrice;
+        try {
+            startingPrice = Double.parseDouble(startingPriceField.getText().trim());
+            if (startingPrice <= 0) {
+                showAlert("Lỗi định dạng", "Giá khởi điểm phải là một số lớn hơn 0!");
+                startingPriceField.requestFocus();
+                return false;
+            }
+        } catch (NumberFormatException e) {
+            showAlert("Lỗi định dạng", "Giá khởi điểm phải là một số hợp lệ (Ví dụ: 100000)!");
+            startingPriceField.requestFocus();
+            return false;
+        }
+
+        // Kiểm tra mô tả
+        if (descriptionArea.getText().trim().isEmpty()) {
+            showAlert("Lỗi nhập liệu", "Mô tả sản phẩm không được để trống!");
+            descriptionArea.requestFocus();
+            return false;
+        }
+
+        // Kiểm tra ảnh: chỉ báo lỗi nếu cả ảnh mới lẫn ảnh cũ đều không có
+        if (selectedImageFile == null && !hasExistingImage) {
+            showAlert("Lỗi thiếu thông tin", "Vui lòng chọn hình ảnh đại diện cho sản phẩm!");
+            imageDropzone.requestFocus();
+            return false;
+        }
+
+        return true;
+    }
 }

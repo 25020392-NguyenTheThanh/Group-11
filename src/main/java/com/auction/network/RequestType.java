@@ -10,5 +10,6 @@ public enum RequestType {
     CREATE_AUCTION, // tạo phiên đấu giá mới
     CREATE_ITEM, // thêm sản phẩm mới vào hệ thống
     GET_MY_ITEMS, // lấy danh sách sản phầm đã tạo
-    DELETE_ITEM // xóa sản phẩm
+    DELETE_ITEM, // xóa sản phẩm
+    UPDATE_ITEM // sửa sản phẩm
 }

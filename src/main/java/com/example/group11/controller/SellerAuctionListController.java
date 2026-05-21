@@ -8,6 +8,7 @@ import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
 import com.auction.model.user.User;
 import com.auction.network.CreateItemPayload;
+import com.auction.network.UpdateItemPayload;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
 import javafx.concurrent.Task;
@@ -131,6 +132,9 @@ public class SellerAuctionListController implements Initializable {
     private VBox notificationDropdown;
 
     @FXML
+    private VBox notificationListContainer;
+
+    @FXML
     private VBox orderHistoryView;
 
     @FXML
@@ -162,6 +166,14 @@ public class SellerAuctionListController implements Initializable {
 
     @FXML
     private Button submitButton;
+
+    @FXML
+    private Label registerTitleLabel;
+
+    @FXML
+    private Label registerSubtitleLabel;
+
+    private Item editingItem = null;
 
     @FXML
     private Label totalBidsLabel;
@@ -240,6 +252,65 @@ public class SellerAuctionListController implements Initializable {
 
         setupCategoryMenuItems();
 
+        // Đăng ký lắng nghe thông báo thời gian thực từ Server
+        ServerConnection.getInstance().setNotificationHandler(notification -> {
+            addNotificationToUI(notification);
+            
+            String type = notification.getType();
+            if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
+                System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
+                loadMyListingView();
+            }
+        });
+    }
+
+    private void addNotificationToUI(com.auction.network.Notification notification) {
+        if (notificationListContainer == null) return;
+
+        VBox notifBox = new VBox(4.0);
+        notifBox.setStyle("-fx-background-color: #1E2D45; -fx-padding: 10; -fx-background-radius: 8; -fx-cursor: hand;");
+
+        HBox header = new HBox();
+        header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+        Label titleLabel = new Label();
+        titleLabel.setTextFill(javafx.scene.paint.Color.WHITE);
+        titleLabel.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 12.0));
+
+        String type = notification.getType();
+        if ("AUCTION_ENDED".equals(type)) {
+            titleLabel.setText("🏁 Phiên đấu giá kết thúc");
+        } else if ("ITEM_STATUS_CHANGED".equals(type)) {
+            titleLabel.setText("🔄 Trạng thái sản phẩm thay đổi");
+        } else {
+            titleLabel.setText("🔔 Thông báo hệ thống");
+        }
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label timeLabel = new Label("Vừa xong");
+        timeLabel.setTextFill(javafx.scene.paint.Color.web("#94a3b8"));
+        timeLabel.setFont(new Font(10.0));
+
+        header.getChildren().addAll(titleLabel, spacer, timeLabel);
+
+        Label descLabel = new Label();
+        if (notification.getData() != null) {
+            if ("ITEM_STATUS_CHANGED".equals(type)) {
+                descLabel.setText("Sản phẩm ID: " + notification.getData() + " đã cập nhật trạng thái mới.");
+            } else {
+                descLabel.setText(notification.getData().toString());
+            }
+        }
+        descLabel.setTextFill(javafx.scene.paint.Color.web("#94A3B8"));
+        descLabel.setFont(new Font(11.0));
+        descLabel.setWrapText(true);
+
+        notifBox.getChildren().addAll(header, descLabel);
+
+        // Đưa thông báo mới lên đầu danh sách
+        notificationListContainer.getChildren().add(0, notifBox);
     }
 
     @FXML
@@ -268,6 +339,19 @@ public class SellerAuctionListController implements Initializable {
 
     @FXML
     void handleAddItem(ActionEvent event) {
+        editingItem = null;
+        clearRegistrationForm();
+
+        // Kích hoạt lại các trường đấu giá
+        minimumBidIncrementField.setDisable(false);
+        startDatePicker.setDisable(false);
+        endDatePicker.setDisable(false);
+
+        // Đặt lại tiêu đề mặc định
+        registerTitleLabel.setText("ĐĂNG KÝ ĐẤU GIÁ MỚI");
+        registerSubtitleLabel.setText("Điền đầy đủ thông tin để niêm yết sản phẩm");
+        submitButton.setText("XÁC NHẬN ĐĂNG KÝ");
+
         // Lưu lại vết trước khi sang trang đăng ký
         lastView = currentView;
         lastButton = SellerUIHelper.findActiveButton(allButtons);
@@ -336,6 +420,9 @@ public class SellerAuctionListController implements Initializable {
                     VBox productCard = ProductCardFactory.createProductCard(item, true,
                             (itemData, cardNode) -> {
                                 System.out.println("Xem chi tiết sản phẩm: " + itemData.getName());
+                            },
+                            (itemData, cardNode) -> {
+                                handleStartEditProduct(itemData);
                             },
                             (itemData, cardNode) -> {
                                 if (cardNode != null) {
@@ -515,71 +602,199 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    @FXML
-    private void handleSubmitProduct(ActionEvent event) {
-        // 1. Gọi các hàm kiểm tra dữ liệu
-        if (!ProductRegistrationValidator.validateAll(productNameField, categoryMenuButton, startingPriceField,
-                minimumBidIncrementField, startDatePicker, endDatePicker,
-                descriptionArea, selectedImageFile, imageDropzone)) return;
+    private void handleStartEditProduct(Item item) {
+        editingItem = item;
 
-        CreateItemPayload createItemPayload = new CreateItemPayload();
-        createItemPayload.name = productNameField.getText().trim();
-        createItemPayload.type = categoryMenuButton.getText();
-        createItemPayload.startingPrice = Double.parseDouble(startingPriceField.getText());
-        createItemPayload.description = descriptionArea.getText().trim();
-        createItemPayload.imageUrl = linkImageUrl;
+        // Điền dữ liệu vào form
+        productNameField.setText(item.getName());
+        startingPriceField.setText(String.valueOf(item.getStartingPrice()));
+        descriptionArea.setText(item.getDescription());
 
-        // 2. LẤY GIÁ TRỊ THUỘC TÍNH ĐỘNG DỰA VÀO DANH MỤC (MỚI CẬP NHẬT)
-        if (dynamicAttributesContainer != null) {
-            // Tìm kiếm TextField động bằng ID thông qua phương thức lookup
+        // Gán category
+        String category = item.getCategory();
+        categoryMenuButton.setText(category);
+
+        // Hiển thị và điền thuộc tính động
+        dynamicAttributesContainer.getChildren().clear();
+        String labelText = "";
+        String promptText = "";
+        String attributeValue = "";
+
+        if (item instanceof Art art) {
+            labelText = "NGHỆ SĨ (ARTIST)";
+            promptText = "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh...";
+            attributeValue = art.getArtist();
+        } else if (item instanceof Electronics elec) {
+            labelText = "THƯƠNG HIỆU (BRAND)";
+            promptText = "Ví dụ: ASUS, Apple, Samsung...";
+            attributeValue = elec.getBrand();
+        } else if (item instanceof Vehicle veh) {
+            labelText = "NĂM SẢN XUẤT (YEAR)";
+            promptText = "Ví dụ: 2024, 2025...";
+            attributeValue = String.valueOf(veh.getYear());
+        }
+
+        if (!labelText.isEmpty()) {
+            handleCategorySelection(category, labelText, promptText);
             TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
-
-            if (customField != null && !customField.getText().trim().isEmpty()) {
-                String attributeValue = customField.getText().trim();
-                //   Phân loại danh mục để gán đúng thuộc tính vào Payload
-                switch (createItemPayload.type) {
-                    case "Electronics":
-                        createItemPayload.brand = attributeValue;
-                        break;
-
-                    case "Art":
-                        createItemPayload.artist = attributeValue;
-                        break;
-
-                    case "Vehicle":
-                        try {
-                            createItemPayload.year = Integer.parseInt(attributeValue);
-                        } catch (NumberFormatException e) {
-                            // Trường hợp người dùng nhập năm sản xuất không phải là số hợp lệ
-                            NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
-                            return; // Dừng xử lý submit nếu có lỗi định dạng
-                        }
-                        break;
-
-                    default:
-                        break;
-                }
+            if (customField != null) {
+                customField.setText(attributeValue);
             }
         }
-        Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
-        if (response != null && response.isSuccess()) {
-            System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
-            NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
-            // Nếu hợp lệ thì xử lý đăng ký
-            System.out.println("Đang xử lý đăng ký sản phẩm: " + productNameField.getText().trim());
-            // Đánh dấu cần làm mới danh sách cho lần chuyển tab sau
-            SellerUIHelper.setNeedsRefresh(true);
-            // XÓA SẠCH DỮ LIỆU TRÊN FORM ĐĂNG KÝ VỪA NHẬP
-            clearRegistrationForm();
-            // Quay lại giao diện danh sách sản phẩm
-            handleBackToListings(null);
-            loadMyListingView();
+
+        // Vô hiệu hóa các trường liên quan đến đấu giá
+        minimumBidIncrementField.setDisable(true);
+        minimumBidIncrementField.setText("");
+        startDatePicker.setDisable(true);
+        startDatePicker.setValue(null);
+        endDatePicker.setDisable(true);
+        endDatePicker.setValue(null);
+
+        // Hiển thị ảnh hiện tại
+        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+            linkImageUrl = item.getImageUrl();
+            selectedImageFile = null; // Chưa chọn ảnh mới
+
+            try {
+                java.io.File imgFile = new java.io.File("src/main/resources" + item.getImageUrl());
+                if (imgFile.exists()) {
+                    ImagesController.displayImage(imgFile, productImageView, uploadPrompt);
+                } else {
+                    productImageView.setImage(new Image("https://placehold.co/260x135/000000/FFFFFF/png?text=No+Image"));
+                    productImageView.setVisible(true);
+                    uploadPrompt.setVisible(false);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } else {
-            // Hiển thị lỗi nếu server từ chối hoặc lỗi mạng
-            String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
-            NotificationController.showError("Lỗi đăng ký", errorMsg);
+            productImageView.setImage(null);
+            productImageView.setVisible(false);
+            uploadPrompt.setVisible(true);
+            linkImageUrl = null;
+            selectedImageFile = null;
         }
 
+        // Đổi tiêu đề form và nút bấm
+        registerTitleLabel.setText("SỬA THÔNG TIN SẢN PHẨM");
+        registerSubtitleLabel.setText("Thay đổi thông tin cho sản phẩm ID: " + item.getId());
+        submitButton.setText("LƯU THAY ĐỔI");
+
+        // Chuyển sang view sửa (sử dụng chung giao diện đăng ký)
+        lastView = currentView;
+        lastButton = SellerUIHelper.findActiveButton(allButtons);
+        SellerUIHelper.resetAllButtons(allButtons);
+        currentView = registerProductView;
+        SellerUIHelper.showView(registerProductView, allViews);
+    }
+
+    @FXML
+    private void handleSubmitProduct(ActionEvent event) {
+        if (editingItem != null) {
+            // Chế độ chỉnh sửa sản phẩm
+            if (!ProductRegistrationValidator.validateEdit(productNameField, categoryMenuButton, startingPriceField,
+                    descriptionArea, (linkImageUrl != null && !linkImageUrl.isEmpty()), selectedImageFile, imageDropzone)) return;
+
+            UpdateItemPayload updateItemPayload = new UpdateItemPayload();
+            updateItemPayload.id = editingItem.getId();
+            updateItemPayload.name = productNameField.getText().trim();
+            updateItemPayload.type = categoryMenuButton.getText();
+            updateItemPayload.startingPrice = Double.parseDouble(startingPriceField.getText());
+            updateItemPayload.description = descriptionArea.getText().trim();
+            updateItemPayload.imageUrl = linkImageUrl;
+
+            // Lấy thuộc tính động
+            if (dynamicAttributesContainer != null) {
+                TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
+                if (customField != null && !customField.getText().trim().isEmpty()) {
+                    String attributeValue = customField.getText().trim();
+                    switch (updateItemPayload.type) {
+                        case "Electronics":
+                            updateItemPayload.brand = attributeValue;
+                            break;
+                        case "Art":
+                            updateItemPayload.artist = attributeValue;
+                            break;
+                        case "Vehicle":
+                            try {
+                                updateItemPayload.year = Integer.parseInt(attributeValue);
+                            } catch (NumberFormatException e) {
+                                NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
+                                return;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            Response response = ServerConnection.getInstance().send(RequestType.UPDATE_ITEM, updateItemPayload);
+            if (response != null && response.isSuccess()) {
+                System.out.println("[DATABASE] Đã cập nhật sản phẩm thành công!");
+                NotificationController.showNotification("Thành công", "Cập nhật sản phẩm thành công!");
+                SellerUIHelper.setNeedsRefresh(true);
+                clearRegistrationForm();
+                editingItem = null;
+                handleBackToListings(null);
+                loadMyListingView();
+            } else {
+                String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
+                NotificationController.showError("Lỗi cập nhật", errorMsg);
+            }
+
+        } else {
+            // Chế độ đăng ký sản phẩm mới
+            if (!ProductRegistrationValidator.validateAll(productNameField, categoryMenuButton, startingPriceField,
+                    minimumBidIncrementField, startDatePicker, endDatePicker,
+                    descriptionArea, selectedImageFile, imageDropzone)) return;
+
+            CreateItemPayload createItemPayload = new CreateItemPayload();
+            createItemPayload.name = productNameField.getText().trim();
+            createItemPayload.type = categoryMenuButton.getText();
+            createItemPayload.startingPrice = Double.parseDouble(startingPriceField.getText());
+            createItemPayload.description = descriptionArea.getText().trim();
+            createItemPayload.imageUrl = linkImageUrl;
+
+            // Lấy thuộc tính động
+            if (dynamicAttributesContainer != null) {
+                TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
+                if (customField != null && !customField.getText().trim().isEmpty()) {
+                    String attributeValue = customField.getText().trim();
+                    switch (createItemPayload.type) {
+                        case "Electronics":
+                            createItemPayload.brand = attributeValue;
+                            break;
+                        case "Art":
+                            createItemPayload.artist = attributeValue;
+                            break;
+                        case "Vehicle":
+                            try {
+                                createItemPayload.year = Integer.parseInt(attributeValue);
+                            } catch (NumberFormatException e) {
+                                NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
+                                return;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
+            if (response != null && response.isSuccess()) {
+                System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
+                NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+                SellerUIHelper.setNeedsRefresh(true);
+                clearRegistrationForm();
+                handleBackToListings(null);
+                loadMyListingView();
+            } else {
+                String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
+                NotificationController.showError("Lỗi đăng ký", errorMsg);
+            }
+        }
     }
 
     // Bấm vào nút Chuông -> Ẩn hoặc hiện khung thông báo (Chỉ xử lý UI mượt mà)

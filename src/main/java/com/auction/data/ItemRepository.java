@@ -81,6 +81,43 @@ public class ItemRepository {
         return false;
     }
 
+    // Cập nhật item.
+    public boolean update(Item item) {
+        String sql = "UPDATE items SET owner_id = ?, name = ?, description = ?, starting_price = ?, category = ?, image_url = ?, artist = ?, brand = ?, manufacture_year = ? WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, item.getOwnerId());
+            ps.setString(2, item.getName());
+            ps.setString(3, item.getDescription());
+            ps.setDouble(4, item.getStartingPrice());
+            ps.setString(5, item.getCategory());
+            ps.setString(6, item.getImageUrl());
+            bindCategoryFields(ps, item);
+            ps.setInt(10, item.getId());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // Cập nhật trạng thái item.
+    public boolean updateStatus(int id, com.auction.model.item.ItemStatus status) {
+        String sql = "UPDATE items SET status = ? WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, status.name());
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+
     // Private helpers
 
     // Gán các tham số đặc thù của từng category (artist / brand / manufacture_year).
