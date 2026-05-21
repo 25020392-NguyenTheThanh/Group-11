@@ -195,4 +195,5 @@ public class Auction implements Subject {
     public List<BidTransaction> getBidHistory()        { return bidHistory; }
     public double               getMinBidStep()        { return minBidStep; }
     public boolean              isExpired()            { return LocalDateTime.now().isAfter(endTime); }
+    public void                 setStatus(AuctionStatus status_) {status = status_;}
 }

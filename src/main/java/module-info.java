@@ -12,13 +12,17 @@ module com.example.group11 {
     requires com.almasb.fxgl.all;
     requires java.desktop;
     requires jdk.jfr;
-    requires org.junit.jupiter.api;
     requires java.sql;
     // jdk.jsobject;
 
     opens com.example.group11 to javafx.fxml;
     exports com.example.group11;
     exports com.example.group11.controller;
+    exports com.auction.model.item;
+    exports com.auction.model.auction;
+    exports com.auction.model.user;
+    exports com.auction.exception;
+    exports com.auction.pattern.factory;
     opens com.example.group11.controller to javafx.fxml;
 
 }

@@ -24,7 +24,7 @@ public class RequestProcessor {
             case REGISTER       -> handleRegister(request);
             case LOGOUT         -> handleLogout(handler);
             case GET_AUCTIONS   -> handleGetAuctions();
-            case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request);
+            case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request, handler);
             case PLACE_BID      -> handlePlaceBid(request, handler);
             case CREATE_ITEM    -> handleCreateItem(request, handler);
             case CREATE_AUCTION -> handleCreateAuction(request, handler);
