@@ -1,8 +1,11 @@
 package com.example.group11.controller;
 
+import com.auction.client.ServerConnection;
+import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
@@ -68,10 +71,22 @@ public class BidderAuctionListController implements Initializable {
     @FXML
     private Label walletBalance;
 
+    @FXML
+    private VBox profileDropdown;
+
+    @FXML
+    private VBox notificationDropdown;
+
+    @FXML
+    private VBox notificationListContainer;
+
     private User user;
 
     public void setUser(User user) {
         this.user = user;
+        if (user instanceof Bidder bidder) {
+            walletBalance.setText(String.format("%.2f", bidder.getBalance()));
+        }
     }
 
 
@@ -154,5 +169,64 @@ public class BidderAuctionListController implements Initializable {
                 "-fx-border-color: transparent #FFD700 transparent transparent; " +
                 "-fx-border-width: 0 4 0 0;";
         button.setStyle(activeStyle);
+    }
+
+    @FXML
+    private void toggleProfileDropdown(ActionEvent event) {
+        if (notificationDropdown.isVisible()) {
+            notificationDropdown.setVisible(false);
+            notificationDropdown.setManaged(false);
+        }
+
+        boolean isVisible = profileDropdown.isVisible();
+        profileDropdown.setVisible(!isVisible);
+        profileDropdown.setManaged(!isVisible);
+    }
+
+    @FXML
+    private void handleShowNotifications(ActionEvent event) {
+        if (profileDropdown != null && profileDropdown.isVisible()) {
+            profileDropdown.setVisible(false);
+            profileDropdown.setManaged(false);
+        }
+
+        boolean isCurrentlyVisible = notificationDropdown.isVisible();
+        notificationDropdown.setVisible(!isCurrentlyVisible);
+        notificationDropdown.setManaged(!isCurrentlyVisible);
+    }
+
+    @FXML
+    private void handleViewProfile(ActionEvent event) {
+        System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
+        profileDropdown.setVisible(false);
+        profileDropdown.setManaged(false);
+    }
+
+    @FXML
+    private void handleLogout(ActionEvent event) {
+        boolean confirm = NotificationController.showConfirmation(
+                "Xác nhận đăng xuất",
+                "Bạn có chắc chắn muốn đăng xuất không?",
+                "Hệ thống sẽ kết thúc phiên làm việc hiện tại của bạn.",
+                "Có, Đăng xuất",
+                "Không, Ở lại"
+        );
+        if (confirm) {
+            try {
+                System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
+                ServerConnection.getInstance().stopListening();
+                ServerConnection.getInstance().disconnect();
+                FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng nhập");
+
+                if (loader != null) {
+                    user = null;
+                } else {
+                    System.err.println("Lỗi: Không thể tải giao diện login-view.fxml");
+                }
+            } catch (Exception e) {
+                System.err.println("Lỗi kết nối khi đăng xuất: " + e.getMessage());
+                NotificationController.showError("Lỗi kết nối", "Không thể kết nối tới Server để đăng xuất.");
+            }
+        }
     }
 }

@@ -65,7 +65,7 @@
                                 <!-- THANH SỐ DƯ -->
                                 <HBox alignment="CENTER" prefHeight="35.0" spacing="8.0" style="-fx-background-color: #112240; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 12 0 12;">
                                     <children>
-                                        <Label textFill="#94A3B8" text="$">
+                                        <Label textFill="#94A3B8" text="\$">
                                             <font><Font name="System Bold" size="14.0" /></font>
                                         </Label>
                                         <Label fx:id="walletBalance" minWidth="50.0" text="0.00" textFill="#ffd700">
