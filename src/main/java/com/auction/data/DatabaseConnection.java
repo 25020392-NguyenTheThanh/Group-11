@@ -28,7 +28,7 @@ public class DatabaseConnection {
     }
 
     // Mở và trả về một kết nối mới tới database. Caller chịu trách nhiệm đóng kết nối.
-    public Connection getConnection() throws SQLException {
+    public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(DB_URL, DB_USER, DB_PASS);
     }
 }
