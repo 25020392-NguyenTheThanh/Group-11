@@ -82,7 +82,6 @@ public class RequestProcessor {
         try {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
             if (auction == null) return Response.error("Phiên không tồn tại");
-            auction.addObserver(handler); // đăng ký nhận thông báo realtime
             Bidder bidder = (Bidder) user;
             auction.placeBid(bidder, payload.amount);
 
@@ -99,11 +98,14 @@ public class RequestProcessor {
         }
     }
     // Lấy chi tiết 1 phiên đấu giá
-    private static Response handleGetAuctionDetail(Request request){
+    private static Response handleGetAuctionDetail(Request request , ClientHandler handler){
         int auctionId = (Integer) request.getPayload();
         Auction a = AuctionManager.getInstance().findAuctionById(auctionId);
         if (a == null ){
             return Response.error("Không tìm thấy phiên đấu giá " + auctionId);
+        }
+        if (!a.hasObserver(handler)) {
+            a.addObserver(handler);
         }
         return Response.ok(a);
     }
