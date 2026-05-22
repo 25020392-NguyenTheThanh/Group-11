@@ -7,11 +7,7 @@ import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
 import com.auction.model.user.User;
-import com.auction.network.CreateAuctionPayload;
-import com.auction.network.CreateItemPayload;
-import com.auction.network.UpdateItemPayload;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
+import com.auction.network.*;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
 import com.auction.model.item.ItemStatus;
@@ -32,6 +28,7 @@ import javafx.scene.layout.*;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 import java.io.File;
 import java.net.URL;
@@ -40,6 +37,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Consumer;
 
 import static com.example.group11.controller.ImagesController.confirmRemoveImage;
 import static com.example.group11.controller.ImagesController.displayImage;
@@ -257,8 +255,16 @@ public class SellerAuctionListController implements Initializable {
 
         setupCategoryMenuItems();
 
-        // Đăng ký lắng nghe thông báo thời gian thực từ Server
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
+        setupRealtimeNotifications();
+    }
+
+    private Consumer<Notification> sellerNotificationHandler;
+
+    private void setupRealtimeNotifications() {
+        if (sellerNotificationHandler != null) {
+            ServerConnection.getInstance().removeNotificationHandler(sellerNotificationHandler);
+        }
+        sellerNotificationHandler = notification -> {
             addNotificationToUI(notification);
             
             String type = notification.getType();
@@ -266,7 +272,8 @@ public class SellerAuctionListController implements Initializable {
                 System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
                 loadMyListingView();
             }
-        });
+        };
+        ServerConnection.getInstance().addNotificationHandler(sellerNotificationHandler);
     }
 
     private void addNotificationToUI(com.auction.network.Notification notification) {
@@ -408,14 +415,21 @@ public class SellerAuctionListController implements Initializable {
                         Auction auction = itemAuctionMap.get(itemData.getId());
                         if (auction != null) {
                             try {
-                                FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
+                                Stage existingStage = LiveAuctionController.getOpenStage(auction.getId());
+                                if (existingStage != null) {
+                                    existingStage.toFront();
+                                    existingStage.requestFocus();
+                                    return;
+                                }
+
+                                FXMLLoader loader = GenerationSupport.openNewStage("liveAuction-view.fxml", "Phòng đấu giá #" + auction.getId() + " - " + auction.getItem().getName());
                                 if (loader != null) {
                                     LiveAuctionController controller = loader.getController();
                                     controller.setAuctionAndUser(auction, user);
                                 }
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                NotificationController.showError("Lỗi chuyển trang", "Không thể mở trang đấu giá trực tiếp.");
+                                NotificationController.showError("Lỗi mở cửa sổ", "Không thể mở trang đấu giá trực tiếp.");
                             }
                         } else {
                             NotificationController.showError("Thông báo", "Sản phẩm chưa đăng ký hoặc không có phiên đấu giá.");
@@ -1031,6 +1045,7 @@ public class SellerAuctionListController implements Initializable {
         if (confirm) {
             try {
                 System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
+                LiveAuctionController.clearEnteredAuctions();
 
 //                Response response = ServerConnection.getInstance().send(RequestType.LOGOUT, null);
 

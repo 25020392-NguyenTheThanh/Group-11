@@ -69,7 +69,7 @@ public class RequestProcessor {
             User user = handler.getLoggedInUser();
             if (user != null) {
                 user.logout();
-                // TODO: Nếu có thể, hãy gọi AuctionManager.getInstance().removeObserverFromAllAuctions(handler);
+                AuctionManager.getInstance().removeObserverFromAllAuctions(handler);
             }
             handler.setLoggedInUser(null); // Giải phóng user ngắt kết nối logic
             return Response.ok("Đăng xuất thành công");
@@ -111,7 +111,7 @@ public class RequestProcessor {
             return Response.error(e.getMessage());
         }
     }
-    // Lấy chi tiết 1 phiên đấu giá và xử lý tăng lượt xem nếu yêu cầu
+    // Lấy chi tiết 1 phiên đấu giá và xử lý tăng/giảm lượt xem hoặc đăng ký/hủy observer
     private static Response handleGetAuctionDetail(Request request , ClientHandler handler){
         GetAuctionDetailPayload payload = (GetAuctionDetailPayload) request.getPayload();
         int auctionId = payload.auctionId;
@@ -119,14 +119,21 @@ public class RequestProcessor {
         if (a == null ){
             return Response.error("Không tìm thấy phiên đấu giá " + auctionId);
         }
-        // Đăng ký client handler làm observer của phiên đấu giá để nhận thông báo realtime
-        if (!a.hasObserver(handler)) {
-            a.addObserver(handler);
-        }
-        // Tăng lượt xem và thông báo realtime cho các client khác nếu click CHI TIẾT
-        if (payload.incrementView) {
-            a.incrementViewCount();
+        
+        if (payload.decrementView) {
+            a.decrementViewCount();
+            a.removeObserver(handler);
             a.notifyObservers("VIEW_UPDATE");
+        } else {
+            // Đăng ký client handler làm observer của phiên đấu giá để nhận thông báo realtime
+            if (!a.hasObserver(handler)) {
+                a.addObserver(handler);
+            }
+            // Tăng lượt xem và thông báo realtime cho các client khác nếu click CHI TIẾT
+            if (payload.incrementView) {
+                a.incrementViewCount();
+                a.notifyObservers("VIEW_UPDATE");
+            }
         }
         return Response.ok(a);
     }

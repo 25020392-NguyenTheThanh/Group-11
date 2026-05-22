@@ -32,7 +32,7 @@ public class GenerationSupport {
         }
     }
 
-    public static FXMLLoader changeScene(javafx.scene.Node node, String fxmlFile, String title) {
+    public static FXMLLoader changeScene(Node node, String fxmlFile, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(GenerationSupport.class.getResource("/com/example/group11/" + fxmlFile));
             Parent root = loader.load();
@@ -61,6 +61,21 @@ public class GenerationSupport {
             stage.centerOnScreen();
             stage.show();
 
+            return loader;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static FXMLLoader openNewStage(String fxmlFile, String title) {
+        try {
+            FXMLLoader loader = new FXMLLoader(GenerationSupport.class.getResource("/com/example/group11/" + fxmlFile));
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setScene(new Scene(root));
+            stage.setTitle(title);
+            stage.show();
             return loader;
         } catch (IOException e) {
             e.printStackTrace();

@@ -8,10 +8,7 @@ import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
 import com.auction.model.user.User;
-import com.auction.network.GetAuctionDetailPayload;
-import com.auction.network.PlaceBidPayload;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
+import com.auction.network.*;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -34,14 +31,15 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
+import java.util.function.Consumer;
 
 public class LiveAuctionController implements Initializable {
 
@@ -59,6 +57,7 @@ public class LiveAuctionController implements Initializable {
     @FXML private Button confirmBidButton;
     @FXML private VBox bidHistoryContainer;
     @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
+    @FXML private Button closeButton; // Nút X thoát hẳn phòng
     
     @FXML private LineChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
@@ -68,17 +67,108 @@ public class LiveAuctionController implements Initializable {
     private User user;
     private Timeline countdownTimeline;
 
+    // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
+    private static final Set<Integer> enteredAuctionIds = new HashSet<>();
+
+    // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
+    private static final Map<Integer, Stage> openStages = new HashMap<>();
+
+    // Bộ sưu tập lưu giữ các Controller của các phòng đấu giá đang mở song song để thực hiện cleanup
+    private static final Map<Integer, LiveAuctionController> openControllers = new HashMap<>();
+
+    private Consumer<Notification> liveAuctionNotificationHandler;
+
+    public static Stage getOpenStage(int auctionId) {
+        return openStages.get(auctionId);
+    }
+
+    public static void closeAllOpenStages() {
+        Platform.runLater(() -> {
+            for (LiveAuctionController controller : new java.util.ArrayList<>(openControllers.values())) {
+                controller.cleanup(false);
+                Stage stage = null;
+                if (controller.backButton != null && controller.backButton.getScene() != null) {
+                    stage = (Stage) controller.backButton.getScene().getWindow();
+                } else if (controller.closeButton != null && controller.closeButton.getScene() != null) {
+                    stage = (Stage) controller.closeButton.getScene().getWindow();
+                }
+                if (stage != null) {
+                    stage.close();
+                }
+            }
+            openControllers.clear();
+            openStages.clear();
+        });
+    }
+
+    /**
+     * Dọn sạch danh sách phòng đấu giá đã truy cập (ví dụ khi người dùng đăng xuất hoặc đăng nhập).
+     */
+    public static void clearEnteredAuctions() {
+        enteredAuctionIds.clear();
+        closeAllOpenStages();
+    }
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Chuẩn bị ban đầu
+    }
+
+    public void cleanup(boolean decrementView) {
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
+        if (liveAuctionNotificationHandler != null) {
+            ServerConnection.getInstance().removeNotificationHandler(liveAuctionNotificationHandler);
+            liveAuctionNotificationHandler = null;
+        }
+        if (auction != null) {
+            int auctionId = auction.getId();
+            openControllers.remove(auctionId);
+            openStages.remove(auctionId);
+            if (decrementView) {
+                enteredAuctionIds.remove(auctionId);
+
+                Task<Response> closeTask = new Task<>() {
+                    @Override
+                    protected Response call() throws Exception {
+                        GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auctionId, false);
+                        payload.decrementView = true;
+                        return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
+                    }
+                };
+                Thread t = new Thread(closeTask);
+                t.setDaemon(true);
+                t.start();
+            }
+        }
     }
 
     public void setAuctionAndUser(Auction auction, User user) {
         this.auction = auction;
         this.user = user;
 
+        // Lưu thông tin Stage của cửa sổ mới mở vào openStages để quản lý song song
+        Platform.runLater(() -> {
+            if (backButton != null && backButton.getScene() != null) {
+                Stage stage = (Stage) backButton.getScene().getWindow();
+                if (stage != null) {
+                    openStages.put(auction.getId(), stage);
+                    openControllers.put(auction.getId(), this);
+                    stage.setOnCloseRequest(event -> {
+                        cleanup(true);
+                    });
+                }
+            }
+        });
+
         // 1. Lấy thông tin đấu giá mới nhất từ Server để đồng bộ và đăng ký Observer
-        refreshAuctionDetails(true);
+        // Chỉ tăng lượt xem nếu chưa ở trong phòng đấu giá này trước đó
+        boolean isFirstEntry = !enteredAuctionIds.contains(auction.getId());
+        if (isFirstEntry) {
+            enteredAuctionIds.add(auction.getId());
+        }
+        refreshAuctionDetails(isFirstEntry);
 
         // 2. Lắng nghe cập nhật realtime
         setupRealtimeNotifications();
@@ -148,16 +238,20 @@ public class LiveAuctionController implements Initializable {
     }
 
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
+        if (liveAuctionNotificationHandler != null) {
+            ServerConnection.getInstance().removeNotificationHandler(liveAuctionNotificationHandler);
+        }
+        liveAuctionNotificationHandler = notification -> {
             Platform.runLater(() -> {
-                System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
+                System.out.println("LiveAuction #" + (auction != null ? auction.getId() : "null") + " nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
                 if ("BID_UPDATE".equals(notification.getType()) 
                         || "AUCTION_ENDED".equals(notification.getType()) 
                         || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                     refreshAuctionDetails(false);
                 }
             });
-        });
+        };
+        ServerConnection.getInstance().addNotificationHandler(liveAuctionNotificationHandler);
     }
 
     private void updateUI() {
@@ -415,30 +509,26 @@ public class LiveAuctionController implements Initializable {
     }
 
     /**
-     * Quay lại danh sách phiên đấu giá phù hợp với vai trò người dùng (Bidder hoặc Seller).
+     * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
      */
     @FXML
     private void handleBack(ActionEvent event) {
-        if (countdownTimeline != null) {
-            countdownTimeline.stop();
+        cleanup(false);
+        Stage stage = (Stage) backButton.getScene().getWindow();
+        if (stage != null) {
+            stage.close();
         }
-        try {
-            if (user instanceof Seller) {
-                FXMLLoader loader = GenerationSupport.changeScene(backButton, "sellerAuctionList-view.fxml", "Auction floor of Seller");
-                if (loader != null) {
-                    SellerAuctionListController controller = loader.getController();
-                    controller.setUser(user);
-                }
-            } else {
-                FXMLLoader loader = GenerationSupport.changeScene(backButton, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
-                if (loader != null) {
-                    BidderAuctionListController controller = loader.getController();
-                    controller.setUser(user);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            NotificationController.showError("Lỗi chuyển trang", "Không thể quay về danh sách phiên đấu giá.");
+    }
+
+    /**
+     * Thoát chính thức khỏi phòng đấu giá (bấm nút X). Giảm lượt xem và huỷ đăng ký observer trên server, sau đó đóng cửa sổ.
+     */
+    @FXML
+    private void handleClose(ActionEvent event) {
+        cleanup(true);
+        Stage stage = (Stage) closeButton.getScene().getWindow();
+        if (stage != null) {
+            stage.close();
         }
     }
 }

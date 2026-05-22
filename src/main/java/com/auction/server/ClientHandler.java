@@ -64,6 +64,7 @@ public class ClientHandler implements Runnable , Observer {
             if (out != null) out.close();
             if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException ignored) {}
+        com.auction.manager.AuctionManager.getInstance().removeObserverFromAllAuctions(this);
         server.removeClient(this); // xóa khỏi danh sách connectedClients
         System.out.println("Đã dọn dẹp kết nối: " + socket.getInetAddress());
     }

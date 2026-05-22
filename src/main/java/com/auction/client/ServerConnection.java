@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 // Class quản lý kết nối client tới server
@@ -36,8 +38,8 @@ public class ServerConnection {
     // Thread lắng nghe notification từ server
     private Thread listenerThread;
 
-    // Hàm xử lý notification
-    private Consumer<Notification> notificationHandler;
+    // Danh sách hàm xử lý notification để hỗ trợ nhiều cửa sổ song song
+    private final List<Consumer<Notification>> notificationHandlers = new CopyOnWriteArrayList<>();
 
     // Flag đánh dấu có request đang gửi đi và chờ response
     private boolean requestInProgress = false;
@@ -132,13 +134,14 @@ public class ServerConnection {
                     if (obj instanceof Response r)
                         return r;
 
-                    if (obj instanceof Notification n
-                            && notificationHandler != null) {
+                    if (obj instanceof Notification n) {
                         final Notification notif = n;
-                        // Chạy trên JavaFX thread
-                        javafx.application.Platform.runLater(
-                                () -> notificationHandler.accept(notif)
-                        );
+                        // Chạy trên JavaFX thread cho tất cả các handler đăng ký
+                        for (Consumer<Notification> handler : notificationHandlers) {
+                            javafx.application.Platform.runLater(
+                                    () -> handler.accept(notif)
+                            );
+                        }
                     }
                 }
             }
@@ -182,12 +185,13 @@ public class ServerConnection {
                         if (obj instanceof Response r) {
                             responseBuffer = r;
                             this.notifyAll();
-                        } else if (obj instanceof Notification n
-                                && notificationHandler != null) {
-                            // Chạy trên JavaFX thread
-                            javafx.application.Platform.runLater(
-                                    () -> notificationHandler.accept(n)
-                            );
+                        } else if (obj instanceof Notification n) {
+                            // Chạy trên JavaFX thread cho tất cả các handler đăng ký
+                            for (Consumer<Notification> handler : notificationHandlers) {
+                                javafx.application.Platform.runLater(
+                                        () -> handler.accept(n)
+                                );
+                            }
                         }
                     }
 
@@ -219,16 +223,31 @@ public class ServerConnection {
         }
 
         // Hủy bỏ handler để tránh rò rỉ bộ nhớ hoặc xử lý nhầm dữ liệu cũ
-        this.notificationHandler = null;
+        this.notificationHandlers.clear();
         System.out.println("Đã dừng luồng lắng nghe thành công.");
     }
 
+    public void addNotificationHandler(Consumer<Notification> handler) {
+        if (handler != null && !notificationHandlers.contains(handler)) {
+            notificationHandlers.add(handler);
+        }
+    }
+
+    public void removeNotificationHandler(Consumer<Notification> handler) {
+        if (handler != null) {
+            notificationHandlers.remove(handler);
+        }
+    }
+
     // Gán hàm xử lý notification
+    @Deprecated
     public void setNotificationHandler(
             Consumer<Notification> handler
     ) {
-
-        this.notificationHandler = handler;
+        this.notificationHandlers.clear();
+        if (handler != null) {
+            this.notificationHandlers.add(handler);
+        }
     }
 
     // Kiểm tra trạng thái kết nối

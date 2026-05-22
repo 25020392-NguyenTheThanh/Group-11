@@ -14,8 +14,12 @@ public class GetAuctionDetailPayload implements Serializable {
     // Cờ đánh dấu có tăng lượt xem (viewCount) hay không (true khi click CHI TIẾT, false khi refresh realtime)
     public boolean incrementView;
 
+    // Cờ đánh dấu có giảm lượt xem (viewCount) hay không (true khi click X để thoát phòng)
+    public boolean decrementView;
+
     public GetAuctionDetailPayload(int auctionId, boolean incrementView) {
         this.auctionId = auctionId;
         this.incrementView = incrementView;
+        this.decrementView = false;
     }
 }

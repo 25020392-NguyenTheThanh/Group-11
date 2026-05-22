@@ -251,6 +251,13 @@ public class Auction implements Subject, Serializable {
         this.viewCount++;
     }
 
+    // Giảm số lượt xem của phiên đấu giá đi 1 (đồng bộ chống race-condition)
+    public synchronized void decrementViewCount() {
+        if (this.viewCount > 0) {
+            this.viewCount--;
+        }
+    }
+
     // Thiết lập/khôi phục số lượt xem của phiên đấu giá
     public void restoreViewCount(int viewCount) {
         this.viewCount = viewCount;

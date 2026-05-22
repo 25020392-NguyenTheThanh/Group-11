@@ -124,6 +124,7 @@ public class LoginController implements Initializable {
 
         Response response = connection.send(RequestType.LOGIN, payload);
         if (response.isSuccess()) {
+            LiveAuctionController.clearEnteredAuctions();
             ServerConnection.getInstance().startListening();
             User loggedInUser = (User) response.getData();
 

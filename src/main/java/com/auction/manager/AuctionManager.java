@@ -105,6 +105,16 @@ public class AuctionManager {
         System.out.println("Loaded " + dbAuctions.size() + " auctions from database.");
     }
 
+    public void removeObserverFromAllAuctions(com.auction.pattern.observer.Observer observer) {
+        for (Auction a : auctions.values()) {
+            if (a.hasObserver(observer)) {
+                a.removeObserver(observer);
+                a.decrementViewCount();
+                a.notifyObservers("VIEW_UPDATE");
+            }
+        }
+    }
+
     @Deprecated
     public void loadFromDisk() {
         System.out.println("[AuctionManager] loadFromDisk() đã bị bỏ — dữ liệu lấy từ MySQL.");
