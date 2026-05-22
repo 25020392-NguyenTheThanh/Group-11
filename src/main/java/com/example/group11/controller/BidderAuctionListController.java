@@ -6,21 +6,22 @@ import com.auction.model.auction.AuctionStatus;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
-import com.auction.network.Notification;
-import com.auction.network.PlaceBidPayload;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
+import com.auction.network.*;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
@@ -336,9 +337,9 @@ public class BidderAuctionListController implements Initializable {
                     return false;
                 }
                 if (user instanceof Bidder bidder) {
-                    boolean won = (auction.getCurrentWinner() != null && auction.getCurrentWinner().getId() == bidder.getId()) 
+                    boolean won = (auction.getCurrentWinner() != null && auction.getCurrentWinner().getId() == bidder.getId())
                             || bidder.getProfile().getWonAuctions().contains(auction.getId());
-                    boolean participated = bidder.getProfile().getParticipatedAuctions().contains(auction.getId()) 
+                    boolean participated = bidder.getProfile().getParticipatedAuctions().contains(auction.getId())
                             || auction.getBidHistory().stream().anyMatch(tx -> tx.getBidderId() == bidder.getId());
                     if (!won && !participated) {
                         return false;
@@ -408,10 +409,11 @@ public class BidderAuctionListController implements Initializable {
             VBox productCard = AuctionCardFactory.createAuctionCard(
                     auction,
                     this::handleBid,          // Hàm callback xử lý đặt giá hiện tại của bạn
-                    this::handleViewDetails,   // Hàm callback xử lý xem chi tiết hiện tại của bạn
+                    this::handleViewDetails,   // Hàm callback xử lý xem chi tiết hiện tại của bạn   // Hàm callback xử lý xem chi tiết hiện tại của bạn
                     isWatched,
                     this::handleToggleWatchlist,
                     this.user
+
             );
 
             int column = i % 3;
@@ -420,6 +422,61 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+//    // Thay handleViewDetails bằng openLiveAuction
+//    private void openLiveAuction(Auction auction) {
+//        // Gọi GET_AUCTION_DETAIL để server đăng ký handler này là Observer
+//        Task<Response> task = new Task<>() {
+//            @Override
+//            protected Response call() {
+//                return ServerConnection.getInstance()
+//                        .send(RequestType.GET_AUCTION_DETAIL, auction.getId());
+//            }
+//        };
+//
+//        task.setOnSucceeded(evt -> {
+//            Response res = task.getValue();
+//            if (res == null || !res.isSuccess()) {
+//                NotificationController.showError("Lỗi",
+//                        "Không thể tải chi tiết phiên: "
+//                                + (res != null ? res.getMessage() : "mất kết nối"));
+//                return;
+//            }
+//
+//            Auction detailed = (Auction) res.getData();
+//
+//            try {
+//                FXMLLoader loader = new FXMLLoader(
+//                        getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
+//                Parent root = loader.load();
+//
+//                LiveAuctionController liveCtrl = loader.getController();
+//                liveCtrl.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
+//
+//                Stage stage = new Stage();
+//                stage.setTitle("Đấu giá trực tiếp — " + detailed.getItem().getName());
+//                stage.setScene(new javafx.scene.Scene(root));
+//                // Khi đóng cửa sổ Live, khôi phục handler về màn hình danh sách
+//                stage.setOnCloseRequest(e -> {
+//                    liveCtrl.clearEnteredAuctions();
+//                    // Khôi phục realtime handler về BidderAuctionListController
+//                    setupRealtimeNotifications();
+//                });
+//                stage.show();
+//
+//            } catch (java.io.IOException e) {
+//                NotificationController.showError("Lỗi UI",
+//                        "Không thể mở màn hình đấu giá.\n" + e.getMessage());
+//            }
+//        });
+//
+//        task.setOnFailed(evt ->
+//                NotificationController.showError("Lỗi mạng", "Không thể kết nối server.")
+//        );
+//
+//        Thread th = new Thread(task);
+//        th.setDaemon(true);
+//        th.start();
+//    }
     /**
      * Xử lý sự kiện xem chi tiết phiên đấu giá. Chuyển hướng sang màn hình đấu giá trực tiếp (Live Auction).
      *
@@ -451,7 +508,7 @@ public class BidderAuctionListController implements Initializable {
         }
 
         double minAccepted = auction.getCurrentHighestBid() + auction.getMinBidStep();
-        
+
         TextInputDialog dialog = new TextInputDialog(String.format("%.2f", minAccepted));
         dialog.setTitle("Đặt giá thầu");
         dialog.setHeaderText("Đấu giá cho sản phẩm: " + auction.getItem().getName());
@@ -567,16 +624,51 @@ public class BidderAuctionListController implements Initializable {
             Platform.runLater(() -> {
                 System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
                 addNotificationToDropdown(notification);
-                
-                if ("BID_UPDATE".equals(notification.getType()) 
-                        || "AUCTION_ENDED".equals(notification.getType()) 
-                        || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
-                    loadAuctions();
-                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
-                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
+
+                String type = notification.getType();
+
+                if ("BID_UPDATE".equals(type)) {
+                    Object data = notification.getData();
+
+                    if (data instanceof BidUpdateData upd) {
+                        // Cập nhật đúng card mà không reload toàn bộ
+                        updateAuctionCardPrice(upd.auctionId, upd.newHighestBid,
+                                upd.winnerUsername, upd.totalBids);
+                    } else {
+                        // fallback nếu server cũ
+                        loadAuctions();
+                    }
+
+                } else if ("AUCTION_ENDED".equals(type)
+                        || "ITEM_STATUS_CHANGED".equals(type)) {
+                    loadAuctions(); // reload để cập nhật trạng thái card
                 }
             });
         });
+    }
+    /**
+     * Cập nhật giá realtime trên card đấu giá đang hiển thị,
+     * không cần reload lại toàn bộ danh sách auction.
+     * Nếu chưa tìm thấy card thì tải lại danh sách.
+     */
+
+    private void updateAuctionCardPrice(int auctionId, double newPrice,
+                                        String winner, int totalBids) {
+        // Cập nhật object trong allAuctions list để filter không mất dữ liệu
+        boolean found = false;
+        for (Auction a : allAuctions) {
+            if (a.getId() == auctionId) {
+                // Cập nhật field trực tiếp (không gọi placeBid — tránh double-logic)
+                a.restoreHighestBid(newPrice);
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            applyFilters(); // re-render cards với giá mới
+        } else {
+            loadAuctions();
+        }
     }
 
     /**
@@ -623,7 +715,7 @@ public class BidderAuctionListController implements Initializable {
     }
 
     @FXML
-    private void handleSelectPackage(javafx.scene.input.MouseEvent event) {
+    private void handleSelectPackage(MouseEvent event) {
         VBox clickedNode = (VBox) event.getSource();
 
         if (clickedNode == selectedPackageNode) {
@@ -638,7 +730,7 @@ public class BidderAuctionListController implements Initializable {
         double amount = Double.parseDouble(amountStr);
 
         String packageLabel = "";
-        for (javafx.scene.Node child : clickedNode.getChildren()) {
+        for (Node child : clickedNode.getChildren()) {
             if (child instanceof Label) {
                 Label lbl = (Label) child;
                 if (lbl.getText().contains("đ")) {
@@ -699,7 +791,7 @@ public class BidderAuctionListController implements Initializable {
         for (VBox pkg : packages) {
             if (pkg != null) {
                 pkg.setStyle("-fx-background-color: #1E2D45; -fx-border-color: #334155; -fx-border-width: 1.5; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand;");
-                for (javafx.scene.Node child : pkg.getChildren()) {
+                for (Node child : pkg.getChildren()) {
                     if (child instanceof Label) {
                         Label lbl = (Label) child;
                         if (lbl.getText().contains("Ưu đãi")) {
@@ -716,7 +808,7 @@ public class BidderAuctionListController implements Initializable {
     private void highlightSelectedPackage(VBox pkg) {
         if (pkg != null) {
             pkg.setStyle("-fx-background-color: #FF2A54; -fx-border-color: #FFD700; -fx-border-width: 1.5; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand;");
-            for (javafx.scene.Node child : pkg.getChildren()) {
+            for (Node child : pkg.getChildren()) {
                 if (child instanceof Label) {
                     Label lbl = (Label) child;
                     if (lbl.getText().contains("Ưu đãi")) {

@@ -158,8 +158,6 @@ public class LoginController implements Initializable {
 
                 case "SELLER":
                     loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
-                    SellerAuctionListController controller=loader.getController();
-                    controller.setUser(loggedInUser);
                     break;
                 default:
                     throw new AuthenticationException("Role " + role + " is not recognized.");
@@ -290,7 +288,19 @@ public class LoginController implements Initializable {
             signUpPayload.email = email;
             signUpPayload.role = role.toUpperCase();
 
-            Response response = ServerConnection.getInstance().send(RequestType.REGISTER, signUpPayload);
+            // BẮT BUỘC: Kết nối tới server nếu chưa kết nối (giống handleLogin)
+            ServerConnection connection = ServerConnection.getInstance();
+            if (!connection.isConnected()) {
+                try {
+                    System.out.println("Đang kết nối tới Server...");
+                    connection.connect();
+                } catch (Exception ex) {
+                    NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ: " + ex.getMessage());
+                    return;
+                }
+            }
+
+            Response response = connection.send(RequestType.REGISTER, signUpPayload);
 
             if (response != null && response.isSuccess()) {
                 NotificationController.showNotification("Đăng ký thành công", "Tài khoản của bạn đã được khởi tạo thành công trên hệ thống!");
@@ -360,25 +370,25 @@ public class LoginController implements Initializable {
         isPasswordVisible = !isPasswordVisible;
 
         if (isPasswordVisible) {
-            // Lấy vị trí con trỏ hiện tại của trường Ẩn để chuyển sang trường Hiện
+            // Lấy vị trí con trỏ từ field đang active (enterPassword)
             int caretPosition = enterPassword.getCaretPosition();
             // Hiển thị mật khẩu
             togglePasswordIcon.setText("🙈"); // Đổi icon sang nhắm mắt
             visiblePassword.setVisible(true);
             enterPassword.setVisible(false);
-            // Đưa con trỏ chuột về cuối dòng văn bản
+            // Focus vào field đang hiển thị (visiblePassword) và đặt con trỏ
             visiblePassword.requestFocus();
             visiblePassword.positionCaret(caretPosition);
         } else {
-            // Lấy vị trí con trỏ hiện tại của trường Ẩn để chuyển sang trường Hiện
-            int caretPosition = enterPassword.getCaretPosition();
+            // Lấy vị trí con trỏ từ field đang active (visiblePassword)
+            int caretPosition = visiblePassword.getCaretPosition();
             // Ẩn mật khẩu
             togglePasswordIcon.setText("👁"); // Đổi icon sang mở mắt
             visiblePassword.setVisible(false);
             enterPassword.setVisible(true);
-            // Đưa con trỏ chuột về cuối dòng văn bản
-            visiblePassword.requestFocus();
-            visiblePassword.positionCaret(caretPosition);
+            // Focus vào field đang hiển thị (enterPassword) và đặt con trỏ
+            enterPassword.requestFocus();
+            enterPassword.positionCaret(caretPosition);
         }
     }
 

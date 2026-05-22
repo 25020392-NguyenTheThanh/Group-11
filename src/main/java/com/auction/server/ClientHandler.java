@@ -1,5 +1,6 @@
 package com.auction.server;
 
+import com.auction.manager.AuctionManager;
 import com.auction.model.user.User;
 import com.auction.network.Notification;
 import com.auction.network.Request;
@@ -11,12 +12,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
+// đại diện cho 1 client đang kết nối với server và xử lý toàn bộ giao tiếp với client đó.
 public class ClientHandler implements Runnable , Observer {
     private final Socket socket;
     private final AuctionServer server;
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private User loggedInUser; // user đang đăng nhập qua kết nối này
+
     public ClientHandler(Socket socket, AuctionServer server) {
         this.socket = socket;
         this.server = server;
@@ -24,12 +27,12 @@ public class ClientHandler implements Runnable , Observer {
     // viết tiếp
 
     @Override
-    public void run(){
+    public void run() {
         try {
             // QUAN TRỌNG: phải tạo out TRƯỚC in — tránh deadlock khi cả 2 đầu cùng chờ
             out = new ObjectOutputStream(socket.getOutputStream());
             out.flush(); // flush ngay để bên client tạo được ObjectInputStream
-            in  = new ObjectInputStream(socket.getInputStream());
+            in = new ObjectInputStream(socket.getInputStream());
 
             System.out.println("Client kết nối: " + socket.getInetAddress());
 
@@ -49,6 +52,7 @@ public class ClientHandler implements Runnable , Observer {
             cleanup();
         }
     }
+
     private synchronized void sendResponse(Response response) {
         try {
             out.writeObject(response);
@@ -58,37 +62,47 @@ public class ClientHandler implements Runnable , Observer {
             System.err.println("Lỗi gửi response: " + e.getMessage());
         }
     }
+
     private void cleanup() {
         try {
-            if (in  != null) in.close();
+            if (in != null) in.close();
             if (out != null) out.close();
             if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException ignored) {}
-        com.auction.manager.AuctionManager.getInstance().removeObserverFromAllAuctions(this);
+        AuctionManager.getInstance().removeObserverFromAllAuctions(this);
         server.removeClient(this); // xóa khỏi danh sách connectedClients
         System.out.println("Đã dọn dẹp kết nối: " + socket.getInetAddress());
     }
 
     @Override
-    public void send(String message){
-        sendNotification(new Notification("BID_UPDATE" , message));
+    public void send(String message) {
+        sendNotification(new Notification("BID_UPDATE", message));
     }
 
-    public synchronized void sendNotification(Notification notification){
+    public synchronized void sendNotification(Notification notification) {
         try {
-            if (out != null){
+            if (out != null) {
                 out.writeObject(notification);
                 out.flush();
                 out.reset();
             }
-        } catch (IOException e){
+        } catch (IOException e) {
             System.err.println("Lỗi gửi notification : " + e.getMessage());
         }
     }
 
-    public void setLoggedInUser(User user){ this.loggedInUser = user ;}
+    public void setLoggedInUser(User user) {
+        this.loggedInUser = user;
+    }
 
-    public User getLoggedInUser(){return loggedInUser;}
+    public User getLoggedInUser() {
+        return loggedInUser;
+    }
+
+    public AuctionServer getServer() {
+        return server;
+    }
+//    cho ClientHandler truy cập object server
 }
 // out.reset(): khi gửi cùng một object nhiều lần ,
 // Java ObjectOutputStream cache lại object đó.

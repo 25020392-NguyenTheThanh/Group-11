@@ -12,16 +12,16 @@ public class DataManager {
 
     private static DataManager instance;
 
-    private final UserRepository userRepo;
-    private final ItemRepository itemRepo;
-    private final AuctionRepository auctionRepo;
+    private final UserRepository           userRepo;
+    private final ItemRepository           itemRepo;
+    private final AuctionRepository        auctionRepo;
     private final BidTransactionRepository bidRepo;
 
     private DataManager() {
-        this.userRepo = new UserRepository();
-        this.itemRepo = new ItemRepository();
+        this.userRepo    = new UserRepository();
+        this.itemRepo    = new ItemRepository();
         this.auctionRepo = new AuctionRepository();
-        this.bidRepo = new BidTransactionRepository();
+        this.bidRepo     = new BidTransactionRepository();
     }
 
     public static synchronized DataManager getInstance() {
@@ -30,33 +30,16 @@ public class DataManager {
     }
 
     // User
-
     public User authenticate(String username, String password) {
         return userRepo.authenticate(username, password);
     }
 
-    public boolean registerUser(String username, String password, String email, String role) {
+    /** Trả "ok" | "USERNAME_EXISTS" | "EMAIL_EXISTS" | mô tả lỗi */
+    public String registerUser(String username, String password, String email, String role) {
         return userRepo.register(username, password, email, role);
     }
 
-    public List<User> getAllUsers() {
-        return userRepo.findAll();
-    }
-
-    // Item
-
-    public int addItem(Item item) {
-        return itemRepo.add(item);
-    }
-
-    public List<Item> getItemsBySeller(int sellerId) {
-        return itemRepo.findBySeller(sellerId);
-    }
-
-    public List<Item> getAllItems() {
-        return itemRepo.findAll();
-    }
-
+    public List<User> getAllUsers() { return userRepo.findAll(); }
     public boolean deleteItem(int id) {
         return itemRepo.delete(id);
     }
@@ -69,11 +52,14 @@ public class DataManager {
         return itemRepo.updateStatus(itemId, status);
     }
 
+    // Item
+    public int        addItem(Item item)               { return itemRepo.add(item); }
+    public List<Item> getItemsBySeller(int sellerId)   { return itemRepo.findBySeller(sellerId); }
+    public List<Item> getAllItems()                     { return itemRepo.findAll(); }
 
     // Auction
-
-    public int createAuction(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
-        return auctionRepo.create(itemId, startTime, endTime, minBidStep);
+    public int     createAuction(int itemId,LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
+        return auctionRepo.create(itemId,startTime, endTime, minBidStep);
     }
 
     public boolean updateAuctionBid(int auctionId, int bidderId, double amount) {

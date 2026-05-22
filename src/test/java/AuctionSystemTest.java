@@ -52,8 +52,8 @@ public class AuctionSystemTest {
         Item item = new Electronics(1 , 123,"Iphone","abc" ,2000 , "", "apple");
 
         // Bắt đầu cách đây 2 ngày, kết thúc cách đây 1 ngày
-        LocalDateTime startTime = LocalDateTime.now().minusDays(2);
-        LocalDateTime endTime = LocalDateTime.now().minusDays(1);
+        LocalDateTime startTime = LocalDateTime.now().minusDays(1);
+        LocalDateTime endTime = LocalDateTime.now().plusDays(1);
 
         Auction auction = new Auction(1, item , startTime, endTime, 100);
         Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);

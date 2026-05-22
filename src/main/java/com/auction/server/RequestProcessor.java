@@ -1,11 +1,13 @@
 package com.auction.server;
 
+import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
 import com.auction.model.user.User;
@@ -123,7 +125,7 @@ public class RequestProcessor {
         if (a == null ){
             return Response.error("Không tìm thấy phiên đấu giá " + auctionId);
         }
-        
+
         if (payload.decrementView) {
             a.decrementViewCount();
             a.removeObserver(handler);
@@ -152,27 +154,32 @@ public class RequestProcessor {
             case "ART"     -> new ArtFactory(p.artist);
             case "VEHICLE" -> new VehicleFactory(p.year);
             default        -> new ElectronicsFactory(p.brand);
-        }; // code smell , ở createItem
-        Item item = ItemManager.getInstance().createItem(factory , user.getId() , p.name , p.description , p.startingPrice, p.imageUrl);
+        };
+        Item item = ItemManager.getInstance().createItem(factory, user.getId(), p.name, p.description, p.startingPrice, p.imageUrl);
+        if (item == null) return Response.error("Không thể tạo sản phẩm, vui lòng thử lại.");
         return Response.ok(item);
     }
     // Seller tạo phiên đấu giá từ item
-    private static Response handleCreateAuction(Request request , ClientHandler handler){
+    private static Response handleCreateAuction(Request request, ClientHandler handler) {
         User user = handler.getLoggedInUser();
-        if (user == null) return Response.error("Chưa đăng nhập");
-        if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể phiên đấu giá");
-
+        if (user == null)              return Response.error("Chưa đăng nhập");
+        if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể tạo phiên đấu giá");
         CreateAuctionPayload p = (CreateAuctionPayload) request.getPayload();
+
+        // Validate endTime: không được null và phải ở tương lai
+        if (p.endTime == null) return Response.error("Thời gian kết thúc không được để trống");
+        if (!p.endTime.isAfter(java.time.LocalDateTime.now()))
+            return Response.error("Thời gian kết thúc phải ở trong tương lai");
+
         Item item = ItemManager.getInstance().findItem(p.itemId);
-        if (item  == null) return Response.error("Sản phẩm không tồn tại : " + p.itemId);
-        if (item.getOwnerId() != user.getId()) return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
+        if (item == null)                      return Response.error("Sản phẩm không tồn tại: " + p.itemId);
+        if (item.getOwnerId() != user.getId()) return Response.error("Bạn không phải chủ sở hữu sản phẩm này");
+        Auction auction = AuctionManager.getInstance().createAuction(item, p.startTime, p.endTime, p.minBidStep);
+        if (auction == null) return Response.error("Không thể tạo phiên — sản phẩm không ở trạng thái AVAILABLE");
 
-        Auction auction = AuctionManager.getInstance().createAuction(item , p.startTime , p.endTime , p.minBidStep);
-        if (auction == null) return Response.error("Không thể tạo phiên - sản phẩm không ở trạng thái AVAILABLE");
-
-        auction.start(); // chuyển sang RUNNING
-        // Đồng bộ trạng thái RUNNING vào DB
-        com.auction.data.DataManager.getInstance().startAuction(auction.getId());
+        // Đúng thứ tự: start() đổi status RAM trước, rồi mới sync xuống DB
+        auction.start();
+        DataManager.getInstance().startAuction(auction.getId());
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại
@@ -234,7 +241,7 @@ public class RequestProcessor {
             return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
         }
 
-        if (existingItem.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+        if (existingItem.getStatus() != ItemStatus.AVAILABLE) {
             return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE");
         }
 
@@ -259,11 +266,11 @@ public class RequestProcessor {
         User user = handler.getLoggedInUser();
         if (user == null) return Response.error("Bạn cần đăng nhập");
         if (!(user instanceof Bidder)) return Response.error("Chỉ Bidder mới có thể theo dõi");
-        
+
         int auctionId = (Integer) request.getPayload();
         Bidder bidder = (Bidder) user;
-        
-        boolean success = com.auction.data.DataManager.getInstance().addToWatchlist(bidder.getId(), auctionId);
+
+        boolean success = DataManager.getInstance().addToWatchlist(bidder.getId(), auctionId);
         if (success) {
             bidder.getProfile().addToWatchlist(auctionId);
             return Response.ok("Đã thêm vào danh sách theo dõi");
@@ -276,11 +283,11 @@ public class RequestProcessor {
         User user = handler.getLoggedInUser();
         if (user == null) return Response.error("Bạn cần đăng nhập");
         if (!(user instanceof Bidder)) return Response.error("Chỉ Bidder mới có thể hủy theo dõi");
-        
+
         int auctionId = (Integer) request.getPayload();
         Bidder bidder = (Bidder) user;
-        
-        boolean success = com.auction.data.DataManager.getInstance().removeFromWatchlist(bidder.getId(), auctionId);
+
+        boolean success = DataManager.getInstance().removeFromWatchlist(bidder.getId(), auctionId);
         if (success) {
             bidder.getProfile().removeFromWatchlist(auctionId);
             return Response.ok("Đã xóa khỏi danh sách theo dõi");
@@ -311,7 +318,7 @@ public class RequestProcessor {
             double newBalance = bidder.getBalance() + amount;
 
             // Đồng bộ trực tiếp vào cơ sở dữ liệu
-            boolean success = com.auction.data.DataManager.getInstance().updateBidderBalance(bidder.getId(), newBalance);
+            boolean success = DataManager.getInstance().updateBidderBalance(bidder.getId(), newBalance);
             if (success) {
                 bidder.topUp(amount);
                 return Response.ok(bidder.getBalance());

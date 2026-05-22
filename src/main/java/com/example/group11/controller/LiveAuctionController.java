@@ -41,8 +41,7 @@ import java.io.File;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.ResourceBundle;
+import java.util.*;
 
 /**
  * Bộ điều khiển phòng đấu giá trực tiếp (Live Auction Controller).
@@ -68,7 +67,7 @@ public class LiveAuctionController implements Initializable {
     @FXML private VBox bidHistoryContainer;
     @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
     @FXML private Button closeButton; // Nút X thoát hẳn phòng
-    
+
     @FXML private LineChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
     @FXML private NumberAxis yAxis;
@@ -79,10 +78,10 @@ public class LiveAuctionController implements Initializable {
     private Button watchlistButton;
 
     // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
-    private static final java.util.Set<Integer> enteredAuctionIds = new java.util.HashSet<>();
+    private static final Set<Integer> enteredAuctionIds = new HashSet<>();
 
     // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
-    private static final java.util.Map<Integer, Stage> openStages = new java.util.HashMap<>();
+    private static final Map<Integer, Stage> openStages = new HashMap<>();
 
     /**
      * Lấy đối tượng Stage cửa sổ giao diện phòng đấu giá đang mở dựa trên mã phiên đấu giá.
@@ -267,8 +266,8 @@ public class LiveAuctionController implements Initializable {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
                 System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-                if ("BID_UPDATE".equals(notification.getType()) 
-                        || "AUCTION_ENDED".equals(notification.getType()) 
+                if ("BID_UPDATE".equals(notification.getType())
+                        || "AUCTION_ENDED".equals(notification.getType())
                         || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                     refreshAuctionDetails(false);
                 } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
@@ -488,7 +487,7 @@ public class LiveAuctionController implements Initializable {
         try {
             double bidAmount = Double.parseDouble(bidAmountField.getText().trim());
             if (bidAmount < minAccepted) {
-                NotificationController.showError("Lỗi đặt giá", 
+                NotificationController.showError("Lỗi đặt giá",
                         String.format("Số tiền đặt giá phải tối thiểu %.2f $", minAccepted));
                 return;
             }
@@ -603,7 +602,7 @@ public class LiveAuctionController implements Initializable {
                     return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
                 }
             };
-            
+
             Thread t = new Thread(closeTask);
             t.setDaemon(true);
             t.start();
