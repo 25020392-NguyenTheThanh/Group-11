@@ -19,7 +19,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.chart.LineChart;
+import javafx.scene.chart.BarChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -32,6 +32,11 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.net.URL;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.scene.control.cell.PropertyValueFactory;
+import java.time.format.DateTimeFormatter;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
@@ -84,22 +89,22 @@ public class SellerAuctionListController implements Initializable {
     private MenuButton categoryMenuButton;
 
     @FXML
-    private TableColumn<?, ?> colBuyer;
+    private TableColumn<Order, String> colBuyer;
 
     @FXML
-    private TableColumn<?, ?> colDate;
+    private TableColumn<Order, LocalDateTime> colDate;
 
     @FXML
-    private TableColumn<?, ?> colOrderId;
+    private TableColumn<Order, Integer> colOrderId;
 
     @FXML
-    private TableColumn<?, ?> colPrice;
+    private TableColumn<Order, Double> colPrice;
 
     @FXML
-    private TableColumn<?, ?> colProduct;
+    private TableColumn<Order, String> colProduct;
 
     @FXML
-    private TableColumn<?, ?> colStatus;
+    private TableColumn<Order, String> colStatus;
 
     @FXML
     private GridPane contentGrid;
@@ -141,7 +146,10 @@ public class SellerAuctionListController implements Initializable {
     private VBox orderHistoryView;
 
     @FXML
-    private TableView<?> orderTable;
+    private TableView<Order> orderTable;
+
+    @FXML
+    private TextField searchOrderField;
 
     @FXML
     private ImageView productImageView;
@@ -156,7 +164,7 @@ public class SellerAuctionListController implements Initializable {
     private VBox registerProductView;
 
     @FXML
-    private LineChart<String, Number> revenueChart;
+    private BarChart<String, Number> revenueChart;
 
     @FXML
     private Label soldProductsLabel;
@@ -251,6 +259,7 @@ public class SellerAuctionListController implements Initializable {
         SellerUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
 
         setupFilters();
+        setupOrderTableColumns();
         GenerationSupport.setupMenuButtonUpdate(categoryMenuButton);
 
         setupCategoryMenuItems();
@@ -258,13 +267,8 @@ public class SellerAuctionListController implements Initializable {
         setupRealtimeNotifications();
     }
 
-    private Consumer<Notification> sellerNotificationHandler;
-
     private void setupRealtimeNotifications() {
-        if (sellerNotificationHandler != null) {
-            ServerConnection.getInstance().removeNotificationHandler(sellerNotificationHandler);
-        }
-        sellerNotificationHandler = notification -> {
+        ServerConnection.getInstance().setNotificationHandler(notification -> {
             addNotificationToUI(notification);
             
             String type = notification.getType();
@@ -272,9 +276,9 @@ public class SellerAuctionListController implements Initializable {
                 System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
                 loadMyListingView();
             }
-        };
-        ServerConnection.getInstance().addNotificationHandler(sellerNotificationHandler);
+        });
     }
+
 
     private void addNotificationToUI(com.auction.network.Notification notification) {
         if (notificationListContainer == null) return;
@@ -650,10 +654,6 @@ public class SellerAuctionListController implements Initializable {
 
     // TÍNH NĂNG: Load dữ liệu biểu đồ
     public void loadAnalyticsData() {
-        // TODO: LOGIC DATABASE
-        // 1. Viết Query lấy doanh thu theo tháng (Sum giá chốt của các đơn hàng Status=PAID)
-        // 2. Loop kết quả và add vào Series
-
         // 1. Xóa dữ liệu cũ
         revenueChart.getData().clear();
 
@@ -670,49 +670,265 @@ public class SellerAuctionListController implements Initializable {
         XYChart.Series<String, Number> vehicleSeries = new XYChart.Series<>();
         vehicleSeries.setName("Vehicle");
 
-        // 3. Thêm dữ liệu mẫu (Sau này bạn sẽ thay bằng dữ liệu từ database)
-        // Dữ liệu cho Tổng doanh thu
-        totalSeries.getData().add(new XYChart.Data<>("Jan", 5000));
-        totalSeries.getData().add(new XYChart.Data<>("Feb", 7200));
-        totalSeries.getData().add(new XYChart.Data<>("Mar", 6500));
+        // Khởi tạo 12 tháng với giá trị 0.0
+        String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+        Map<String, Double> totalMap = new LinkedHashMap<>();
+        Map<String, Double> electronicsMap = new LinkedHashMap<>();
+        Map<String, Double> artMap = new LinkedHashMap<>();
+        Map<String, Double> vehicleMap = new LinkedHashMap<>();
 
-        // Dữ liệu cho Electronics
-        electronicsSeries.getData().add(new XYChart.Data<>("Jan", 2000));
-        electronicsSeries.getData().add(new XYChart.Data<>("Feb", 3500));
-        electronicsSeries.getData().add(new XYChart.Data<>("Mar", 2800));
-
-        // Dữ liệu cho Art
-        artSeries.getData().add(new XYChart.Data<>("Jan", 1500));
-        artSeries.getData().add(new XYChart.Data<>("Feb", 2200));
-        artSeries.getData().add(new XYChart.Data<>("Mar", 1700));
-
-        // Dữ liệu cho Vehicle
-        vehicleSeries.getData().add(new XYChart.Data<>("Jan", 1500));
-        vehicleSeries.getData().add(new XYChart.Data<>("Feb", 1500));
-        vehicleSeries.getData().add(new XYChart.Data<>("Mar", 2000));
-
-        double totalRevenue = 0;
-        //Lấy tổng doanh thu
-        for (XYChart.Data<String, Number> data : totalSeries.getData()) {
-            totalRevenue += data.getYValue().doubleValue();
+        for (String m : months) {
+            totalMap.put(m, 0.0);
+            electronicsMap.put(m, 0.0);
+            artMap.put(m, 0.0);
+            vehicleMap.put(m, 0.0);
         }
 
+        double totalRevenue = 0.0;
+        int soldCount = 0;
+        int totalBids = 0;
+
+        if (auctionItems != null && itemAuctionMap != null) {
+            for (Item item : auctionItems) {
+                Auction auction = itemAuctionMap.get(item.getId());
+                if (auction != null) {
+                    // Sum the bids for all auctions of the seller's items
+                    if (auction.getBidHistory() != null) {
+                        totalBids += auction.getBidHistory().size();
+                    }
+
+                    // Check if the auction ended successfully (with a winner, and status is FINISHED or PAID)
+                    if ((auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID)
+                            && auction.getCurrentWinner() != null) {
+                        
+                        soldCount++;
+                        double price = auction.getCurrentHighestBid();
+                        totalRevenue += price;
+
+                        String monthAbbr = getMonthAbbreviation(auction.getEndTime());
+                        
+                        // Add to total
+                        totalMap.put(monthAbbr, totalMap.get(monthAbbr) + price);
+
+                        // Add to category
+                        String category = item.getCategory();
+                        if (category != null) {
+                            switch (category.toUpperCase()) {
+                                case "ELECTRONICS":
+                                    electronicsMap.put(monthAbbr, electronicsMap.get(monthAbbr) + price);
+                                    break;
+                                case "ART":
+                                    artMap.put(monthAbbr, artMap.get(monthAbbr) + price);
+                                    break;
+                                case "VEHICLE":
+                                    vehicleMap.put(monthAbbr, vehicleMap.get(monthAbbr) + price);
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Đưa dữ liệu đã tính toán vào các Series
+        for (String m : months) {
+            totalSeries.getData().add(new XYChart.Data<>(m, totalMap.get(m)));
+            electronicsSeries.getData().add(new XYChart.Data<>(m, electronicsMap.get(m)));
+            artSeries.getData().add(new XYChart.Data<>(m, artMap.get(m)));
+            vehicleSeries.getData().add(new XYChart.Data<>(m, vehicleMap.get(m)));
+        }
+
+        // Cập nhật các Label thống kê lên giao diện
         CalculatorView.updateCurrency(totalRevenueLabel, totalRevenue);
+        CalculatorView.updateCount(soldProductsLabel, soldCount);
+        CalculatorView.updateCount(totalBidsLabel, totalBids);
 
         // 4. Đưa tất cả series vào biểu đồ
         revenueChart.getData().addAll(totalSeries, electronicsSeries, artSeries, vehicleSeries);
     }
 
-    /**
-     * TÍNH NĂNG: Load lịch sử giao dịch
-     */
-    private void loadOrderHistory() {
-        // TODO: LOGIC DATABASE
-        // 1. Tạo class Model 'Order' với các field: id, product, buyer, price, date, status
-        // 2. Gọi Repository lấy danh sách đơn hàng của Seller hiện tại
-        // 3. Đổ dữ liệu vào bảng: orderTable.setItems(orderList);
+    private String getMonthAbbreviation(LocalDateTime dateTime) {
+        if (dateTime == null) return "Jan";
+        return switch (dateTime.getMonth()) {
+            case JANUARY -> "Jan";
+            case FEBRUARY -> "Feb";
+            case MARCH -> "Mar";
+            case APRIL -> "Apr";
+            case MAY -> "May";
+            case JUNE -> "Jun";
+            case JULY -> "Jul";
+            case AUGUST -> "Aug";
+            case SEPTEMBER -> "Sep";
+            case OCTOBER -> "Oct";
+            case NOVEMBER -> "Nov";
+            case DECEMBER -> "Dec";
+        };
+    }
 
+    /**
+     * TÍNH NĂNG: Khởi tạo cấu trúc các cột của bảng Lịch sử đơn hàng và thiết lập hiển thị/tô màu.
+     */
+    private void setupOrderTableColumns() {
+        // Cài đặt các cell value factory để ánh xạ thuộc tính của Order vào từng cột
+        colOrderId.setCellValueFactory(new PropertyValueFactory<>("id"));
+        colProduct.setCellValueFactory(new PropertyValueFactory<>("product"));
+        colBuyer.setCellValueFactory(new PropertyValueFactory<>("buyer"));
+        colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
+        colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
+        colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
+
+        // Định dạng và tạo kiểu cho cột Mã đơn hàng
+        colOrderId.setCellFactory(column -> new TableCell<Order, Integer>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText("#" + item);
+                    setStyle("-fx-text-fill: #38BDF8; -fx-font-weight: bold;"); // Màu xanh da trời nhạt
+                }
+            }
+        });
+
+        // Định dạng và tạo kiểu cho cột Tên sản phẩm
+        colProduct.setCellFactory(column -> new TableCell<Order, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    setStyle("-fx-text-fill: #FFFFFF;"); // Chữ màu trắng cho tên sản phẩm
+                }
+            }
+        });
+
+        // Định dạng và tạo kiểu cho cột Người mua
+        colBuyer.setCellFactory(column -> new TableCell<Order, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    setStyle("-fx-text-fill: #E2E8F0;"); // Chữ màu xám đá nhạt
+                }
+            }
+        });
+
+        // Định dạng tiền tệ và tạo kiểu cột Giá chốt (Màu vàng hoàng kim)
+        colPrice.setCellFactory(column -> new TableCell<Order, Double>() {
+            @Override
+            protected void updateItem(Double item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(String.format("$%,.2f", item));
+                    setStyle("-fx-text-fill: #FFC107; -fx-font-weight: bold;"); // Màu vàng hoàng kim
+                }
+            }
+        });
+
+        // Định dạng cột Ngày hoàn thành (yyyy-MM-dd HH:mm:ss)
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        colDate.setCellFactory(column -> new TableCell<Order, LocalDateTime>() {
+            @Override
+            protected void updateItem(LocalDateTime item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item.format(formatter));
+                    setStyle("-fx-text-fill: #94A3B8;"); // Màu xám đá
+                }
+            }
+        });
+
+        // Tô màu nổi bật theo trạng thái giao dịch
+        colStatus.setCellFactory(column -> new TableCell<Order, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item.toUpperCase());
+                    if ("PAID".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: #22C55E; -fx-font-weight: bold;"); // Màu xanh lá lục bảo
+                    } else if ("FINISHED".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: #FFD700; -fx-font-weight: bold;"); // Màu vàng
+                    } else {
+                        setStyle("-fx-text-fill: #EF4444; -fx-font-weight: bold;"); // Màu đỏ (đã hủy hoặc khác)
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * TÍNH NĂNG: Tải và hiển thị lịch sử đơn hàng của người bán.
+     * Lấy tất cả các phiên đấu giá thuộc về người bán có trạng thái FINISHED hoặc PAID và đã xác định người thắng cuộc.
+     * Hỗ trợ tìm kiếm bộ lọc trực tiếp theo mã đơn, sản phẩm, người mua hoặc trạng thái.
+     */
+    public void loadOrderHistory() {
         System.out.println("Đang tải dữ liệu lịch sử đơn hàng...");
+        
+        List<Order> orders = new ArrayList<>();
+        if (auctionItems != null && itemAuctionMap != null) {
+            for (Item item : auctionItems) {
+                Auction auction = itemAuctionMap.get(item.getId());
+                // Chỉ lấy các phiên đấu giá kết thúc thành công (FINISHED hoặc PAID) và có người thắng
+                if (auction != null && (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID)
+                        && auction.getCurrentWinner() != null) {
+                    orders.add(new Order(
+                            auction.getId(),
+                            item.getName(),
+                            auction.getCurrentWinner().getUsername(),
+                            auction.getCurrentHighestBid(),
+                            auction.getEndTime(),
+                            auction.getStatus().name()
+                    ));
+                }
+            }
+        }
+
+        ObservableList<Order> orderList = FXCollections.observableArrayList(orders);
+        FilteredList<Order> filteredData = new FilteredList<>(orderList, p -> true);
+
+        // Đăng ký bộ lọc tìm kiếm theo thời gian thực nếu ô nhập liệu tồn tại
+        if (searchOrderField != null) {
+            searchOrderField.textProperty().addListener((observable, oldValue, newValue) -> {
+                filteredData.setPredicate(order -> {
+                    // Nếu từ khóa trống, hiển thị toàn bộ đơn hàng
+                    if (newValue == null || newValue.isEmpty()) {
+                        return true;
+                    }
+                    String lowerCaseFilter = newValue.toLowerCase();
+                    // Khớp theo mã đơn, tên sản phẩm, người mua hoặc trạng thái đơn hàng
+                    if (String.valueOf(order.getId()).contains(lowerCaseFilter)) {
+                        return true;
+                    } else if (order.getProduct().toLowerCase().contains(lowerCaseFilter)) {
+                        return true;
+                    } else if (order.getBuyer().toLowerCase().contains(lowerCaseFilter)) {
+                        return true;
+                    } else if (order.getStatus().toLowerCase().contains(lowerCaseFilter)) {
+                        return true;
+                    }
+                    return false;
+                });
+            });
+        }
+        orderTable.setItems(filteredData);
     }
 
     /**

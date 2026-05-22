@@ -8,7 +8,10 @@ import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
 import com.auction.model.user.User;
-import com.auction.network.*;
+import com.auction.network.GetAuctionDetailPayload;
+import com.auction.network.PlaceBidPayload;
+import com.auction.network.RequestType;
+import com.auction.network.Response;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -38,8 +41,8 @@ import java.io.File;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.function.Consumer;
+import java.util.List;
+import java.util.ResourceBundle;
 
 public class LiveAuctionController implements Initializable {
 
@@ -68,15 +71,10 @@ public class LiveAuctionController implements Initializable {
     private Timeline countdownTimeline;
 
     // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
-    private static final Set<Integer> enteredAuctionIds = new HashSet<>();
+    private static final java.util.Set<Integer> enteredAuctionIds = new java.util.HashSet<>();
 
     // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
-    private static final Map<Integer, Stage> openStages = new HashMap<>();
-
-    // Bộ sưu tập lưu giữ các Controller của các phòng đấu giá đang mở song song để thực hiện cleanup
-    private static final Map<Integer, LiveAuctionController> openControllers = new HashMap<>();
-
-    private Consumer<Notification> liveAuctionNotificationHandler;
+    private static final java.util.Map<Integer, Stage> openStages = new java.util.HashMap<>();
 
     public static Stage getOpenStage(int auctionId) {
         return openStages.get(auctionId);
@@ -84,19 +82,9 @@ public class LiveAuctionController implements Initializable {
 
     public static void closeAllOpenStages() {
         Platform.runLater(() -> {
-            for (LiveAuctionController controller : new java.util.ArrayList<>(openControllers.values())) {
-                controller.cleanup(false);
-                Stage stage = null;
-                if (controller.backButton != null && controller.backButton.getScene() != null) {
-                    stage = (Stage) controller.backButton.getScene().getWindow();
-                } else if (controller.closeButton != null && controller.closeButton.getScene() != null) {
-                    stage = (Stage) controller.closeButton.getScene().getWindow();
-                }
-                if (stage != null) {
-                    stage.close();
-                }
+            for (Stage stage : new java.util.ArrayList<>(openStages.values())) {
+                stage.close();
             }
-            openControllers.clear();
             openStages.clear();
         });
     }
@@ -114,36 +102,6 @@ public class LiveAuctionController implements Initializable {
         // Chuẩn bị ban đầu
     }
 
-    public void cleanup(boolean decrementView) {
-        if (countdownTimeline != null) {
-            countdownTimeline.stop();
-        }
-        if (liveAuctionNotificationHandler != null) {
-            ServerConnection.getInstance().removeNotificationHandler(liveAuctionNotificationHandler);
-            liveAuctionNotificationHandler = null;
-        }
-        if (auction != null) {
-            int auctionId = auction.getId();
-            openControllers.remove(auctionId);
-            openStages.remove(auctionId);
-            if (decrementView) {
-                enteredAuctionIds.remove(auctionId);
-
-                Task<Response> closeTask = new Task<>() {
-                    @Override
-                    protected Response call() throws Exception {
-                        GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auctionId, false);
-                        payload.decrementView = true;
-                        return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
-                    }
-                };
-                Thread t = new Thread(closeTask);
-                t.setDaemon(true);
-                t.start();
-            }
-        }
-    }
-
     public void setAuctionAndUser(Auction auction, User user) {
         this.auction = auction;
         this.user = user;
@@ -154,9 +112,11 @@ public class LiveAuctionController implements Initializable {
                 Stage stage = (Stage) backButton.getScene().getWindow();
                 if (stage != null) {
                     openStages.put(auction.getId(), stage);
-                    openControllers.put(auction.getId(), this);
                     stage.setOnCloseRequest(event -> {
-                        cleanup(true);
+                        openStages.remove(auction.getId());
+                        if (countdownTimeline != null) {
+                            countdownTimeline.stop();
+                        }
                     });
                 }
             }
@@ -238,20 +198,16 @@ public class LiveAuctionController implements Initializable {
     }
 
     private void setupRealtimeNotifications() {
-        if (liveAuctionNotificationHandler != null) {
-            ServerConnection.getInstance().removeNotificationHandler(liveAuctionNotificationHandler);
-        }
-        liveAuctionNotificationHandler = notification -> {
+        ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
-                System.out.println("LiveAuction #" + (auction != null ? auction.getId() : "null") + " nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
+                System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
                 if ("BID_UPDATE".equals(notification.getType()) 
                         || "AUCTION_ENDED".equals(notification.getType()) 
                         || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                     refreshAuctionDetails(false);
                 }
             });
-        };
-        ServerConnection.getInstance().addNotificationHandler(liveAuctionNotificationHandler);
+        });
     }
 
     private void updateUI() {
@@ -513,9 +469,12 @@ public class LiveAuctionController implements Initializable {
      */
     @FXML
     private void handleBack(ActionEvent event) {
-        cleanup(false);
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
         Stage stage = (Stage) backButton.getScene().getWindow();
         if (stage != null) {
+            openStages.remove(auction.getId());
             stage.close();
         }
     }
@@ -525,9 +484,27 @@ public class LiveAuctionController implements Initializable {
      */
     @FXML
     private void handleClose(ActionEvent event) {
-        cleanup(true);
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
+        if (auction != null) {
+            enteredAuctionIds.remove(auction.getId());
+            Task<Response> closeTask = new Task<>() {
+                @Override
+                protected Response call() throws Exception {
+                    GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auction.getId(), false);
+                    payload.decrementView = true;
+                    return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
+                }
+            };
+            
+            Thread t = new Thread(closeTask);
+            t.setDaemon(true);
+            t.start();
+        }
         Stage stage = (Stage) closeButton.getScene().getWindow();
         if (stage != null) {
+            openStages.remove(auction.getId());
             stage.close();
         }
     }

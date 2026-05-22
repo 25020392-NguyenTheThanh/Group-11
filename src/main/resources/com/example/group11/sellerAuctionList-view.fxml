@@ -2,7 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.chart.CategoryAxis?>
-<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.BarChart?>
 <?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.DatePicker?>
@@ -180,7 +180,7 @@
                                         <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 25; -fx-border-color: #1E2D45; -fx-border-radius: 12;">
                                             <children>
                                                 <Label text="Biểu đồ doanh thu theo tháng" textFill="#94A3B8" />
-                                                <LineChart fx:id="revenueChart" createSymbols="true" legendSide="RIGHT" prefHeight="350.0" style="-fx-background-color: transparent;">
+                                                <BarChart fx:id="revenueChart" legendSide="RIGHT" prefHeight="350.0" style="-fx-background-color: transparent;">
                                                     <xAxis>
                                                         <CategoryAxis side="BOTTOM" tickLabelFill="#94a3b8">
                                                             <categories>
@@ -204,7 +204,7 @@
                                                     <yAxis>
                                                         <NumberAxis side="LEFT" tickLabelFill="#94a3b8" />
                                                     </yAxis>
-                                                </LineChart>
+                                                </BarChart>
                                             </children>
                                         </VBox>
                                     </children>
@@ -218,7 +218,7 @@
                                             <children>
                                                 <Label text="LỊCH SỬ GIAO DỊCH" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
                                                 <Region HBox.hgrow="ALWAYS" />
-                                                <TextField promptText="Tìm mã đơn hàng..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                <TextField fx:id="searchOrderField" promptText="Tìm mã đơn hàng..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
                                             </children>
                                         </HBox>
 

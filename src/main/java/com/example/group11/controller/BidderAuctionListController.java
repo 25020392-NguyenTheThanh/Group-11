@@ -20,7 +20,6 @@ import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
@@ -314,21 +313,14 @@ public class BidderAuctionListController implements Initializable {
 
     private void handleViewDetails(Auction auction) {
         try {
-            Stage existingStage = LiveAuctionController.getOpenStage(auction.getId());
-            if (existingStage != null) {
-                existingStage.toFront();
-                existingStage.requestFocus();
-                return;
-            }
-
-            FXMLLoader loader = GenerationSupport.openNewStage("liveAuction-view.fxml", "Phòng đấu giá #" + auction.getId() + " - " + auction.getItem().getName());
+            FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
             if (loader != null) {
                 LiveAuctionController controller = loader.getController();
                 controller.setAuctionAndUser(auction, user);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            NotificationController.showError("Lỗi mở cửa sổ", "Không thể mở trang đấu giá trực tiếp.");
+            NotificationController.showError("Lỗi chuyển trang", "Không thể mở trang đấu giá trực tiếp.");
         }
     }
 
@@ -401,13 +393,8 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    private java.util.function.Consumer<Notification> bidderNotificationHandler;
-
     private void setupRealtimeNotifications() {
-        if (bidderNotificationHandler != null) {
-            ServerConnection.getInstance().removeNotificationHandler(bidderNotificationHandler);
-        }
-        bidderNotificationHandler = notification -> {
+        ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
                 System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
                 addNotificationToDropdown(notification);
@@ -418,8 +405,7 @@ public class BidderAuctionListController implements Initializable {
                     loadAuctions();
                 }
             });
-        };
-        ServerConnection.getInstance().addNotificationHandler(bidderNotificationHandler);
+        });
     }
 
     private void addNotificationToDropdown(Notification notification) {
