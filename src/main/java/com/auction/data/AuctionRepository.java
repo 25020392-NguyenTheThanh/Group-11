@@ -1,5 +1,9 @@
 package com.auction.data;
 
+import com.auction.manager.UserManager;
+import com.auction.model.auction.Auction;
+import com.auction.model.user.User;
+
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,14 +38,14 @@ public class AuctionRepository {
                 com.auction.model.item.Item item = com.auction.manager.ItemManager.getInstance().findItem(itemId);
                 if (item == null) continue;
 
-                com.auction.model.auction.Auction auction = new com.auction.model.auction.Auction(id, item, startTime, endTime, minBidStep);
+                Auction auction = new Auction(id, item, startTime, endTime, minBidStep);
                 auction.restoreStatus(com.auction.model.auction.AuctionStatus.valueOf(statusStr));
                 auction.restoreHighestBid(currentHighestBid);
 
                 if (!winnerIsNull && winnerId > 0) {
-                    com.auction.model.user.User winner = com.auction.manager.UserManager.getInstance().findUserById(winnerId);
+                    User winner = UserManager.getInstance().findUserById(winnerId);
                     if (winner instanceof com.auction.model.user.Bidder b) {
-                        //auction.restoreCurrentWinner(b);
+//                        auction.restoreCurrentWinner(b);
                     }
                 }
                 list.add(auction);
