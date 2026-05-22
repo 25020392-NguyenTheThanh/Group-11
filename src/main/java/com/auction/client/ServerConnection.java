@@ -39,6 +39,12 @@ public class ServerConnection {
     // Hàm xử lý notification
     private Consumer<Notification> notificationHandler;
 
+    // Flag đánh dấu có request đang gửi đi và chờ response
+    private boolean requestInProgress = false;
+
+    // Buffer lưu trữ response nhận được từ listenerThread truyền qua cho send()
+    private Response responseBuffer = null;
+
     // Constructor private để dùng Singleton
     private ServerConnection() {}
 
@@ -84,14 +90,23 @@ public class ServerConnection {
     }
 
     // Gửi request lên server
-    // synchronized để tránh nhiều thread đọc ghi cùng lúc
     public synchronized Response send(
             RequestType type,
             Object payload
     ) {
+        // Chờ nếu có một request khác đang được xử lý
+        while (requestInProgress) {
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return Response.error("Yêu cầu bị ngắt quãng");
+            }
+        }
+
+        requestInProgress = true;
 
         try {
-
             // Gửi request
             out.writeObject(
                     new Request(type, payload)
@@ -101,29 +116,34 @@ public class ServerConnection {
 
             out.reset();
 
-            // Đọc dữ liệu trả về
-            while (true) {
+            // Nếu listener thread đang chạy, ta đợi nó đọc và thông báo
+            if (listenerThread != null && listenerThread.isAlive()) {
+                while (responseBuffer == null) {
+                    this.wait();
+                }
+                Response r = responseBuffer;
+                responseBuffer = null; // consume
+                return r;
+            } else {
+                // Nếu listener thread chưa chạy, ta tự đọc trực tiếp
+                while (true) {
+                    Object obj = in.readObject();
 
-                Object obj = in.readObject();
+                    if (obj instanceof Response r)
+                        return r;
 
-                if (obj instanceof Response r)
-                    return r;
-
-                if (obj instanceof Notification n
-                        && notificationHandler != null) {
-
-                    final Notification notif = n;
-
-                    // Chạy trên JavaFX thread
-                    javafx.application.Platform.runLater(
-
-                            () -> notificationHandler.accept(notif)
-                    );
+                    if (obj instanceof Notification n
+                            && notificationHandler != null) {
+                        final Notification notif = n;
+                        // Chạy trên JavaFX thread
+                        javafx.application.Platform.runLater(
+                                () -> notificationHandler.accept(notif)
+                        );
+                    }
                 }
             }
 
-        } catch (IOException | ClassNotFoundException e) {
-
+        } catch (IOException | ClassNotFoundException | InterruptedException e) {
             // Báo lỗi kết nối
             System.err.println(
                     "Lỗi gửi request: "
@@ -133,6 +153,9 @@ public class ServerConnection {
             return Response.error(
                     "Mất kết nối tới server"
             );
+        } finally {
+            requestInProgress = false;
+            this.notifyAll(); // Đánh thức các thread khác đang chờ để gửi request tiếp theo
         }
     }
 
@@ -151,35 +174,31 @@ public class ServerConnection {
                     && !socket.isClosed()) {
 
                 try {
-                    Object obj;
+                    // Đọc mạng KHÔNG giữ lock đồng bộ
+                    Object obj = in.readObject();
+
+                    // Chỉ đồng bộ khi lưu responseBuffer và gọi handler
                     synchronized (this) {
-                        obj = in.readObject();
-                    }
-
-                    // Nếu nhận notification
-                    if (obj instanceof Notification n
-                            && notificationHandler != null) {
-
-                        // Chạy trên JavaFX thread
-                        javafx.application.Platform.runLater(
-
-                                () -> notificationHandler.accept(n)
-                        );
+                        if (obj instanceof Response r) {
+                            responseBuffer = r;
+                            this.notifyAll();
+                        } else if (obj instanceof Notification n
+                                && notificationHandler != null) {
+                            // Chạy trên JavaFX thread
+                            javafx.application.Platform.runLater(
+                                    () -> notificationHandler.accept(n)
+                            );
+                        }
                     }
 
                 } catch (IOException | ClassNotFoundException e) {
-
-                    // Nếu socket chưa đóng thì báo lỗi
-                    if (socket != null
-                            && !socket.isClosed()) {
-
-                        System.err.println(
-                                "Listener lỗi: "
-                                        + e.getMessage()
-                        );
+                    // Kiểm tra xem lỗi xảy ra do ta chủ động đóng kết nối/dừng luồng hay lỗi mạng thật
+                    if (Thread.currentThread().isInterrupted() || socket == null || socket.isClosed()) {
+                        System.out.println("Luồng lắng nghe đã kết thúc an toàn (Đăng xuất/Ngắt kết nối chủ động).");
+                    } else {
+                        System.err.println("Listener lỗi kết nối đột ngột: " + e.getMessage());
                     }
-
-                    break;
+                    break; // Thoát khỏi vòng lặp, kết thúc Thread
                 }
             }
         });
@@ -189,6 +208,19 @@ public class ServerConnection {
 
         // Start thread
         listenerThread.start();
+    }
+
+    public void stopListening() {
+        System.out.println("Đang dừng luồng lắng nghe (listenerThread)...");
+
+        if (listenerThread != null && listenerThread.isAlive()) {
+            // Gửi tín hiệu ngắt (interrupt) tới thread
+            listenerThread.interrupt();
+        }
+
+        // Hủy bỏ handler để tránh rò rỉ bộ nhớ hoặc xử lý nhầm dữ liệu cũ
+        this.notificationHandler = null;
+        System.out.println("Đã dừng luồng lắng nghe thành công.");
     }
 
     // Gán hàm xử lý notification

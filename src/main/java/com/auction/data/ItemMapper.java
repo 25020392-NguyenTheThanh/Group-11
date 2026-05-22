@@ -3,6 +3,7 @@ package com.auction.data;
 import com.auction.model.item.Art;
 import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.item.Vehicle;
 
 import java.sql.ResultSet;
@@ -20,15 +21,22 @@ public class ItemMapper {
         String description = rs.getString("description");
         double startPrice = rs.getDouble("starting_price");
         String category = rs.getString("category");
+        String imageUrl = rs.getString("image_url");
+        String status = rs.getString("status");
 
-        return switch (category) {
-            case "ART" -> new Art(id, ownerId, name, description, startPrice,
+        Item item = switch (category) {
+            case "ART" -> new Art(id, ownerId, name, description, startPrice, imageUrl,
                     rs.getString("artist"));
-            case "ELECTRONICS" -> new Electronics(id, ownerId, name, description, startPrice,
+            case "ELECTRONICS" -> new Electronics(id, ownerId, name, description, startPrice, imageUrl,
                     rs.getString("brand"));
-            case "VEHICLE" -> new Vehicle(id, ownerId, name, description, startPrice,
+            case "VEHICLE" -> new Vehicle(id, ownerId, name, description, startPrice, imageUrl,
                     rs.getInt("manufacture_year"));
             default -> throw new IllegalStateException("Category không hợp lệ: " + category);
         };
+
+        if (status != null) {
+            item.setStatus(ItemStatus.valueOf(status));
+        }
+        return item;
     }
 }

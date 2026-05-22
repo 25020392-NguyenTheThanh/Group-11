@@ -2,7 +2,8 @@ package com.auction.data;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-
+import java.util.List;
+import java.util.ArrayList;
 
 public class AuctionRepository {
 
@@ -12,19 +13,59 @@ public class AuctionRepository {
         this.db = DatabaseConnection.getInstance();
     }
 
+    public List<com.auction.model.auction.Auction> findAll() {
+        List<com.auction.model.auction.Auction> list = new ArrayList<>();
+        String sql = "SELECT * FROM auctions";
+        try (Connection con = db.getConnection();
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery(sql)) {
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                int itemId = rs.getInt("item_id");
+                double currentHighestBid = rs.getDouble("current_highest_bid");
+                int winnerId = rs.getInt("current_winner_id");
+                boolean winnerIsNull = rs.wasNull();
+                String statusStr = rs.getString("status");
+                LocalDateTime startTime = rs.getTimestamp("star_time").toLocalDateTime();
+                LocalDateTime endTime = rs.getTimestamp("end_time").toLocalDateTime();
+                double minBidStep = rs.getDouble("min_bid_step");
+
+                com.auction.model.item.Item item = com.auction.manager.ItemManager.getInstance().findItem(itemId);
+                if (item == null) continue;
+
+                com.auction.model.auction.Auction auction = new com.auction.model.auction.Auction(id, item, startTime, endTime, minBidStep);
+                auction.restoreStatus(com.auction.model.auction.AuctionStatus.valueOf(statusStr));
+                auction.restoreHighestBid(currentHighestBid);
+
+                if (!winnerIsNull && winnerId > 0) {
+                    com.auction.model.user.User winner = com.auction.manager.UserManager.getInstance().findUserById(winnerId);
+                    if (winner instanceof com.auction.model.user.Bidder b) {
+                        //auction.restoreCurrentWinner(b);
+                    }
+                }
+                list.add(auction);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     /**
      * Tạo phiên đấu giá mới và đổi trạng thái item sang IN_AUCTION.
      * return auctionId được sinh ra, hoặc {-1} nếu lỗi.
      */
-    public int create(int itemId, LocalDateTime endTime, double minBidStep) {
-        String sql = "INSERT INTO auctions (item_id, current_highest_bid, status, end_time, min_bid_step) "
+    public int create(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
+        String sql = "INSERT INTO auctions (item_id, current_highest_bid, status, start_time , end_time, min_bid_step) "
                 + "SELECT id, starting_price, 'OPEN', ?, ? FROM items WHERE id = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            ps.setTimestamp(1, Timestamp.valueOf(endTime));
-            ps.setDouble   (2, minBidStep);
-            ps.setInt      (3, itemId);
+            ps.setTimestamp(1, Timestamp.valueOf(startTime));
+            ps.setTimestamp(2, Timestamp.valueOf(endTime));
+            ps.setDouble   (3, minBidStep);
+            ps.setInt      (4, itemId);
             ps.executeUpdate();
 
             markItemInAuction(con, itemId);

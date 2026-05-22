@@ -28,11 +28,18 @@ public class RequestProcessor {
             case CREATE_ITEM    -> handleCreateItem(request, handler);
             case CREATE_AUCTION -> handleCreateAuction(request, handler);
             case GET_MY_ITEMS   -> handleGetMyItems(handler);
+            case DELETE_ITEM    -> handleDeleteItem(request, handler);
+            case UPDATE_ITEM    -> handleUpdateItem(request, handler);
         };
     } // vi phạm OCP
 
     // kiểm tra danh tính
     private static Response handleLogin(Request request , ClientHandler handler){
+        // Kiểm tra payload hợp lệ
+        if (request.getPayload() == null || !(request.getPayload() instanceof LoginPayload)) {
+            return Response.error("Dữ liệu đăng nhập không hợp lệ!");
+        }
+
         LoginPayload payload = (LoginPayload) request.getPayload();
         try {
             User user = UserManager.getInstance().login(payload.username , payload.password);
@@ -57,10 +64,17 @@ public class RequestProcessor {
 
     // xử lý đăng xuất
     private static Response handleLogout(ClientHandler handler){
-        User user = handler.getLoggedInUser();
-        if (user != null) user.logout();
-        handler.setLoggedInUser(null);
-        return Response.ok("Đăng xuất thành công");
+        try {
+            User user = handler.getLoggedInUser();
+            if (user != null) {
+                user.logout();
+                // TODO: Nếu có thể, hãy gọi AuctionManager.getInstance().removeObserverFromAllAuctions(handler);
+            }
+            handler.setLoggedInUser(null); // Giải phóng user ngắt kết nối logic
+            return Response.ok("Đăng xuất thành công");
+        } catch (Exception e) {
+            return Response.error("Lỗi xóa phiên đăng nhập: " + e.getMessage());
+        }
     }
     // lấy danh sách
     private static Response handleGetAuctions() {
@@ -128,7 +142,7 @@ public class RequestProcessor {
             case "VEHICLE" -> new VehicleFactory(p.year);
             default        -> new ElectronicsFactory(p.brand);
         }; // code smell , ở createItem
-        Item item = ItemManager.getInstance().createItem(factory , user.getId() , p.name , p.description , p.startingPrice);
+        Item item = ItemManager.getInstance().createItem(factory , user.getId() , p.name , p.description , p.startingPrice, p.imageUrl);
         return Response.ok(item);
     }
     // Seller tạo phiên đấu giá từ item
@@ -142,7 +156,7 @@ public class RequestProcessor {
         if (item  == null) return Response.error("Sản phẩm không tồn tại : " + p.itemId);
         if (item.getOwnerId() != user.getId()) return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
 
-        Auction auction = AuctionManager.getInstance().createAuction(item , p.endTime , p.minBidStep);
+        Auction auction = AuctionManager.getInstance().createAuction(item , p.startTime , p.endTime , p.minBidStep);
         if (auction == null) return Response.error("Không thể tạo phiên - sản phẩm không ở trạng thái AVAILABLE");
 
         auction.start(); // chuyển sang RUNNING
@@ -157,4 +171,76 @@ public class RequestProcessor {
         return Response.ok(ItemManager.getInstance().getByOwner(user.getId()));
     }
 
+    // Xóa sản phẩm
+    private static Response handleDeleteItem(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Chưa đăng nhập");
+        if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể xóa sản phẩm");
+
+        if (request.getPayload() == null || !(request.getPayload() instanceof Integer)) {
+            return Response.error("Dữ liệu xóa sản phẩm không hợp lệ!");
+        }
+
+        int itemId = (Integer) request.getPayload();
+        Item item = ItemManager.getInstance().findItem(itemId);
+        if (item == null) {
+            return Response.error("Sản phẩm không tồn tại");
+        }
+
+        if (item.getOwnerId() != user.getId()) {
+            return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
+        }
+
+        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+            return Response.error("Chỉ có thể xóa sản phẩm ở trạng thái AVAILABLE");
+        }
+
+        boolean success = ItemManager.getInstance().deleteItem(itemId);
+        if (success) {
+            return Response.ok("Xóa sản phẩm thành công");
+        } else {
+            return Response.error("Không thể xóa sản phẩm khỏi cơ sở dữ liệu");
+        }
+    }
+
+    // Sửa sản phẩm
+    private static Response handleUpdateItem(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Chưa đăng nhập");
+        if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể sửa sản phẩm");
+
+        if (request.getPayload() == null || !(request.getPayload() instanceof UpdateItemPayload)) {
+            return Response.error("Dữ liệu sửa sản phẩm không hợp lệ!");
+        }
+
+        UpdateItemPayload p = (UpdateItemPayload) request.getPayload();
+        Item existingItem = ItemManager.getInstance().findItem(p.id);
+        if (existingItem == null) {
+            return Response.error("Sản phẩm không tồn tại");
+        }
+
+        if (existingItem.getOwnerId() != user.getId()) {
+            return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
+        }
+
+        if (existingItem.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+            return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE");
+        }
+
+        ItemFactory factory = switch (p.type.toUpperCase()) {
+            case "ART"     -> new ArtFactory(p.artist);
+            case "VEHICLE" -> new VehicleFactory(p.year);
+            default        -> new ElectronicsFactory(p.brand);
+        };
+
+        // Tạo item mới dựa trên factory để thay thế
+        Item updatedItem = factory.createItem(p.id, user.getId(), p.name, p.description, p.startingPrice, p.imageUrl);
+
+        boolean success = ItemManager.getInstance().updateItem(updatedItem);
+        if (success) {
+            return Response.ok("Cập nhật sản phẩm thành công");
+        } else {
+            return Response.error("Không thể cập nhật sản phẩm trong cơ sở dữ liệu");
+        }
+    }
 }

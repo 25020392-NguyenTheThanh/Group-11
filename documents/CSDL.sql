@@ -46,6 +46,7 @@ CREATE TABLE items (
     starting_price DECIMAL(18,2) NOT NULL,
     category ENUM('ART', 'ELECTRONICS', 'VEHICLE') NOT NULL,
     status ENUM('AVAILABLE','IN_AUCTION','SOLD') NOT NULL DEFAULT 'AVAILABLE',
+    image_url VARCHAR(255) DEFAULT NULL,
 -- Thuộc tính riêng của từng loại
 	artist VARCHAR(100),  -- chỉ art
     brand VARCHAR(100),  -- chỉ electronics
@@ -63,6 +64,7 @@ CREATE TABLE auctions (
     current_highest_bid DECIMAL(18,2) NOT NULL, -- Giá đấu cao nhất hiện tại
     current_winner_id INT DEFAULT NULL, -- Mới tạo là null
     status ENUM('OPEN', 'RUNNING', 'FINISHED', 'PAID', 'CANCELED') NOT NULL DEFAULT 'OPEN',
+    start_time DATETIME NOT NULL, -- Thời gian bắt đầu đấu giá
 	end_time DATETIME NOT NULL, -- Thời gian kết thúc đấu giá
     min_bid_step DECIMAL(18,2) NOT NULL DEFAULT 0.00, -- Giá đấu đặt tối thiểu
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 

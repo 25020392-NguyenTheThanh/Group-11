@@ -1,5 +1,6 @@
 package com.auction.data;
 
+import com.auction.model.auction.Auction;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.user.User;
@@ -11,16 +12,16 @@ public class DataManager {
 
     private static DataManager instance;
 
-    private final UserRepository           userRepo;
-    private final ItemRepository           itemRepo;
-    private final AuctionRepository        auctionRepo;
+    private final UserRepository userRepo;
+    private final ItemRepository itemRepo;
+    private final AuctionRepository auctionRepo;
     private final BidTransactionRepository bidRepo;
 
     private DataManager() {
-        this.userRepo    = new UserRepository();
-        this.itemRepo    = new ItemRepository();
+        this.userRepo = new UserRepository();
+        this.itemRepo = new ItemRepository();
         this.auctionRepo = new AuctionRepository();
-        this.bidRepo     = new BidTransactionRepository();
+        this.bidRepo = new BidTransactionRepository();
     }
 
     public static synchronized DataManager getInstance() {
@@ -56,10 +57,23 @@ public class DataManager {
         return itemRepo.findAll();
     }
 
+    public boolean deleteItem(int id) {
+        return itemRepo.delete(id);
+    }
+
+    public boolean updateItem(Item item) {
+        return itemRepo.update(item);
+    }
+
+    public boolean updateItemStatus(int itemId, com.auction.model.item.ItemStatus status) {
+        return itemRepo.updateStatus(itemId, status);
+    }
+
+
     // Auction
 
-    public int createAuction(int itemId, LocalDateTime endTime, double minBidStep) {
-        return auctionRepo.create(itemId, endTime, minBidStep);
+    public int createAuction(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
+        return auctionRepo.create(itemId, startTime, endTime, minBidStep);
     }
 
     public boolean updateAuctionBid(int auctionId, int bidderId, double amount) {
@@ -72,6 +86,10 @@ public class DataManager {
 
     public boolean finishAuction(int auctionId) {
         return auctionRepo.finish(auctionId);
+    }
+
+    public List<Auction> getAllAuctions() {
+        return auctionRepo.findAll();
     }
 
     // BidTransaction
@@ -87,6 +105,7 @@ public class DataManager {
     public boolean updateSellerRevenue(int sellerId, double amount) {
         return userRepo.addSellerRevenue(sellerId, amount);
     }
+
     public boolean updateBidderBalance(int bidderId, double newBalance) {
         return userRepo.updateBidderBalance(bidderId, newBalance);
     }

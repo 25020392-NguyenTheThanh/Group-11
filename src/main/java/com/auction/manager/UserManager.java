@@ -67,6 +67,14 @@ public class UserManager {
                 .orElse(null);
     }
 
+    // Tìm user theo id.
+    public User findUserById(int id) {
+        return getUsers().stream()
+                .filter(u -> u.getId() == id)
+                .findFirst()
+                .orElse(null);
+    }
+
     @Deprecated
     public void loadFromDisk() {
         System.out.println("[UserManager] loadFromDisk() đã bị bỏ — dữ liệu lấy từ MySQL.");

@@ -2,11 +2,12 @@ package com.auction.network;
 
 import java.io.Serializable;
 
-public class CreateItemPayload implements Serializable {
-    public String type ; // type của item
-    public String name ;
-    public String description ;
-    public double startingPrice ;
+public class UpdateItemPayload implements Serializable {
+    public int id;
+    public String type; // type của item (Electronics, Art, Vehicle)
+    public String name;
+    public String description;
+    public double startingPrice;
     public String imageUrl;
 
     public String artist;        // cho ART

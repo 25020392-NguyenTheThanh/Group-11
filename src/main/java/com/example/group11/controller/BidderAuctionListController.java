@@ -1,14 +1,8 @@
 package com.example.group11.controller;
 
-import com.auction.client.ServerConnection;
-import com.auction.model.auction.Auction;
 import com.auction.model.user.User;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
-import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;

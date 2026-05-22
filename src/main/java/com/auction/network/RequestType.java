@@ -9,5 +9,7 @@ public enum RequestType {
     PLACE_BID, // đặt giá thầu cho phiên
     CREATE_AUCTION, // tạo phiên đấu giá mới
     CREATE_ITEM, // thêm sản phẩm mới vào hệ thống
-    GET_MY_ITEMS // lấy danh sách sản phầm đã tạo
+    GET_MY_ITEMS, // lấy danh sách sản phầm đã tạo
+    DELETE_ITEM, // xóa sản phẩm
+    UPDATE_ITEM // sửa sản phẩm
 }

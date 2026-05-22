@@ -123,7 +123,7 @@
                                                 <TextField fx:id="filterSearchId" prefWidth="250.0" promptText="Tìm kiếm ID sản phẩm..." style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
                                                 <MenuButton fx:id="filterStatus" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 5;" text="TRẠNG THÁI" textFill="WHITE">
                                                     <items>
-                                                        <MenuItem text="Tất cả " /><MenuItem text="OPEN" /><MenuItem text="RUNNING" /><MenuItem text="FINISHED" /><MenuItem text="PAID" /><MenuItem text="CANCELED" />
+                                                        <MenuItem text="Tất cả " /><MenuItem text="AVAILABLE" /><MenuItem text="OPEN" /><MenuItem text="RUNNING" /><MenuItem text="FINISHED" /><MenuItem text="PAID" /><MenuItem text="CANCELED" />
                                                     </items>
                                                 </MenuButton>
                                                 <MenuButton fx:id="filterSort" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 5;" text="SẮP XẾP" textFill="WHITE">
@@ -248,8 +248,8 @@
                                                 <Button onAction="#handleBackToListings" style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 8;" text="← Quay lại" />
                                                 <VBox>
                                                     <children>
-                                                        <Label text="ĐĂNG KÝ ĐẤU GIÁ MỚI" textFill="#ffd700"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                        <Label text="Điền đầy đủ thông tin để niêm yết sản phẩm" textFill="#94A3B8"><font><Font size="12.0" /></font></Label>
+                                                        <Label fx:id="registerTitleLabel" text="ĐĂNG KÝ ĐẤU GIÁ MỚI" textFill="#ffd700"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                        <Label fx:id="registerSubtitleLabel" text="Điền đầy đủ thông tin để niêm yết sản phẩm" textFill="#94A3B8"><font><Font size="12.0" /></font></Label>
                                                     </children>
                                                 </VBox>
                                             </children>
@@ -327,10 +327,6 @@
                                                                             <Label text="BƯỚC GIÁ TỐI THIỂU ($)" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
                                                                             <TextField fx:id="minimumBidIncrementField" prefHeight="40.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45;" />
                                                                         </VBox>
-                                                                        <VBox spacing="5.0">
-                                                                            <Label text="TIỀN ĐẶT CỌC ($)" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
-                                                                            <TextField fx:id="depositField" prefHeight="40.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45;" />
-                                                                        </VBox>
                                                                     </children>
                                                                 </VBox>
                                                             </children>
@@ -386,7 +382,7 @@
 
                 <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;" VBox.vgrow="ALWAYS">
                     <content>
-                        <VBox spacing="8.0" style="-fx-background-color: transparent;">
+                        <VBox fx:id="notificationListContainer" spacing="8.0" style="-fx-background-color: transparent;">
                             <children>
 
                                 <VBox spacing="4.0" style="-fx-background-color: #1E2D45; -fx-padding: 10; -fx-background-radius: 8; -fx-cursor: hand;">

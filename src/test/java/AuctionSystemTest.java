@@ -17,8 +17,13 @@ public class AuctionSystemTest {
     // valid bid : kiểm tra đấu giá hợp lệ
     @Test
     void validBidShouldUpdateHighestPrice(){
-        Item item = new Electronics(1 , 123,"Iphone","abc" ,1000 , "apple");
-        Auction auction = new Auction(1, item , LocalDateTime.now().plusDays(1),100);
+        Item item = new Electronics(1 , 123,"Iphone","abc" ,1000 , "", "apple");
+
+        // Bắt đầu từ bây giờ, kết thúc sau 1 ngày
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusDays(1);
+
+        Auction auction = new Auction(1, item , startTime , endTime , 20);
         Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
@@ -29,8 +34,12 @@ public class AuctionSystemTest {
     // invalid bid : kiểm tra đấu giá không hợp lệ
     @Test
     void invalidBidShouldThrowException(){
-        Item item = new Electronics(1 , 123,"Iphone","abc" ,2000 , "apple");
-        Auction auction = new Auction(1, item , LocalDateTime.now().plusDays(1),100);
+        Item item = new Electronics(1 , 123,"Iphone","abc" ,2000 , "", "apple");
+        // Chọn thời gian kiểm thử tường minh cố định tương lai
+        LocalDateTime startTime = LocalDateTime.of(2026, 5, 25, 10, 30);
+        LocalDateTime endTime = LocalDateTime.of(2026, 5, 30, 10, 30);
+
+        Auction auction = new Auction(1, item , startTime , endTime , 20);
         Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
@@ -40,8 +49,13 @@ public class AuctionSystemTest {
     // closed auction : kiểm tra khi auction đã đóng -> không cho bid nữa
     @Test
     void closedAuctionShouldRejectBid(){
-        Item item = new Electronics(1 , 123,"Iphone","abc" ,2000 , "apple");
-        Auction auction = new Auction(1, item , LocalDateTime.now().plusDays(1),100);
+        Item item = new Electronics(1 , 123,"Iphone","abc" ,2000 , "", "apple");
+
+        // Bắt đầu cách đây 2 ngày, kết thúc cách đây 1 ngày
+        LocalDateTime startTime = LocalDateTime.now().minusDays(2);
+        LocalDateTime endTime = LocalDateTime.now().minusDays(1);
+
+        Auction auction = new Auction(1, item , startTime, endTime, 100);
         Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.FINISHED);
@@ -51,8 +65,13 @@ public class AuctionSystemTest {
     // concurrency test
     @Test
     void concurrentBiddingShouldKeepHighestPrice() throws Exception {
-        Item item = new Electronics(1 , 123,"Iphone","abc" ,1000 , "apple");
-        Auction auction = new Auction(1, item , LocalDateTime.now().plusDays(1),100);
+        Item item = new Electronics(1 , 123,"Iphone","abc" ,1000 , "", "apple");
+
+        // SỬA: Set thời gian hợp lệ cho phiên trực tuyến kéo dài từ bây giờ tới ngày mai
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusDays(1);
+
+        Auction auction = new Auction(1, item , startTime , endTime ,100);
         Bidder bidder_1 = new Bidder(1,"Tuan","123","123@gmail",3000);
         Bidder bidder_2 = new Bidder(2,"Tuan_2","1234","1234@gmail",4000);
         bidder_1.setAuthenticated(true);
@@ -76,7 +95,7 @@ public class AuctionSystemTest {
     @Test
     void factoryShouldCreateElectronicItem(){
         ElectronicsFactory electronicsfactory = new ElectronicsFactory("apple");
-        Item item = electronicsfactory.createItem(1 , 123,"Iphone","abc" ,1000 );
+        Item item = electronicsfactory.createItem(1 , 123,"Iphone","abc" ,1000, "" );
         assertNotNull(item);
         assertEquals("ELECTRONICS" , item.getCategory());
     }
@@ -84,8 +103,13 @@ public class AuctionSystemTest {
     // auction init
     @Test
     void auctionShouldInitializeCorrectly(){
-        Item item = new Electronics(1,123, "Iphone","abc",1000, "apple");
-        Auction auction = new Auction(1 , item , LocalDateTime.now().plusDays(1),100);
+        Item item = new Electronics(1,123, "Iphone","abc",1000, "", "apple");
+
+        // Cung cấp đủ cặp ngày bắt đầu và kết thúc
+        LocalDateTime startTime = LocalDateTime.now();
+        LocalDateTime endTime = startTime.plusDays(1);
+
+        Auction auction = new Auction(1 , item , startTime , endTime , 100);
         assertEquals(1000 , auction.getCurrentHighestBid());
         assertEquals(AuctionStatus.OPEN , auction.getStatus());
     }

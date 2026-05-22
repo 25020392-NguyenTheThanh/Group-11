@@ -3,8 +3,8 @@ package com.auction.model.item;
 public class Electronics extends Item{
     private String brand ; // thương hiệu
 
-    public Electronics(int id, int ownerId , String name , String description , double startingPrice , String brand){
-        super(id , ownerId, name , description , startingPrice);
+    public Electronics(int id, int ownerId , String name , String description , double startingPrice ,String imageUrl, String brand){
+        super(id , ownerId, name , description , startingPrice, imageUrl);
         this.brand = brand ;
     }
     public String getBrand(){ return brand ; }
