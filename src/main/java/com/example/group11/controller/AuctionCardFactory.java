@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 public class AuctionCardFactory {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
 
-    public static VBox createAuctionCard(Auction auction, Consumer<Auction> onBidAction, Consumer<Auction> onViewDetailsAction) {
+    public static VBox createAuctionCard(Auction auction, Consumer<Auction> onBidAction, Consumer<Auction> onViewDetailsAction, boolean isWatched, Consumer<Auction> onWatchlistToggleAction) {
         Item item = auction.getItem();
         if (item == null) return new VBox();
 
@@ -242,7 +242,26 @@ public class AuctionCardFactory {
             if (onViewDetailsAction != null) onViewDetailsAction.accept(auction);
         });
 
-        actionBox.getChildren().addAll(bidButton, detailsButton);
+        actionBox.getChildren().add(bidButton);
+
+        // Nút Watchlist
+        if (onWatchlistToggleAction != null) {
+            Button watchlistButton = new Button(isWatched ? "★ BỎ THEO DÕI" : "☆ THEO DÕI");
+            watchlistButton.setMaxWidth(Double.MAX_VALUE);
+            if (isWatched) {
+                watchlistButton.setStyle("-fx-background-color: #3b2f00; -fx-text-fill: #ffd700; -fx-border-color: #ffd700; -fx-border-radius: 2; -fx-background-radius: 2; -fx-font-weight: bold; -fx-padding: 6; -fx-cursor: hand;");
+                watchlistButton.setOnMouseEntered(e -> watchlistButton.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3b2f00; -fx-border-color: #ffd700; -fx-border-radius: 2; -fx-background-radius: 2; -fx-font-weight: bold; -fx-padding: 6; -fx-cursor: hand;"));
+                watchlistButton.setOnMouseExited(e -> watchlistButton.setStyle("-fx-background-color: #3b2f00; -fx-text-fill: #ffd700; -fx-border-color: #ffd700; -fx-border-radius: 2; -fx-background-radius: 2; -fx-font-weight: bold; -fx-padding: 6; -fx-cursor: hand;"));
+            } else {
+                watchlistButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-border-color: #94A3B8; -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 6; -fx-cursor: hand;");
+                watchlistButton.setOnMouseEntered(e -> watchlistButton.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3b2f00; -fx-border-color: #ffd700; -fx-border-radius: 2; -fx-background-radius: 2; -fx-font-weight: bold; -fx-padding: 6; -fx-cursor: hand;"));
+                watchlistButton.setOnMouseExited(e -> watchlistButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-border-color: #94A3B8; -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 6; -fx-cursor: hand;"));
+            }
+            watchlistButton.setOnAction(e -> onWatchlistToggleAction.accept(auction));
+            actionBox.getChildren().add(watchlistButton);
+        }
+
+        actionBox.getChildren().add(detailsButton);
 
         // Gom tất cả vào Body, rồi gom Body + Header vào Card chính
         bodyContainer.getChildren().addAll(nameDescContainer, priceContainer, timeContainer, actionBox);

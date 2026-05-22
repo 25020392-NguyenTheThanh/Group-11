@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 // Ánh xạ một hàng trong ResultSet sang đối tượng User phù hợp (Admin / Seller / Bidder).
 public class UserMapper {
@@ -36,7 +38,20 @@ public class UserMapper {
 
             default -> { // BIDDER
                 double balance = fetchBidderBalance(con, id);
-                yield new Bidder(id, username, password, email, balance);
+                Bidder b = new Bidder(id, username, password, email, balance);
+                List<Integer> participated = fetchBidderParticipated(con, id);
+                for (int auctionId : participated) {
+                    b.getProfile().addParticipatedAuction(auctionId);
+                }
+                List<Integer> watchlist = fetchBidderWatchlist(con, id);
+                for (int auctionId : watchlist) {
+                    b.getProfile().addToWatchlist(auctionId);
+                }
+                List<Integer> won = fetchBidderWon(con, id);
+                for (int auctionId : won) {
+                    b.getProfile().addWonAuction(auctionId);
+                }
+                yield b;
             }
         };
     }
@@ -59,5 +74,47 @@ public class UserMapper {
             ResultSet r = ps.executeQuery();
             return r.next() ? r.getDouble("balance") : 0;
         }
+    }
+
+    private List<Integer> fetchBidderParticipated(Connection con, int userId) throws SQLException {
+        List<Integer> list = new ArrayList<>();
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT auction_id FROM bidder_participated WHERE bidder_id = ?")) {
+            ps.setInt(1, userId);
+            try (ResultSet r = ps.executeQuery()) {
+                while (r.next()) {
+                    list.add(r.getInt("auction_id"));
+                }
+            }
+        }
+        return list;
+    }
+
+    private List<Integer> fetchBidderWatchlist(Connection con, int userId) throws SQLException {
+        List<Integer> list = new ArrayList<>();
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT auction_id FROM bid_watchlist WHERE bidder_id = ?")) {
+            ps.setInt(1, userId);
+            try (ResultSet r = ps.executeQuery()) {
+                while (r.next()) {
+                    list.add(r.getInt("auction_id"));
+                }
+            }
+        }
+        return list;
+    }
+
+    private List<Integer> fetchBidderWon(Connection con, int userId) throws SQLException {
+        List<Integer> list = new ArrayList<>();
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT auction_id FROM bidder_won WHERE bidder_id = ?")) {
+            ps.setInt(1, userId);
+            try (ResultSet r = ps.executeQuery()) {
+                while (r.next()) {
+                    list.add(r.getInt("auction_id"));
+                }
+            }
+        }
+        return list;
     }
 }

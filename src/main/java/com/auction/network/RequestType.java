@@ -11,5 +11,7 @@ public enum RequestType {
     CREATE_ITEM, // thêm sản phẩm mới vào hệ thống
     GET_MY_ITEMS, // lấy danh sách sản phầm đã tạo
     DELETE_ITEM, // xóa sản phẩm
-    UPDATE_ITEM // sửa sản phẩm
+    UPDATE_ITEM, // sửa sản phẩm
+    ADD_TO_WATCHLIST, // thêm vào danh sách theo dõi
+    REMOVE_FROM_WATCHLIST // xóa khỏi danh sách theo dõi
 }

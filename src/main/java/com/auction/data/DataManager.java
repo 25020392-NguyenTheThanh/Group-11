@@ -88,6 +88,10 @@ public class DataManager {
         return auctionRepo.finish(auctionId);
     }
 
+    public void saveBidderWon(int bidderId, int auctionId) {
+        auctionRepo.saveBidderWon(bidderId, auctionId);
+    }
+
     public List<Auction> getAllAuctions() {
         return auctionRepo.findAll();
     }
@@ -108,5 +112,13 @@ public class DataManager {
 
     public boolean updateBidderBalance(int bidderId, double newBalance) {
         return userRepo.updateBidderBalance(bidderId, newBalance);
+    }
+
+    public boolean addToWatchlist(int bidderId, int auctionId) {
+        return userRepo.addToWatchlist(bidderId, auctionId);
+    }
+
+    public boolean removeFromWatchlist(int bidderId, int auctionId) {
+        return userRepo.removeFromWatchlist(bidderId, auctionId);
     }
 }

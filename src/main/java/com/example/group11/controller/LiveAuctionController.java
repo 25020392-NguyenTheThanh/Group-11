@@ -69,6 +69,7 @@ public class LiveAuctionController implements Initializable {
     private Auction auction;
     private User user;
     private Timeline countdownTimeline;
+    private Button watchlistButton;
 
     // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
     private static final java.util.Set<Integer> enteredAuctionIds = new java.util.HashSet<>();
@@ -105,6 +106,25 @@ public class LiveAuctionController implements Initializable {
     public void setAuctionAndUser(Auction auction, User user) {
         this.auction = auction;
         this.user = user;
+
+        if (user instanceof Bidder bidder) {
+            Platform.runLater(() -> {
+                if (backButton != null && backButton.getParent() instanceof HBox topBar) {
+                    if (watchlistButton == null) {
+                        watchlistButton = new Button();
+                        int closeBtnIndex = topBar.getChildren().indexOf(closeButton);
+                        if (closeBtnIndex >= 0) {
+                            topBar.getChildren().add(closeBtnIndex, watchlistButton);
+                        } else {
+                            topBar.getChildren().add(watchlistButton);
+                        }
+                        watchlistButton.setOnAction(event -> handleToggleWatchlistInDetail());
+                    }
+                    boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
+                    updateWatchlistButton(watchlistButton, isWatched);
+                }
+            });
+        }
 
         // Lưu thông tin Stage của cửa sổ mới mở vào openStages để quản lý song song
         Platform.runLater(() -> {
@@ -205,6 +225,8 @@ public class LiveAuctionController implements Initializable {
                         || "AUCTION_ENDED".equals(notification.getType()) 
                         || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                     refreshAuctionDetails(false);
+                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
+                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
                 }
             });
         });
@@ -417,6 +439,7 @@ public class LiveAuctionController implements Initializable {
                     NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
                     if (user instanceof Bidder bidder) {
                         bidder.deduct(bidAmount);
+                        bidder.getProfile().addParticipatedAuction(auction.getId());
                     }
                     refreshAuctionDetails(false);
                 } else {
@@ -507,5 +530,58 @@ public class LiveAuctionController implements Initializable {
             openStages.remove(auction.getId());
             stage.close();
         }
+    }
+
+    private void updateWatchlistButton(Button btn, boolean isWatched) {
+        btn.setText(isWatched ? "★ ĐANG THEO DÕI" : "☆ THEO DÕI");
+        if (isWatched) {
+            btn.setStyle("-fx-background-color: #3b2f00; -fx-text-fill: #ffd700; -fx-border-color: #ffd700; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;");
+            btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3b2f00; -fx-border-color: #ffd700; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;"));
+            btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: #3b2f00; -fx-text-fill: #ffd700; -fx-border-color: #ffd700; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;"));
+        } else {
+            btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #909097; -fx-border-color: #45464d; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;");
+            btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3b2f00; -fx-border-color: #ffd700; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;"));
+            btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-text-fill: #909097; -fx-border-color: #45464d; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand;"));
+        }
+    }
+
+    private void handleToggleWatchlistInDetail() {
+        if (auction == null || !(user instanceof Bidder bidder)) return;
+        boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
+        RequestType type = isWatched ? RequestType.REMOVE_FROM_WATCHLIST : RequestType.ADD_TO_WATCHLIST;
+
+        Task<Response> task = new Task<>() {
+            @Override
+            protected Response call() throws Exception {
+                return ServerConnection.getInstance().send(type, auction.getId());
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response res = task.getValue();
+            if (res != null && res.isSuccess()) {
+                if (isWatched) {
+                    bidder.getProfile().removeFromWatchlist(auction.getId());
+                    NotificationController.showNotification("Thành công", "Đã xóa khỏi danh sách theo dõi!");
+                } else {
+                    bidder.getProfile().addToWatchlist(auction.getId());
+                    NotificationController.showNotification("Thành công", "Đã thêm vào danh sách theo dõi!");
+                }
+                if (watchlistButton != null) {
+                    updateWatchlistButton(watchlistButton, !isWatched);
+                }
+            } else {
+                String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                NotificationController.showError("Lỗi", "Không thể cập nhật danh sách theo dõi.\nChi tiết: " + errMsg);
+            }
+        });
+
+        task.setOnFailed(evt -> {
+            NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu cập nhật danh sách theo dõi.");
+        });
+
+        Thread t = new Thread(task);
+        t.setDaemon(true);
+        t.start();
     }
 }

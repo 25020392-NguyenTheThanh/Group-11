@@ -64,6 +64,10 @@ public class AuctionServer {
         connectedClients.remove(handler);
     }
 
+    public List<ClientHandler> getConnectedClients() {
+        return connectedClients;
+    }
+
     public static void main(String[] args) {
         new AuctionServer().start();
     }

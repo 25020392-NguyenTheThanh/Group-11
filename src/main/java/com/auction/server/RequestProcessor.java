@@ -31,6 +31,8 @@ public class RequestProcessor {
             case GET_MY_ITEMS   -> handleGetMyItems(handler);
             case DELETE_ITEM    -> handleDeleteItem(request, handler);
             case UPDATE_ITEM    -> handleUpdateItem(request, handler);
+            case ADD_TO_WATCHLIST -> handleAddToWatchlist(request, handler);
+            case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
         };
     } // vi phạm OCP
 
@@ -98,6 +100,7 @@ public class RequestProcessor {
             if (auction == null) return Response.error("Phiên không tồn tại");
             Bidder bidder = (Bidder) user;
             auction.placeBid(bidder, payload.amount);
+            bidder.getProfile().addParticipatedAuction(payload.auctionId);
 
             // Ghi lịch sử bid vào MySQL
             AuctionManager.getInstance().recordBid(
@@ -248,6 +251,40 @@ public class RequestProcessor {
             return Response.ok("Cập nhật sản phẩm thành công");
         } else {
             return Response.error("Không thể cập nhật sản phẩm trong cơ sở dữ liệu");
+        }
+    }
+
+    private static Response handleAddToWatchlist(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Bạn cần đăng nhập");
+        if (!(user instanceof Bidder)) return Response.error("Chỉ Bidder mới có thể theo dõi");
+        
+        int auctionId = (Integer) request.getPayload();
+        Bidder bidder = (Bidder) user;
+        
+        boolean success = com.auction.data.DataManager.getInstance().addToWatchlist(bidder.getId(), auctionId);
+        if (success) {
+            bidder.getProfile().addToWatchlist(auctionId);
+            return Response.ok("Đã thêm vào danh sách theo dõi");
+        } else {
+            return Response.error("Không thể thêm vào danh sách theo dõi");
+        }
+    }
+
+    private static Response handleRemoveFromWatchlist(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Bạn cần đăng nhập");
+        if (!(user instanceof Bidder)) return Response.error("Chỉ Bidder mới có thể hủy theo dõi");
+        
+        int auctionId = (Integer) request.getPayload();
+        Bidder bidder = (Bidder) user;
+        
+        boolean success = com.auction.data.DataManager.getInstance().removeFromWatchlist(bidder.getId(), auctionId);
+        if (success) {
+            bidder.getProfile().removeFromWatchlist(auctionId);
+            return Response.ok("Đã xóa khỏi danh sách theo dõi");
+        } else {
+            return Response.error("Không thể xóa khỏi danh sách theo dõi");
         }
     }
 }

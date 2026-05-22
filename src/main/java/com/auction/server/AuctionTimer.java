@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 public class AuctionTimer {
     private final AuctionServer server ;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final java.util.Set<Integer> warnedAuctions = new java.util.HashSet<>();
+
     // threadpool chạy task theo thời gian
     public AuctionTimer(AuctionServer server){
         this.server = server ;
@@ -29,6 +31,20 @@ public class AuctionTimer {
     private void checkExpiredAuctions(){
         List<Auction> auctions = AuctionManager.getInstance().getAuctions();
         for (Auction auction : auctions){
+            // Kiểm tra phiên sắp kết thúc (dưới 5 phút)
+            if (auction.getStatus() == AuctionStatus.RUNNING) {
+                LocalDateTime now = LocalDateTime.now();
+                if (now.isBefore(auction.getEndTime())) {
+                    long secondsRemaining = java.time.Duration.between(now, auction.getEndTime()).toSeconds();
+                    if (secondsRemaining > 0 && secondsRemaining < 300) { // dưới 5 phút
+                        if (!warnedAuctions.contains(auction.getId())) {
+                            warnedAuctions.add(auction.getId());
+                            sendEndingSoonNotification(auction);
+                        }
+                    }
+                }
+            }
+
             // Chỉ xử lý phiên đang RUNNING và đã hết giờ
             if (auction.getStatus() == AuctionStatus.RUNNING && LocalDateTime.now().isAfter(auction.getEndTime())){
                 try {
@@ -45,6 +61,13 @@ public class AuctionTimer {
                                 auction.getItem().getOwnerId(),
                                 auction.getCurrentHighestBid()
                         );
+                        // Persist bidder won auction
+                        DataManager.getInstance().saveBidderWon(
+                                auction.getCurrentWinner().getId(),
+                                auction.getId()
+                        );
+                        // Update in-memory profile of the winner on the server
+                        auction.getCurrentWinner().getProfile().addWonAuction(auction.getId());
                     }
 
                     // thông báo cho tất cả client
@@ -58,6 +81,21 @@ public class AuctionTimer {
             }
         }
     }
+
+    private void sendEndingSoonNotification(Auction auction) {
+        String msg = "Phiên đấu giá #" + auction.getId() + " [" + auction.getItem().getName() + "] sắp kết thúc (còn dưới 5 phút)!";
+        Notification notification = new Notification("WATCHLIST_ENDING_SOON", msg);
+        
+        for (ClientHandler client : server.getConnectedClients()) {
+            com.auction.model.user.User u = client.getLoggedInUser();
+            if (u instanceof com.auction.model.user.Bidder bidder) {
+                if (bidder.getProfile().getWatchlist().contains(auction.getId())) {
+                    client.sendNotification(notification);
+                }
+            }
+        }
+    }
+
     public void stop(){
         scheduler.shutdown();
     }

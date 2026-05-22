@@ -110,6 +110,19 @@ public class AuctionRepository {
         return setStatus(auctionId, "FINISHED");
     }
 
+    // Lưu bidder đã thắng phiên đấu giá
+    public void saveBidderWon(int bidderId, int auctionId) {
+        String sql = "INSERT IGNORE INTO bidder_won (bidder_id, auction_id) VALUES (?, ?)";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, bidderId);
+            ps.setInt(2, auctionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     //Private helpers
 
     private boolean setStatus(int auctionId, String status) {

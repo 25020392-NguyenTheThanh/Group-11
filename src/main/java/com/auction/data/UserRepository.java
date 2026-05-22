@@ -127,4 +127,30 @@ public class UserRepository {
             return false;
         }
     }
+
+    public boolean addToWatchlist(int bidderId, int auctionId) {
+        String sql = "INSERT IGNORE INTO bid_watchlist (bidder_id, auction_id) VALUES (?, ?)";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, bidderId);
+            ps.setInt(2, auctionId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean removeFromWatchlist(int bidderId, int auctionId) {
+        String sql = "DELETE FROM bid_watchlist WHERE bidder_id = ? AND auction_id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, bidderId);
+            ps.setInt(2, auctionId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

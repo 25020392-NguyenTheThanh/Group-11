@@ -232,10 +232,12 @@ public class BidderAuctionListController implements Initializable {
                     return false;
                 }
             } else if (currentTab.equals("MY BIDS")) {
-                if (user != null) {
-                    boolean bidPlaced = auction.getBidHistory().stream()
-                            .anyMatch(tx -> tx.getBidderId() == user.getId());
+                if (user instanceof Bidder bidder) {
+                    boolean bidPlaced = bidder.getProfile().getParticipatedAuctions().contains(auction.getId()) ||
+                            auction.getBidHistory().stream().anyMatch(tx -> tx.getBidderId() == bidder.getId());
                     if (!bidPlaced) return false;
+                } else {
+                    return false;
                 }
             } else if (currentTab.equals("WATCHLIST")) {
                 if (user instanceof Bidder bidder) {
@@ -298,11 +300,17 @@ public class BidderAuctionListController implements Initializable {
 
         for (int i = 0; i < auctions.size(); i++) {
             Auction auction = auctions.get(i);
+            boolean isWatched = false;
+            if (user instanceof Bidder bidder) {
+                isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
+            }
             // THAY THẾ HOÀN TOÀN FXML LOADER BẰNG CLASS JAVA CARD FACTORY
             VBox productCard = AuctionCardFactory.createAuctionCard(
                     auction,
                     this::handleBid,          // Hàm callback xử lý đặt giá hiện tại của bạn
-                    this::handleViewDetails   // Hàm callback xử lý xem chi tiết hiện tại của bạn
+                    this::handleViewDetails,   // Hàm callback xử lý xem chi tiết hiện tại của bạn
+                    isWatched,
+                    this::handleToggleWatchlist
             );
 
             int column = i % 3;
@@ -370,6 +378,7 @@ public class BidderAuctionListController implements Initializable {
                         NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
                         if (user instanceof Bidder bidder) {
                             bidder.deduct(bidAmount);
+                            bidder.getProfile().addParticipatedAuction(auction.getId());
                             walletBalance.setText(String.format("%.2f", bidder.getBalance()));
                         }
                         loadAuctions();
@@ -393,6 +402,44 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    private void handleToggleWatchlist(Auction auction) {
+        if (!(user instanceof Bidder bidder)) return;
+        boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
+        RequestType type = isWatched ? RequestType.REMOVE_FROM_WATCHLIST : RequestType.ADD_TO_WATCHLIST;
+
+        Task<Response> task = new Task<>() {
+            @Override
+            protected Response call() throws Exception {
+                return ServerConnection.getInstance().send(type, auction.getId());
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response res = task.getValue();
+            if (res != null && res.isSuccess()) {
+                if (isWatched) {
+                    bidder.getProfile().removeFromWatchlist(auction.getId());
+                    NotificationController.showNotification("Thành công", "Đã xóa khỏi danh sách theo dõi!");
+                } else {
+                    bidder.getProfile().addToWatchlist(auction.getId());
+                    NotificationController.showNotification("Thành công", "Đã thêm vào danh sách theo dõi!");
+                }
+                applyFilters();
+            } else {
+                String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                NotificationController.showError("Lỗi", "Không thể cập nhật danh sách theo dõi.\nChi tiết: " + errMsg);
+            }
+        });
+
+        task.setOnFailed(evt -> {
+            NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu cập nhật danh sách theo dõi.");
+        });
+
+        Thread t = new Thread(task);
+        t.setDaemon(true);
+        t.start();
+    }
+
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
@@ -403,6 +450,8 @@ public class BidderAuctionListController implements Initializable {
                         || "AUCTION_ENDED".equals(notification.getType()) 
                         || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                     loadAuctions();
+                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
+                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
                 }
             });
         });
