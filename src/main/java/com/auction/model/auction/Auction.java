@@ -29,6 +29,7 @@ public class Auction implements Subject, Serializable {
     private List<BidTransaction> bidHistory;
     private transient CopyOnWriteArrayList<Observer> observers; // không lưu vào file
     private final double minBidStep; // bước giá tối thiểu
+    private int viewCount; // số lượt xem
 
     public Auction(int id, Item item, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
         this.id = id;
@@ -40,6 +41,7 @@ public class Auction implements Subject, Serializable {
         this.minBidStep = minBidStep; // bước giá tối thiểu
         this.bidHistory = new ArrayList<>();
         this.observers = new CopyOnWriteArrayList<>();
+        this.viewCount = 0;
     }
 
 
@@ -237,5 +239,20 @@ public class Auction implements Subject, Serializable {
 
     public void setStatus(AuctionStatus status_) {
         status = status_;
+    }
+
+    // Lấy số lượt xem của phiên đấu giá
+    public int getViewCount() {
+        return viewCount;
+    }
+
+    // Tăng số lượt xem của phiên đấu giá lên 1 (đồng bộ chống race-condition)
+    public synchronized void incrementViewCount() {
+        this.viewCount++;
+    }
+
+    // Thiết lập/khôi phục số lượt xem của phiên đấu giá
+    public void restoreViewCount(int viewCount) {
+        this.viewCount = viewCount;
     }
 }

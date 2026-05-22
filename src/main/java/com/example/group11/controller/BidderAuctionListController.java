@@ -312,49 +312,15 @@ public class BidderAuctionListController implements Initializable {
     }
 
     private void handleViewDetails(Auction auction) {
-        Item item = auction.getItem();
-        if (item == null) return;
-
-        StringBuilder details = new StringBuilder();
-        details.append("Tên sản phẩm: ").append(item.getName()).append("\n");
-        details.append("Mô tả: ").append(item.getDescription()).append("\n");
-        details.append("Trạng thái sản phẩm: ").append(item.getStatus()).append("\n");
-        details.append("Trạng thái đấu giá: ").append(auction.getStatus()).append("\n");
-        details.append("Giá cao nhất hiện tại: ").append(String.format("%.2f", auction.getCurrentHighestBid())).append(" $\n");
-        details.append("Bước giá tối thiểu: ").append(String.format("%.2f", auction.getMinBidStep())).append(" $\n");
-        details.append("Thời gian kết thúc: ").append(auction.getEndTime()).append("\n");
-
-        if (item instanceof com.auction.model.item.Art art) {
-            details.append("Họa sĩ: ").append(art.getArtist()).append("\n");
-        } else if (item instanceof com.auction.model.item.Electronics electronics) {
-            details.append("Thương hiệu: ").append(electronics.getBrand()).append("\n");
-        } else if (item instanceof com.auction.model.item.Vehicle vehicle) {
-            details.append("Năm sản xuất: ").append(vehicle.getYear()).append("\n");
-        }
-
-        if (user instanceof Bidder bidder) {
-            boolean isWatching = bidder.getProfile().getWatchlist().contains(auction.getId());
-            String actionText = isWatching ? "Bỏ theo dõi" : "Theo dõi phiên";
-            
-            boolean choice = NotificationController.showConfirmation(
-                    "Chi tiết sản phẩm #" + item.getId(),
-                    details.toString(),
-                    "Bạn có muốn " + actionText.toLowerCase() + " này không?",
-                    actionText,
-                    "Đóng"
-            );
-            if (choice) {
-                if (isWatching) {
-                    bidder.getProfile().removeFromWatchlist(auction.getId());
-                    NotificationController.showNotification("Thành công", "Đã xóa khỏi danh sách theo dõi.");
-                } else {
-                    bidder.getProfile().addToWatchlist(auction.getId());
-                    NotificationController.showNotification("Thành công", "Đã thêm vào danh sách theo dõi.");
-                }
-                applyFilters();
+        try {
+            FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
+            if (loader != null) {
+                LiveAuctionController controller = loader.getController();
+                controller.setAuctionAndUser(auction, user);
             }
-        } else {
-            NotificationController.showNotification("Chi tiết sản phẩm #" + item.getId(), details.toString());
+        } catch (Exception e) {
+            e.printStackTrace();
+            NotificationController.showError("Lỗi chuyển trang", "Không thể mở trang đấu giá trực tiếp.");
         }
     }
 
