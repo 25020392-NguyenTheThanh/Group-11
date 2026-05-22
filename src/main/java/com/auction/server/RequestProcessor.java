@@ -4,7 +4,6 @@ import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
-import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
@@ -83,7 +82,7 @@ public class RequestProcessor {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
             if (auction == null) return Response.error("Phiên không tồn tại");
             Bidder bidder = (Bidder) user;
-            auction.placeBid(bidder, payload.amount);
+            auction.placeBid(bidder, payload.amount); // synchronized , throws nếu lỗi
 
             // Ghi lịch sử bid vào MySQL
             AuctionManager.getInstance().recordBid(
@@ -92,6 +91,14 @@ public class RequestProcessor {
                     bidder.getUsername(),
                     payload.amount
             );
+
+            BidUpdateData updateData = new BidUpdateData(
+                    payload.auctionId,
+                    auction.getCurrentHighestBid(),
+                    bidder.getUsername(),
+                    auction.getBidHistory().size()
+            );
+            handler.getServer().broadcast(new Notification("BID_UPDATE" , updateData));
             return Response.ok("Đặt giá thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
