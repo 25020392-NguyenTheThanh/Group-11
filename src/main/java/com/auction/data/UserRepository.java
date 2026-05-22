@@ -12,96 +12,90 @@ public class UserRepository {
     private final UserMapper mapper;
 
     public UserRepository() {
-        this.db = DatabaseConnection.getInstance();
+        this.db     = DatabaseConnection.getInstance();
         this.mapper = new UserMapper();
     }
 
-    /**
-     * Xác thực đăng nhập.
-     * return User nếu đúng thông tin, {@code null} nếu sai.
-     */
+    // ─── Xác thực đăng nhập ───────────────────────────────────────────────────
     public User authenticate(String username, String password) {
         String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-
             ps.setString(1, username);
             ps.setString(2, password);
-
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return mapper.map(con, rs);
             }
-            finally {
-                ps.close();
-                con.close();
-
-            }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("[UserRepository] authenticate lỗi: " + e.getMessage());
         }
         return null;
     }
 
+    // ─── LỖI 1+2+3 FIX: register dùng 1 connection, có transaction, kiểm tra cả username lẫn email ──
     /**
-     * Đăng ký người dùng mới.
-     *return {true} nếu thành công.
+     * Trả về "ok" nếu thành công.
+     * Trả về "USERNAME_EXISTS", "EMAIL_EXISTS", hoặc mô tả lỗi nếu thất bại.
      */
-    public boolean register(String username, String password, String email, String role) {
-        String sqlUser = "INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)";
-        try (Connection con = db.getConnection();
-             PreparedStatement ps = con.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS)) {
+    public String register(String username, String password, String email, String role) {
+        // Kiểm tra trùng trước khi mở transaction
+        if (usernameExists(username)) return "USERNAME_EXISTS";
+        if (emailExists(email))       return "EMAIL_EXISTS";
 
-            ps.setString(1, username);
-            ps.setString(2, password);
-            ps.setString(3, email);
-            ps.setString(4, role.toUpperCase());
-            ps.executeUpdate();
+        Connection con = null;
+        try {
+            con = db.getConnection();
+            con.setAutoCommit(false);   // ← bắt đầu transaction
 
-            ResultSet keys = ps.getGeneratedKeys();
-            if (!keys.next()) return false;
-            int newId = keys.getInt(1);
+            // Bước 1: INSERT vào bảng users
+            int newId;
+            String sqlUser = "INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, username);
+                ps.setString(2, password);
+                ps.setString(3, email);
+                ps.setString(4, role.toUpperCase());
+                ps.executeUpdate();
 
+                ResultSet keys = ps.getGeneratedKeys();
+                if (!keys.next()) {
+                    con.rollback();
+                    return "Không lấy được ID người dùng mới";
+                }
+                newId = keys.getInt(1);
+            }
+
+            // Bước 2: INSERT vào bidders/sellers — CÙNG connection, CÙNG transaction
             insertRoleRecord(con, newId, role);
-            return true;
+
+            con.commit();   // ← commit cả 2 bước
+            return "ok";
 
         } catch (SQLException e) {
-            System.err.println("Lỗi đăng ký: " + e.getMessage());
-            return false;
+            if (con != null) try { con.rollback(); } catch (SQLException ignored) {}
+            System.err.println("[UserRepository] register lỗi: " + e.getMessage());
+            return "Lỗi DB: " + e.getMessage();
+        } finally {
+            if (con != null) try {
+                con.setAutoCommit(true);
+                con.close();
+            } catch (SQLException ignored) {}
         }
     }
 
-    // Lấy toàn bộ danh sách người dùng.
     public List<User> findAll() {
         List<User> list = new ArrayList<>();
         try (Connection con = db.getConnection();
              Statement st = con.createStatement();
              ResultSet rs = st.executeQuery("SELECT * FROM users")) {
-
             while (rs.next()) list.add(mapper.map(con, rs));
-
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("[UserRepository] findAll lỗi: " + e.getMessage());
         }
         return list;
     }
 
-    // Private helpers
-
-    // Tạo bản ghi phụ trong bảng bidders hoặc sellers tùy theo role.
-    private void insertRoleRecord(Connection con, int userId, String role) throws SQLException {
-        String sql = switch (role.toUpperCase()) {
-            case "BIDDER" -> "INSERT INTO bidders (user_id, balance) VALUES (?, 0)";
-            case "SELLER" -> "INSERT INTO sellers (user_id, revenue) VALUES (?, 0)";
-            default       -> null;
-        };
-        if (sql == null) return;
-
-        try (PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            ps.executeUpdate();
-        }
-    }
-
+    // ─── LỖI 4 FIX: implement đầy đủ, không còn stub trả false ──────────────
     public boolean addSellerRevenue(int sellerId, double amount) {
         String sql = "UPDATE sellers SET revenue = revenue + ? WHERE user_id = ?";
         try (Connection con = db.getConnection();
@@ -110,7 +104,7 @@ public class UserRepository {
             ps.setInt(2, sellerId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi cộng doanh thu seller: " + e.getMessage());
+            System.err.println("[UserRepository] addSellerRevenue lỗi: " + e.getMessage());
             return false;
         }
     }
@@ -123,8 +117,39 @@ public class UserRepository {
             ps.setInt(2, bidderId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Lỗi cập nhật số dư bidder: " + e.getMessage());
+            System.err.println("[UserRepository] updateBidderBalance lỗi: " + e.getMessage());
             return false;
+        }
+    }
+
+    // ─── Private helpers ──────────────────────────────────────────────────────
+    private boolean usernameExists(String username) {
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement("SELECT 1 FROM users WHERE username = ?")) {
+            ps.setString(1, username);
+            return ps.executeQuery().next();
+        } catch (SQLException e) { return false; }
+    }
+
+    private boolean emailExists(String email) {
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement("SELECT 1 FROM users WHERE email = ?")) {
+            ps.setString(1, email);
+            return ps.executeQuery().next();
+        } catch (SQLException e) { return false; }
+    }
+
+    /** INSERT bản ghi phụ vào bidders/sellers — PHẢI dùng cùng connection với INSERT users */
+    private void insertRoleRecord(Connection con, int userId, String role) throws SQLException {
+        String sql = switch (role.toUpperCase()) {
+            case "BIDDER" -> "INSERT INTO bidders (user_id, balance) VALUES (?, 0)";
+            case "SELLER" -> "INSERT INTO sellers (user_id, revenue) VALUES (?, 0)";
+            default       -> null;
+        };
+        if (sql == null) return;
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.executeUpdate();
         }
     }
 }

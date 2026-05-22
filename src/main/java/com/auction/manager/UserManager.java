@@ -1,9 +1,6 @@
 package com.auction.manager;
 
 import com.auction.data.DataManager;
-import com.auction.model.user.Admin;
-import com.auction.model.user.Bidder;
-import com.auction.model.user.Seller;
 import com.auction.model.user.User;
 
 import java.util.List;
@@ -11,77 +8,48 @@ import java.util.List;
 public class UserManager {
 
     private static volatile UserManager instance;
-
     private UserManager() {}
 
     public static UserManager getInstance() {
         if (instance == null) {
             synchronized (UserManager.class) {
-                if (instance == null) {
-                    instance = new UserManager();
-                }
+                if (instance == null) instance = new UserManager();
             }
         }
         return instance;
     }
 
     /**
-     * Đăng ký người dùng mới — lưu vào MySQL.
-     * return User vừa tạo, hoặc null nếu username/email đã tồn tại.
+     * Đăng ký người dùng mới.
+     * Trả về User nếu thành công.
+     * Ném IllegalArgumentException với thông báo chi tiết nếu thất bại.
      */
-    public synchronized User register(String username, String password,
-                                      String email, String role) {
-        boolean ok = DataManager.getInstance().registerUser(username, password, email, role);
-        if (!ok) {
-            System.out.println("Đăng ký thất bại: username/email đã tồn tại — " + username);
-            return null;
-        }
-        // Đọc lại từ DB để trả về object có id thật
-        return DataManager.getInstance().authenticate(username, password);
+    public synchronized User register(String username, String password, String email, String role) {
+        String result = DataManager.getInstance().registerUser(username, password, email, role);
+        return switch (result) {
+            case "ok" -> {
+                User created = DataManager.getInstance().authenticate(username, password);
+                if (created != null) created.login(password);
+                yield created;
+            }
+            case "USERNAME_EXISTS" -> throw new IllegalArgumentException("Username '" + username + "' đã tồn tại!");
+            case "EMAIL_EXISTS"    -> throw new IllegalArgumentException("Email '" + email + "' đã được đăng ký!");
+            default                -> throw new IllegalArgumentException("Đăng ký thất bại: " + result);
+        };
     }
 
-    /**
-     * Đăng nhập — xác thực qua MySQL.
-     * return User nếu đúng thông tin, null nếu sai.
-     */
     public User login(String username, String password) {
         User user = DataManager.getInstance().authenticate(username, password);
-        if (user == null) {
-            System.out.println("Đăng nhập thất bại: " + username);
-            return null;
-        }
-        user.login(password); // đánh dấu authenticated = true
+        if (user == null) return null;
+        user.login(password);
         return user;
     }
 
-    // Lấy toàn bộ danh sách user (dùng cho Admin).
-    public List<User> getUsers() {
-        return DataManager.getInstance().getAllUsers();
-    }
+    public List<User> getUsers() { return DataManager.getInstance().getAllUsers(); }
 
-    // Tìm user theo username.
     public User findUser(String username) {
         return getUsers().stream()
                 .filter(u -> u.getUsername().equals(username))
-                .findFirst()
-                .orElse(null);
-    }
-
-    // Tìm user theo id.
-    public User findUserById(int id) {
-        return getUsers().stream()
-                .filter(u -> u.getId() == id)
-                .findFirst()
-                .orElse(null);
-    }
-
-    @Deprecated
-    public void loadFromDisk() {
-        System.out.println("[UserManager] loadFromDisk() đã bị bỏ — dữ liệu lấy từ MySQL.");
-    }
-
-    @Deprecated
-    public void saveToDisk() {
-        System.out.println("[UserManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");
+                .findFirst().orElse(null);
     }
 }
