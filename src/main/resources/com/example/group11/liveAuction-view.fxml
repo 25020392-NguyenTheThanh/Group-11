@@ -104,7 +104,7 @@
                     </ScrollPane>
                 </VBox>
 
-                <VBox spacing="15" style="-fx-background-color: #353436; -fx-border-color: #ffb95f; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 20;">
+                <VBox fx:id="biddingVBox" spacing="15" style="-fx-background-color: #353436; -fx-border-color: #ffb95f; -fx-border-width: 2; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 20;">
                     <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 12px; -fx-font-weight: bold;" text="BÀN ĐẶT GIÁ" />
 
                     <HBox spacing="10">

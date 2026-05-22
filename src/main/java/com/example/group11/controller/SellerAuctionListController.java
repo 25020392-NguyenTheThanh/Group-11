@@ -405,7 +405,21 @@ public class SellerAuctionListController implements Initializable {
             Item item = items.get(i);
             VBox productCard = ProductCardFactory.createProductCard(item,
                     (itemData, cardNode) -> {
-                        System.out.println("Xem chi tiết sản phẩm: " + itemData.getName());
+                        Auction auction = itemAuctionMap.get(itemData.getId());
+                        if (auction != null) {
+                            try {
+                                FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
+                                if (loader != null) {
+                                    LiveAuctionController controller = loader.getController();
+                                    controller.setAuctionAndUser(auction, user);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                NotificationController.showError("Lỗi chuyển trang", "Không thể mở trang đấu giá trực tiếp.");
+                            }
+                        } else {
+                            NotificationController.showError("Thông báo", "Sản phẩm chưa đăng ký hoặc không có phiên đấu giá.");
+                        }
                     },
                     (itemData, cardNode) -> {
                         handleStartEditProduct(itemData);

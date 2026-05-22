@@ -6,6 +6,7 @@ import com.auction.model.auction.AuctionStatus;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
+import com.auction.model.user.Seller;
 import com.auction.model.user.User;
 import com.auction.network.GetAuctionDetailPayload;
 import com.auction.network.PlaceBidPayload;
@@ -57,6 +58,7 @@ public class LiveAuctionController implements Initializable {
     @FXML private TextField bidAmountField;
     @FXML private Button confirmBidButton;
     @FXML private VBox bidHistoryContainer;
+    @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
     
     @FXML private LineChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
@@ -186,19 +188,31 @@ public class LiveAuctionController implements Initializable {
             viewerCountLabel.setText("👁 " + auction.getViewCount());
         }
 
-        // Thiết lập giá trị mặc định cho ô nhập thầu nếu chưa có
-        if (bidAmountField.getText().trim().isEmpty() || isRunning) {
-            double minAccepted = auction.getCurrentHighestBid() + auction.getMinBidStep();
-            bidAmountField.setText(String.format("%.2f", minAccepted));
-        }
-
-        // Bật / tắt bảng đặt thầu theo trạng thái phiên
-        bidAmountField.setDisable(!isRunning);
-        confirmBidButton.setDisable(!isRunning);
-        if (!isRunning) {
-            confirmBidButton.setStyle("-fx-background-color: #262626; -fx-text-fill: #555555; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12;");
+        // Bật / tắt bảng đặt thầu theo vai trò người dùng và trạng thái phiên
+        if (!(user instanceof Bidder)) {
+            if (biddingVBox != null) {
+                biddingVBox.setVisible(false);
+                biddingVBox.setManaged(false);
+            }
         } else {
-            confirmBidButton.setStyle("-fx-background-color: #ffb95f; -fx-text-fill: #2a1700; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12; -fx-cursor: hand;");
+            if (biddingVBox != null) {
+                biddingVBox.setVisible(true);
+                biddingVBox.setManaged(true);
+            }
+            // Thiết lập giá trị mặc định cho ô nhập thầu nếu chưa có
+            if (bidAmountField.getText().trim().isEmpty() || isRunning) {
+                double minAccepted = auction.getCurrentHighestBid() + auction.getMinBidStep();
+                bidAmountField.setText(String.format("%.2f", minAccepted));
+            }
+
+            // Bật / tắt bảng đặt thầu theo trạng thái phiên
+            bidAmountField.setDisable(!isRunning);
+            confirmBidButton.setDisable(!isRunning);
+            if (!isRunning) {
+                confirmBidButton.setStyle("-fx-background-color: #262626; -fx-text-fill: #555555; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12;");
+            } else {
+                confirmBidButton.setStyle("-fx-background-color: #ffb95f; -fx-text-fill: #2a1700; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12; -fx-cursor: hand;");
+            }
         }
 
         // Load ảnh sản phẩm
@@ -386,7 +400,8 @@ public class LiveAuctionController implements Initializable {
         details.append("Trạng thái đấu giá: ").append(auction.getStatus()).append("\n");
         details.append("Giá cao nhất hiện tại: ").append(String.format("%.2f", auction.getCurrentHighestBid())).append(" $\n");
         details.append("Bước giá tối thiểu: ").append(String.format("%.2f", auction.getMinBidStep())).append(" $\n");
-        details.append("Thời gian kết thúc: ").append(auction.getEndTime()).append("\n");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        details.append("Thời gian kết thúc: ").append(auction.getEndTime() != null ? auction.getEndTime().format(formatter) : "N/A").append("\n");
 
         if (item instanceof com.auction.model.item.Art art) {
             details.append("Họa sĩ: ").append(art.getArtist()).append("\n");
@@ -399,16 +414,27 @@ public class LiveAuctionController implements Initializable {
         NotificationController.showNotification("Chi tiết sản phẩm #" + item.getId(), details.toString());
     }
 
+    /**
+     * Quay lại danh sách phiên đấu giá phù hợp với vai trò người dùng (Bidder hoặc Seller).
+     */
     @FXML
     private void handleBack(ActionEvent event) {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
         try {
-            FXMLLoader loader = GenerationSupport.changeScene(backButton, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
-            if (loader != null) {
-                BidderAuctionListController controller = loader.getController();
-                controller.setUser(user);
+            if (user instanceof Seller) {
+                FXMLLoader loader = GenerationSupport.changeScene(backButton, "sellerAuctionList-view.fxml", "Auction floor of Seller");
+                if (loader != null) {
+                    SellerAuctionListController controller = loader.getController();
+                    controller.setUser(user);
+                }
+            } else {
+                FXMLLoader loader = GenerationSupport.changeScene(backButton, "bidderAuctionList-view.fxml", "Auction floor of Bidder");
+                if (loader != null) {
+                    BidderAuctionListController controller = loader.getController();
+                    controller.setUser(user);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
