@@ -19,6 +19,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
@@ -104,6 +105,30 @@ public class BidderAuctionListController implements Initializable {
     private List<Auction> allAuctions = new ArrayList<>();
     private String currentTab = "DASHBOARD";
 
+    @FXML
+    private StackPane addFundsOverlay;
+
+    @FXML
+    private VBox package1;
+
+    @FXML
+    private VBox package2;
+
+    @FXML
+    private VBox package3;
+
+    @FXML
+    private VBox package4;
+
+    @FXML
+    private VBox package5;
+
+    @FXML
+    private VBox package6;
+
+    private VBox selectedPackageNode = null;
+    private static final java.util.Set<Integer> toppedUpBidders = new java.util.HashSet<>();
+
     /**
      * Thiết lập thông tin người dùng hiện tại (Bidder), cập nhật hiển thị số dư ví,
      * tải danh sách đấu giá ban đầu và đăng ký lắng nghe thông báo thời gian thực.
@@ -114,6 +139,9 @@ public class BidderAuctionListController implements Initializable {
         this.user = user;
         if (user instanceof Bidder bidder) {
             walletBalance.setText(String.format("%.2f", bidder.getBalance()));
+            if (toppedUpBidders.contains(bidder.getId())) {
+                addFundsBtn.setDisable(true);
+            }
         }
         loadAuctions();
         setupRealtimeNotifications();
@@ -154,6 +182,23 @@ public class BidderAuctionListController implements Initializable {
         addFundsBtn.setOnAction(event -> {
             handleAddFunds(null);
         });
+
+        // Đăng ký sự kiện rê chuột (hover) cho các gói nạp
+        VBox[] packages = {package1, package2, package3, package4, package5, package6};
+        for (VBox pkg : packages) {
+            if (pkg != null) {
+                pkg.setOnMouseEntered(e -> {
+                    if (pkg != selectedPackageNode) {
+                        pkg.setStyle("-fx-background-color: #1E293B; -fx-border-color: #FFD700; -fx-border-width: 1.5; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand;");
+                    }
+                });
+                pkg.setOnMouseExited(e -> {
+                    if (pkg != selectedPackageNode) {
+                        pkg.setStyle("-fx-background-color: #1E2D45; -fx-border-color: #334155; -fx-border-width: 1.5; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand;");
+                    }
+                });
+            }
+        }
     }
 
     /**
@@ -556,36 +601,130 @@ public class BidderAuctionListController implements Initializable {
      */
     @FXML
     private void handleAddFunds(ActionEvent event) {
-        TextInputDialog dialog = new TextInputDialog("1000");
-        dialog.setTitle("Nạp tiền vào tài khoản");
-        dialog.setHeaderText("Nạp thêm tiền vào ví của bạn");
-        dialog.setContentText("Nhập số tiền muốn nạp ($):");
-
-        DialogPane dialogPane = dialog.getDialogPane();
-        dialogPane.setStyle("-fx-background-color: #0A192F; -fx-text-fill: white;");
-        dialogPane.lookupAll(".label").forEach(node -> node.setStyle("-fx-text-fill: white;"));
-        dialogPane.getButtonTypes().forEach(buttonType -> {
-            Button btn = (Button) dialogPane.lookupButton(buttonType);
-            if (btn != null) {
-                btn.setStyle("-fx-background-color: #112240; -fx-text-fill: white; -fx-font-weight: bold;");
+        if (user instanceof Bidder bidder) {
+            if (toppedUpBidders.contains(bidder.getId())) {
+                NotificationController.showAlert("Thông báo", "Bạn đã nạp tiền trước đó rồi, không thể nạp thêm!");
+                return;
             }
-        });
+        }
 
-        Optional<String> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            try {
-                double amount = Double.parseDouble(result.get());
-                if (amount <= 0) {
-                    NotificationController.showError("Lỗi", "Số tiền phải lớn hơn 0.");
-                    return;
+        // Đặt lại trạng thái các gói nạp
+        resetPackageStyles();
+        selectedPackageNode = null;
+
+        addFundsOverlay.setVisible(true);
+        addFundsOverlay.setManaged(true);
+    }
+
+    @FXML
+    private void handleCloseAddFunds(ActionEvent event) {
+        addFundsOverlay.setVisible(false);
+        addFundsOverlay.setManaged(false);
+    }
+
+    @FXML
+    private void handleSelectPackage(javafx.scene.input.MouseEvent event) {
+        VBox clickedNode = (VBox) event.getSource();
+
+        if (clickedNode == selectedPackageNode) {
+            return;
+        }
+
+        resetPackageStyles();
+        selectedPackageNode = clickedNode;
+        highlightSelectedPackage(clickedNode);
+
+        String amountStr = (String) clickedNode.getUserData();
+        double amount = Double.parseDouble(amountStr);
+
+        String packageLabel = "";
+        for (javafx.scene.Node child : clickedNode.getChildren()) {
+            if (child instanceof Label) {
+                Label lbl = (Label) child;
+                if (lbl.getText().contains("đ")) {
+                    packageLabel = lbl.getText();
+                    break;
                 }
-                if (user instanceof Bidder bidder) {
+            }
+        }
+        if (packageLabel.isEmpty()) {
+            packageLabel = String.format("%,.0fđ", amount);
+        }
+
+        boolean confirm = NotificationController.showConfirmation(
+                "Xác nhận nạp tiền",
+                "Xác nhận nạp gói " + packageLabel + " vào tài khoản?",
+                "Sau khi xác nhận, bạn sẽ không thể nạp thêm tiền nữa.",
+                "Đồng ý",
+                "Hủy"
+        );
+
+        if (confirm) {
+            if (user instanceof Bidder bidder) {
+                // Gửi request nạp tiền lên server để lưu vào database
+                Response res = ServerConnection.getInstance().send(RequestType.TOP_UP, amount);
+                if (res != null && res.isSuccess()) {
+                    double newBalance = (Double) res.getData();
+                    // Cập nhật lại đối tượng bidder ở phía client
                     bidder.topUp(amount);
-                    walletBalance.setText(String.format("%.2f", bidder.getBalance()));
-                    NotificationController.showNotification("Thành công", String.format("Đã nạp thành công %.2f $ vào ví.", amount));
+                    walletBalance.setText(String.format("%.2f", newBalance));
+
+                    // Lưu trạng thái đã nạp tiền
+                    toppedUpBidders.add(bidder.getId());
+
+                    // Khóa nút cộng tiền
+                    addFundsBtn.setDisable(true);
+
+                    NotificationController.showNotification("Thành công",
+                            String.format("Đã nạp thành công %s vào ví. Cổng nạp tiền hiện tại đã được khóa.", packageLabel));
+
+                    // Ẩn bảng nạp tiền
+                    addFundsOverlay.setVisible(false);
+                    addFundsOverlay.setManaged(false);
+                } else {
+                    NotificationController.showError("Lỗi nạp tiền", res != null ? res.getMessage() : "Không thể thực hiện nạp tiền");
+                    resetPackageStyles();
+                    selectedPackageNode = null;
                 }
-            } catch (NumberFormatException e) {
-                NotificationController.showError("Lỗi", "Số tiền không hợp lệ.");
+            }
+        } else {
+            // Người dùng hủy, đặt lại trạng thái các gói nạp
+            resetPackageStyles();
+            selectedPackageNode = null;
+        }
+    }
+
+    private void resetPackageStyles() {
+        VBox[] packages = {package1, package2, package3, package4, package5, package6};
+        for (VBox pkg : packages) {
+            if (pkg != null) {
+                pkg.setStyle("-fx-background-color: #1E2D45; -fx-border-color: #334155; -fx-border-width: 1.5; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand;");
+                for (javafx.scene.Node child : pkg.getChildren()) {
+                    if (child instanceof Label) {
+                        Label lbl = (Label) child;
+                        if (lbl.getText().contains("Ưu đãi")) {
+                            lbl.setStyle("-fx-text-fill: #22C55E; -fx-font-size: 10;");
+                        } else {
+                            lbl.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void highlightSelectedPackage(VBox pkg) {
+        if (pkg != null) {
+            pkg.setStyle("-fx-background-color: #FF2A54; -fx-border-color: #FFD700; -fx-border-width: 1.5; -fx-border-radius: 10; -fx-background-radius: 10; -fx-cursor: hand;");
+            for (javafx.scene.Node child : pkg.getChildren()) {
+                if (child instanceof Label) {
+                    Label lbl = (Label) child;
+                    if (lbl.getText().contains("Ưu đãi")) {
+                        lbl.setStyle("-fx-text-fill: white; -fx-font-size: 10;");
+                    } else {
+                        lbl.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+                    }
+                }
             }
         }
     }

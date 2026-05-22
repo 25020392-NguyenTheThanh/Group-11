@@ -33,6 +33,7 @@ public class RequestProcessor {
             case UPDATE_ITEM    -> handleUpdateItem(request, handler);
             case ADD_TO_WATCHLIST -> handleAddToWatchlist(request, handler);
             case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
+            case TOP_UP         -> handleTopUp(request, handler);
         };
     } // vi phạm OCP
 
@@ -285,6 +286,40 @@ public class RequestProcessor {
             return Response.ok("Đã xóa khỏi danh sách theo dõi");
         } else {
             return Response.error("Không thể xóa khỏi danh sách theo dõi");
+        }
+    }
+
+    private static Response handleTopUp(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) {
+            return Response.error("Bạn cần đăng nhập để nạp tiền");
+        }
+        if (!(user instanceof Bidder)) {
+            return Response.error("Chỉ người mua (Bidder) mới có quyền nạp tiền!");
+        }
+        if (request.getPayload() == null || !(request.getPayload() instanceof Double)) {
+            return Response.error("Dữ liệu nạp tiền không hợp lệ!");
+        }
+
+        double amount = (Double) request.getPayload();
+        if (amount <= 0) {
+            return Response.error("Số tiền nạp phải lớn hơn 0");
+        }
+
+        try {
+            Bidder bidder = (Bidder) user;
+            double newBalance = bidder.getBalance() + amount;
+
+            // Đồng bộ trực tiếp vào cơ sở dữ liệu
+            boolean success = com.auction.data.DataManager.getInstance().updateBidderBalance(bidder.getId(), newBalance);
+            if (success) {
+                bidder.topUp(amount);
+                return Response.ok(bidder.getBalance());
+            } else {
+                return Response.error("Không thể cập nhật số dư vào cơ sở dữ liệu");
+            }
+        } catch (Exception e) {
+            return Response.error("Lỗi nạp tiền: " + e.getMessage());
         }
     }
 }
