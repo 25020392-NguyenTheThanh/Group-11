@@ -1,12 +1,14 @@
 package com.auction.model.auction;
 
 
+import java.io.Serializable;
 import java.time.format.DateTimeFormatter;
 import java.time.LocalDateTime;
 
 // Ghi lại một lần đặt giá trong phiên
 
-public class BidTransaction {
+public class BidTransaction implements Serializable {
+    private static final long serialVersionUID = 1L;
     private final int bidderId;
     private final String bidderName;
     private final double amount;

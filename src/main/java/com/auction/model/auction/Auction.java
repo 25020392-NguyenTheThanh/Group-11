@@ -8,6 +8,7 @@ import com.auction.model.user.Bidder;
 import com.auction.pattern.observer.Observer;
 import com.auction.pattern.observer.Subject;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +17,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 // Auction đóng vai trò là Subject — notify tất cả observer khi có thay đổi
 // sửa thêm một số chỗ tránh race condition!!
 
-public class Auction implements Subject {
+public class Auction implements Subject, Serializable {
+    private static final long serialVersionUID = 1L;
     private int id;
     private Item item;
     private double currentHighestBid;
@@ -134,7 +136,9 @@ public class Auction implements Subject {
 
         // Kiểm tra thời gian thực
         if (LocalDateTime.now().isAfter(endTime)) {
-            finish();
+            if (status == AuctionStatus.RUNNING) {
+                finish();
+            }
             throw new AuctionClosedException("Phiên #" + id + " đã hết giờ.");
         }
 

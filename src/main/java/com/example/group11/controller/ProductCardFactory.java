@@ -23,12 +23,13 @@ import java.util.function.Consumer;
 
 public class ProductCardFactory {
     /**
-     * Hàm tạo Card sản phẩm dùng chung (Cả Bidder và Seller đều dùng được)
+     * Hàm tạo Card sản phẩm dùng riêng cho Seller
      *  item Đối tượng Item polymorph (Art, Electronics, Vehicle) lấy từ DB
-     *  isSeller Nếu là true thì hiện nút XÓA/SỬA, nếu là false (Bidder) thì hiện nút ĐẤU GIÁ
-     *  onActionClick Hành động xử lý khi nhấn nút tương ứng
+     *  onDetailsClick Hành động xử lý khi nhấn nút CHI TIẾT
+     *  onEditClick Hành động xử lý khi nhấn nút SỬA
+     *  onActionClick Hành động xử lý khi nhấn nút XÓA
      */
-    public static VBox createProductCard(Item item, boolean isSeller, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onEditClick, BiConsumer<Item, VBox> onActionClick) {
+    public static VBox createProductCard(Item item, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onEditClick, BiConsumer<Item, VBox> onActionClick) {
         // 1. Lấy thông tin chung từ DB
         String id = String.valueOf(item.getId());
         String name = item.getName();
@@ -201,54 +202,40 @@ public class ProductCardFactory {
         });
         actions.getChildren().add(btnDetails);
 
-        // 3. THAY ĐỔI NÚT BẤM LINH HOẠT THEO VAI TRÒ (ROLE)
-
-        if (isSeller) {
-            // Giao diện phía Seller: Hiện nút quản lý
-            Button btnEdit = new Button("SỬA");
-            btnEdit.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(btnEdit, javafx.scene.layout.Priority.ALWAYS);
-            if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
-                btnEdit.setDisable(true);
-                btnEdit.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
-            } else {
-                btnEdit.setStyle("-fx-background-color: #f57c00; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
+        // Giao diện phía Seller: Hiện nút quản lý (SỬA, XÓA)
+        Button btnEdit = new Button("SỬA");
+        btnEdit.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(btnEdit, javafx.scene.layout.Priority.ALWAYS);
+        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+            btnEdit.setDisable(true);
+            btnEdit.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
+        } else {
+            btnEdit.setStyle("-fx-background-color: #f57c00; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
+        }
+        btnEdit.setOnAction(e -> {
+            if (onEditClick != null) {
+                onEditClick.accept(item, card);
             }
-            btnEdit.setOnAction(e -> {
-                if (onEditClick != null) {
-                    onEditClick.accept(item, card);
+        });
+
+        Button btnDelete = new Button("XÓA");
+        btnDelete.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(btnDelete, javafx.scene.layout.Priority.ALWAYS);
+        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+            btnDelete.setDisable(true);
+            btnDelete.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
+        } else {
+            btnDelete.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
+        }
+        btnDelete.setOnAction(e -> {
+            handleDeleteAuctionAction(id, card, (confirmedCardNode) -> {
+                if (onActionClick != null) {
+                    // Trả cả đối tượng item dữ liệu và node giao diện card về Controller
+                    onActionClick.accept(item, confirmedCardNode);
                 }
             });
-
-            Button btnDelete = new Button("XÓA");
-            btnDelete.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(btnDelete, javafx.scene.layout.Priority.ALWAYS);
-            if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
-                btnDelete.setDisable(true);
-                btnDelete.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
-            } else {
-                btnDelete.setStyle("-fx-background-color: #d32f2f; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand; -fx-background-radius: 4;");
-            }
-            btnDelete.setOnAction(e -> {
-                handleDeleteAuctionAction(id, card, (confirmedCardNode) -> {
-                    if (onActionClick != null) {
-                        // Trả cả đối tượng item dữ liệu và node giao diện card về Controller
-                        onActionClick.accept(item, confirmedCardNode);
-                    }
-                });
-            });
-            actions.getChildren().addAll(btnEdit, btnDelete);
-        } else {
-            // Giao diện phía Bidder: Hiện nút tham gia đấu giá
-            Button btnBid = new Button("ĐẤU GIÁ");
-            btnBid.setMaxWidth(Double.MAX_VALUE);
-            HBox.setHgrow(btnBid, javafx.scene.layout.Priority.ALWAYS);
-            btnBid.setStyle("-fx-background-color: #ffd700; -fx-text-fill: black; -fx-font-weight: bold; -fx-padding: 8; -fx-cursor: hand;");
-            btnBid.setOnAction(e -> {
-                if (onActionClick != null) onActionClick.accept(item, card);
-            });
-            actions.getChildren().add(btnBid);
-        }
+        });
+        actions.getChildren().addAll(btnEdit, btnDelete);
 
         // Lắp ráp toàn bộ card
         content.getChildren().addAll(nameDesc, priceContainer, attrBox, actions);
@@ -260,7 +247,7 @@ public class ProductCardFactory {
     public static void handleDeleteAuctionAction(String auctionId, VBox cardNode, Consumer<VBox> onDeleteSuccess) {
         boolean isConfirmed = NotificationController.showConfirmation(
                 "Xác nhận xóa",
-                "Bạn có chắc chắn muốn xóa đấu giá này không?",
+                "Bạn có chắc chắn muốn xóa sản phẩm này không?",
                 "Hành động này không thể hoàn tác ID: " + auctionId,
                 "Đồng ý",
                 "Hủy bỏ"

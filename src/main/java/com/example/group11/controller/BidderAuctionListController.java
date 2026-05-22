@@ -371,15 +371,7 @@ public class BidderAuctionListController implements Initializable {
         dialog.setHeaderText("Đấu giá cho sản phẩm: " + auction.getItem().getName());
         dialog.setContentText(String.format("Nhập số tiền đấu giá (Tối thiểu %.2f $):", minAccepted));
 
-        DialogPane dialogPane = dialog.getDialogPane();
-        dialogPane.setStyle("-fx-background-color: #0A192F; -fx-text-fill: white;");
-        dialogPane.lookupAll(".label").forEach(node -> node.setStyle("-fx-text-fill: white;"));
-        dialogPane.getButtonTypes().forEach(buttonType -> {
-            Button btn = (Button) dialogPane.lookupButton(buttonType);
-            if (btn != null) {
-                btn.setStyle("-fx-background-color: #112240; -fx-text-fill: white; -fx-font-weight: bold;");
-            }
-        });
+        NotificationController.applyDarkTheme(dialog);
 
         Optional<String> result = dialog.showAndWait();
         if (result.isPresent()) {

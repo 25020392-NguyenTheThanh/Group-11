@@ -7,6 +7,7 @@ import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
 import com.auction.model.user.User;
+import com.auction.network.CreateAuctionPayload;
 import com.auction.network.CreateItemPayload;
 import com.auction.network.UpdateItemPayload;
 import com.auction.network.RequestType;
@@ -402,7 +403,7 @@ public class SellerAuctionListController implements Initializable {
 
         for (int i = 0; i < items.size(); i++) {
             Item item = items.get(i);
-            VBox productCard = ProductCardFactory.createProductCard(item, true,
+            VBox productCard = ProductCardFactory.createProductCard(item,
                     (itemData, cardNode) -> {
                         System.out.println("Xem chi tiết sản phẩm: " + itemData.getName());
                     },
@@ -421,6 +422,43 @@ public class SellerAuctionListController implements Initializable {
                             deleteTask.setOnSucceeded(evt -> {
                                 Response res = deleteTask.getValue();
                                 if (res != null && res.isSuccess()) {
+                                    // 1. Giải phóng Image ở ImageView trong cardNode để tránh file lock trên Windows
+                                    ImageView imgView = (ImageView) cardNode.lookup("#productCardImageView");
+                                    if (imgView != null) {
+                                        imgView.setImage(null);
+                                    }
+
+                                    // 2. Nếu sản phẩm bị xóa trùng với sản phẩm đang hiển thị trong form sửa, giải phóng nó
+                                    if (editingItem != null && editingItem.getId() == itemData.getId()) {
+                                        productImageView.setImage(null);
+                                        productImageView.setVisible(false);
+                                        uploadPrompt.setVisible(true);
+                                        selectedImageFile = null;
+                                        linkImageUrl = null;
+                                        editingItem = null;
+                                    }
+
+                                    // Ép Garbage Collector chạy để giải phóng tài nguyên hệ thống (file lock) lập tức
+                                    System.gc();
+
+                                    // 3. Thực hiện xóa file ảnh vật lý
+                                    String imageUrl = itemData.getImageUrl();
+                                    if (imageUrl != null && !imageUrl.isEmpty() && imageUrl.startsWith("/")) {
+                                        try {
+                                            java.io.File file = new java.io.File("src/main/resources" + imageUrl);
+                                            if (file.exists()) {
+                                                boolean isDeleted = file.delete();
+                                                if (isDeleted) {
+                                                    System.out.println("Đã xóa file ảnh vật lý thành công tại: " + file.getAbsolutePath());
+                                                } else {
+                                                    System.err.println("Không thể xóa file vật lý! Tệp tin vẫn đang bị lock hoặc không có quyền: " + file.getAbsolutePath());
+                                                }
+                                            }
+                                        } catch (Exception ex) {
+                                            System.err.println("Lỗi khi xóa file ảnh: " + ex.getMessage());
+                                        }
+                                    }
+
                                     NotificationController.showNotification("Thành công", "Đã xóa sản phẩm thành công!");
                                     this.contentGrid.getChildren().remove(cardNode);
                                     auctionItems.remove(itemData);
@@ -881,7 +919,42 @@ public class SellerAuctionListController implements Initializable {
             Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
             if (response != null && response.isSuccess()) {
                 System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
-                NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+                
+                Item createdItem = (Item) response.getData();
+                if (createdItem != null) {
+                    CreateAuctionPayload createAuctionPayload = new CreateAuctionPayload();
+                    createAuctionPayload.itemId = createdItem.getId();
+                    
+                    if (startDatePicker.getValue() != null) {
+                        createAuctionPayload.startTime = startDatePicker.getValue().atStartOfDay();
+                    } else {
+                        createAuctionPayload.startTime = LocalDateTime.now();
+                    }
+                    
+                    if (endDatePicker.getValue() != null) {
+                        createAuctionPayload.endTime = endDatePicker.getValue().atTime(23, 59, 59);
+                    } else {
+                        createAuctionPayload.endTime = LocalDateTime.now().plusDays(7);
+                    }
+                    
+                    try {
+                        createAuctionPayload.minBidStep = Double.parseDouble(minimumBidIncrementField.getText().trim());
+                    } catch (NumberFormatException e) {
+                        createAuctionPayload.minBidStep = 1.0;
+                    }
+
+                    Response auctionResponse = ServerConnection.getInstance().send(RequestType.CREATE_AUCTION, createAuctionPayload);
+                    if (auctionResponse != null && auctionResponse.isSuccess()) {
+                        System.out.println("[DATABASE] Đã tạo phiên đấu giá thành công!");
+                        NotificationController.showNotification("Thành công", "Đăng ký sản phẩm và tạo phiên đấu giá thành công!");
+                    } else {
+                        String auctionError = (auctionResponse != null) ? auctionResponse.getMessage() : "Lỗi kết nối khi tạo phiên đấu giá";
+                        NotificationController.showError("Lỗi tạo phiên đấu giá", "Đã đăng ký sản phẩm nhưng không thể tạo phiên đấu giá.\nChi tiết: " + auctionError);
+                    }
+                } else {
+                    NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+                }
+
                 SellerUIHelper.setNeedsRefresh(true);
                 clearRegistrationForm();
                 handleBackToListings(null);

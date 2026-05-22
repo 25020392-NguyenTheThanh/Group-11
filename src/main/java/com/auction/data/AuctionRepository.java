@@ -27,7 +27,7 @@ public class AuctionRepository {
                 int winnerId = rs.getInt("current_winner_id");
                 boolean winnerIsNull = rs.wasNull();
                 String statusStr = rs.getString("status");
-                LocalDateTime startTime = rs.getTimestamp("star_time").toLocalDateTime();
+                LocalDateTime startTime = rs.getTimestamp("start_time").toLocalDateTime();
                 LocalDateTime endTime = rs.getTimestamp("end_time").toLocalDateTime();
                 double minBidStep = rs.getDouble("min_bid_step");
 
@@ -57,8 +57,8 @@ public class AuctionRepository {
      * return auctionId được sinh ra, hoặc {-1} nếu lỗi.
      */
     public int create(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
-        String sql = "INSERT INTO auctions (item_id, current_highest_bid, status, start_time , end_time, min_bid_step) "
-                + "SELECT id, starting_price, 'OPEN', ?, ? FROM items WHERE id = ?";
+        String sql = "INSERT INTO auctions (item_id, current_highest_bid, status, start_time, end_time, min_bid_step) "
+                + "SELECT id, starting_price, 'OPEN', ?, ?, ? FROM items WHERE id = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 

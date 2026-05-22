@@ -13,12 +13,17 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
+import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 
 public class AuctionCardFactory {
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy");
 
     public static VBox createAuctionCard(Auction auction, Consumer<Auction> onBidAction, Consumer<Auction> onViewDetailsAction) {
         Item item = auction.getItem();
@@ -26,8 +31,8 @@ public class AuctionCardFactory {
 
         // 1. Container chính của Card (Tương đương VBox fx:id="mainCardContainer")
         VBox cardContainer = new VBox();
-        cardContainer.setMaxWidth(350.0);
-        cardContainer.setPrefWidth(320.0);
+        cardContainer.setMaxWidth(260.0);
+        cardContainer.setPrefWidth(260.0);
         cardContainer.setStyle(
                 "-fx-background-color: #1A1A1A; " +
                         "-fx-border-color: #262626; " +
@@ -41,11 +46,12 @@ public class AuctionCardFactory {
         headerBar.setAlignment(Pos.CENTER_LEFT);
         headerBar.setPrefHeight(35.0);
         headerBar.setSpacing(10.0);
-        headerBar.setPadding(new Insets(10, 15, 5, 15));
+        headerBar.setPadding(new Insets(0, 15, 0, 15));
+        headerBar.setStyle("-fx-background-color: #0A0A0A; -fx-border-color: transparent transparent #262626 transparent; -fx-background-radius: 15 15 0 0; -fx-border-radius: 15 15 0 0;");
 
         Label auctionIdLabel = new Label("ID: #" + auction.getId());
-        auctionIdLabel.setTextFill(Color.valueOf("#94A3B8"));
-        auctionIdLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+        auctionIdLabel.setStyle("-fx-text-fill: #d0c6ab; -fx-font-weight: bold;");
+        auctionIdLabel.setFont(Font.font("System", 9.0));
 
         // Khoảng trống đẩy trạng thái về bên phải
         Region spacerHeader = new Region();
@@ -53,122 +59,179 @@ public class AuctionCardFactory {
 
         // Container trạng thái (Dot + Text)
         HBox statusContainer = new HBox();
-        statusContainer.setAlignment(Pos.CENTER_LEFT);
-        statusContainer.setSpacing(6.0);
+        statusContainer.setAlignment(Pos.CENTER);
+        statusContainer.setSpacing(5.0);
 
-        Circle statusDot = new Circle(4.0);
+        Circle statusDot = new Circle(3.0);
+        statusDot.setStroke(Color.TRANSPARENT);
         Label statusLabel = new Label(auction.getStatus().toString());
-        statusLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+        statusLabel.setFont(Font.font("System", 10.0));
 
         // Cấu hình màu sắc theo trạng thái
+        String statusColor = "#94A3B8";
         if (auction.getStatus() == AuctionStatus.RUNNING) {
-            statusDot.setFill(Color.valueOf("#00e475"));
-            statusLabel.setTextFill(Color.valueOf("#00e475"));
-        } else {
-            statusDot.setFill(Color.valueOf("#94A3B8"));
-            statusLabel.setTextFill(Color.valueOf("#94A3B8"));
+            statusColor = "#00e475";
         }
+        statusDot.setFill(Color.valueOf(statusColor));
+        statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-weight: bold;");
         statusContainer.getChildren().addAll(statusDot, statusLabel);
-        headerBar.getChildren().addAll(auctionIdLabel, spacerHeader, statusContainer);
 
+        // Nhãn đếm ngược thời gian còn lại (timerLabel)
+        Label timerLabel = new Label();
+        timerLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        timerLabel.setFont(Font.font("System", 12.0));
+        if (auction.getStatus() == AuctionStatus.RUNNING) {
+            java.time.Duration duration = java.time.Duration.between(java.time.LocalDateTime.now(), auction.getEndTime());
+            if (!duration.isNegative()) {
+                long hours = duration.toHours();
+                long minutes = duration.toMinutesPart();
+                long seconds = duration.toSecondsPart();
+                timerLabel.setText(String.format("%02d:%02d:%02d", hours, minutes, seconds));
+            } else {
+                timerLabel.setText("00:00:00");
+            }
+        } else if (auction.getStatus() == AuctionStatus.OPEN) {
+            timerLabel.setText("WAITING");
+        } else {
+            timerLabel.setText("ENDED");
+        }
+
+        headerBar.getChildren().addAll(auctionIdLabel, spacerHeader, statusContainer, timerLabel);
+
+        // --- HÌNH ẢNH SẢN PHẨM ---
+        String imageUrl = item.getImageUrl();
+        StackPane imgStack = new StackPane();
+        imgStack.setPrefHeight(120.0);
+        imgStack.setStyle("-fx-background-color: #000000;");
+
+        ImageView imgView = new ImageView();
+        imgView.setFitHeight(120.0);
+        imgView.setFitWidth(260.0);
+        imgView.setPreserveRatio(true);
+        try {
+            if (imageUrl != null && !imageUrl.isEmpty()) {
+                if (imageUrl.startsWith("/")) {
+                    // Giải pháp tối ưu: Đọc trực tiếp từ ổ đĩa (File System) dựa trên thư mục mã nguồn src
+                    java.io.File imageFile = new java.io.File("src/main/resources" + imageUrl);
+                    if (imageFile.exists()) {
+                        imgView.setImage(new Image(imageFile.toURI().toString(), true));
+                    } else {
+                        System.err.println("Không tìm thấy file ảnh thực tế tại: " + imageFile.getAbsolutePath());
+                        imgView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
+                    }
+                } else {
+                    imgView.setImage(new Image(imageUrl, true));
+                }
+            } else {
+                imgView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi bất ngờ khi load ảnh sản phẩm: " + e.getMessage());
+            imgView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
+        }
+        imgStack.getChildren().add(imgView);
 
         // --- BODY CONTAINER (Thông tin sản phẩm) ---
         VBox bodyContainer = new VBox();
-        bodyContainer.setSpacing(12.0);
-        bodyContainer.setPadding(new Insets(10, 15, 15, 15));
+        bodyContainer.setSpacing(8.0);
+        bodyContainer.setPadding(new Insets(8, 12, 8, 12));
 
-        // Tên sản phẩm
+        // Tên và mô tả sản phẩm
+        VBox nameDescContainer = new VBox(2.0);
+
         Label productNameLabel = new Label(item.getName());
-        productNameLabel.setTextFill(Color.WHITE);
-        productNameLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        productNameLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        productNameLabel.setFont(Font.font("System", 14.0));
         productNameLabel.setWrapText(true);
 
-        // Mô tả sản phẩm
         Label descriptionLabel = new Label(item.getDescription());
-        descriptionLabel.setTextFill(Color.valueOf("#94A3B8"));
-        descriptionLabel.setFont(Font.font("System", 13));
+        descriptionLabel.setStyle("-fx-text-fill: #d0c6ab;");
+        descriptionLabel.setFont(Font.font("System", 11.0));
         descriptionLabel.setWrapText(true);
-        descriptionLabel.setMinHeight(36.0); // Giữ khoảng trống đều nhau giữa các card
+        descriptionLabel.setMinHeight(18.0); // Giữ khoảng trống đều nhau giữa các card
 
-        // --- KHU VỰC HIỂN THỊ GIÁ ---
-        HBox priceContainer = new HBox();
-        priceContainer.setSpacing(15.0);
+        nameDescContainer.getChildren().addAll(productNameLabel, descriptionLabel);
 
-        // Giá khởi điểm
-        VBox startPriceBox = new VBox(4);
-        Label lblStartTitle = new Label("Giá khởi điểm");
-        lblStartTitle.setTextFill(Color.valueOf("#64748B"));
-        lblStartTitle.setFont(Font.font("System", 11));
+        // --- KHU VỰC HIỂN THỊ GIÁ (Pricing Section) ---
+        VBox priceContainer = new VBox(2.0);
+        priceContainer.setStyle("-fx-background-color: #0A0A0A; -fx-padding: 4 10; -fx-border-color: transparent transparent transparent #ffd700; -fx-border-width: 0 0 0 3;");
+
+        VBox startPriceBox = new VBox();
+        Label lblStartTitle = new Label("GIÁ KHỞI ĐIỂM");
+        lblStartTitle.setStyle("-fx-text-fill: rgba(255,255,255,0.4); -fx-font-weight: bold;");
+        lblStartTitle.setFont(Font.font("System", 8.0));
+
         Label startingPriceLabel = new Label(String.format("%.2f $", item.getStartingPrice()));
-        startingPriceLabel.setTextFill(Color.valueOf("#CBD5E1"));
-        startingPriceLabel.setFont(Font.font("System", FontWeight.BOLD, 13));
+        startingPriceLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.8);");
+        startingPriceLabel.setFont(Font.font("System", 11.0));
         startPriceBox.getChildren().addAll(lblStartTitle, startingPriceLabel);
 
-        // Giá hiện tại
-        VBox currentPriceBox = new VBox(4);
-        Label lblCurrentTitle = new Label("Giá hiện tại");
-        lblCurrentTitle.setTextFill(Color.valueOf("#FFD700"));
-        lblCurrentTitle.setFont(Font.font("System", 11));
+        VBox currentPriceBox = new VBox(0.0);
+        Label lblCurrentTitle = new Label("GIÁ HIỆN TẠI CAO NHẤT");
+        lblCurrentTitle.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
+        lblCurrentTitle.setFont(Font.font("System", 9.0));
+
         Label currentPriceLabel = new Label(String.format("%.2f $", auction.getCurrentHighestBid()));
-        currentPriceLabel.setTextFill(Color.valueOf("#FFD700"));
-        currentPriceLabel.setFont(Font.font("System", FontWeight.BOLD, 15));
+        currentPriceLabel.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
+        currentPriceLabel.setFont(Font.font("System", 18.0));
         currentPriceBox.getChildren().addAll(lblCurrentTitle, currentPriceLabel);
 
         priceContainer.getChildren().addAll(startPriceBox, currentPriceBox);
 
 
-        // --- KHU VỰC THỜI GIAN ---
+        // --- KHU VỰC THỜI GIAN (Dates Section) ---
         HBox timeContainer = new HBox();
-        timeContainer.setSpacing(15.0);
+        timeContainer.setSpacing(0.0);
+        timeContainer.setStyle("-fx-border-color: #262626 transparent #262626 transparent; -fx-border-width: 1 0 1 0; -fx-padding: 4 0;");
 
-        // Bắt đầu
-        VBox startBox = new VBox(4);
-        Label lblStart = new Label("Bắt đầu");
-        lblStart.setTextFill(Color.valueOf("#64748B"));
-        lblStart.setFont(Font.font("System", 11));
-        String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().toString() : "--:--";
+        VBox startBox = new VBox(2.0);
+        HBox.setHgrow(startBox, Priority.ALWAYS);
+        Label lblStart = new Label("BẮT ĐẦU");
+        lblStart.setStyle("-fx-text-fill: #d0c6ab;");
+        lblStart.setFont(Font.font("System", 8.0));
+
+        String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(DATE_FORMATTER) : "--:--";
         Label startTimeLabel = new Label(startTimeStr);
-        startTimeLabel.setTextFill(Color.WHITE);
-        startTimeLabel.setFont(Font.font("System", FontWeight.BOLD, 11));
+        startTimeLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        startTimeLabel.setFont(Font.font("System", 11.0));
         startBox.getChildren().addAll(lblStart, startTimeLabel);
 
-        // Kết thúc
-        VBox endBox = new VBox(4);
-        Label lblEnd = new Label("Kết thúc");
-        lblEnd.setTextFill(Color.valueOf("#64748B"));
-        lblEnd.setFont(Font.font("System", 11));
-        String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().toString() : "--:--";
+        VBox endBox = new VBox(2.0);
+        endBox.setStyle("-fx-border-color: transparent transparent transparent #262626; -fx-border-width: 0 0 0 1; -fx-padding: 0 0 0 15;");
+        HBox.setHgrow(endBox, Priority.ALWAYS);
+        Label lblEnd = new Label("KẾT THÚC");
+        lblEnd.setStyle("-fx-text-fill: #d0c6ab;");
+        lblEnd.setFont(Font.font("System", 8.0));
+
+        String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(DATE_FORMATTER) : "--:--";
         Label endTimeLabel = new Label(endTimeStr);
-        endTimeLabel.setTextFill(Color.WHITE);
-        endTimeLabel.setFont(Font.font("System", FontWeight.BOLD, 11));
+        endTimeLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+        endTimeLabel.setFont(Font.font("System", 11.0));
         endBox.getChildren().addAll(lblEnd, endTimeLabel);
 
         timeContainer.getChildren().addAll(startBox, endBox);
 
 
         // --- HÀNH ĐỘNG BUTTONS ---
-        VBox actionBox = new VBox(8.0);
-        actionBox.setPadding(new Insets(5, 0, 0, 0));
+        VBox actionBox = new VBox(4.0);
 
         // Nút ĐẶT GIÁ
         Button bidButton = new Button("ĐẶT GIÁ");
         bidButton.setMaxWidth(Double.MAX_VALUE);
-        bidButton.setFont(Font.font("System", FontWeight.BOLD, 13));
 
         // Thiết lập trạng thái và màu sắc kích hoạt nút ĐẶT GIÁ
         if (auction.getStatus() == AuctionStatus.RUNNING) {
             bidButton.setDisable(false);
-            bidButton.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-background-radius: 6; -fx-padding: 10; -fx-cursor: hand;");
+            bidButton.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-font-weight: bold; -fx-padding: 6; -fx-background-radius: 2; -fx-cursor: hand;");
         } else {
             bidButton.setDisable(true);
-            bidButton.setStyle("-fx-background-color: #262626; -fx-text-fill: #555555; -fx-background-radius: 6; -fx-padding: 10;");
+            bidButton.setStyle("-fx-background-color: #262626; -fx-text-fill: #555555; -fx-font-weight: bold; -fx-padding: 6; -fx-background-radius: 2;");
         }
 
         // Nút CHI TIẾT
         Button detailsButton = new Button("CHI TIẾT");
         detailsButton.setMaxWidth(Double.MAX_VALUE);
-        detailsButton.setFont(Font.font("System", FontWeight.BOLD, 13));
-        detailsButton.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: white; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10; -fx-cursor: hand;");
+        detailsButton.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-border-color: white; -fx-border-radius: 2; -fx-background-radius: 2; -fx-padding: 6; -fx-cursor: hand;");
 
         // Gắn sự kiện (Callbacks)
         bidButton.setOnAction(e -> {
@@ -182,8 +245,8 @@ public class AuctionCardFactory {
         actionBox.getChildren().addAll(bidButton, detailsButton);
 
         // Gom tất cả vào Body, rồi gom Body + Header vào Card chính
-        bodyContainer.getChildren().addAll(productNameLabel, descriptionLabel, priceContainer, timeContainer, actionBox);
-        cardContainer.getChildren().addAll(headerBar, bodyContainer);
+        bodyContainer.getChildren().addAll(nameDescContainer, priceContainer, timeContainer, actionBox);
+        cardContainer.getChildren().addAll(headerBar, imgStack, bodyContainer);
 
         return cardContainer;
     }
