@@ -11,7 +11,13 @@ import java.util.Optional;
 
 public class ImagesController {
 
-    // Hiển thị ảnh lên giao diện và ẩn thông báo hướng dẫn.
+    /**
+     * Hiển thị hình ảnh lên giao diện người dùng và ẩn vùng thông báo hướng dẫn tải ảnh lên.
+     *
+     * @param file Tệp hình ảnh cần hiển thị
+     * @param productImageView Thành phần hiển thị hình ảnh trên UI
+     * @param uploadPrompt Container chứa văn bản hướng dẫn tải ảnh lên cần ẩn đi
+     */
     public static void displayImage(File file, ImageView productImageView, VBox uploadPrompt) {
         if (file == null) return;
 
@@ -25,7 +31,14 @@ public class ImagesController {
         System.out.println("Đã chọn ảnh: " + file.getAbsolutePath());
     }
 
-    // Xóa ảnh - Trả về null nếu người dùng đồng ý xóa, trả về file cũ nếu hủy bỏ
+    /**
+     * Xác nhận xóa hình ảnh - Hiển thị hộp thoại hỏi người dùng, thực hiện xóa tệp vật lý nếu đồng ý.
+     *
+     * @param currentFile Tệp hình ảnh hiện tại đang được chọn
+     * @param productImageView Thành phần hiển thị hình ảnh cần xóa liên kết hiển thị
+     * @param uploadPrompt Vùng hiển thị hướng dẫn tải ảnh lên cần hiển thị lại sau khi xóa
+     * @return null nếu người dùng đồng ý xóa ảnh thành công; trả về file cũ nếu người dùng hủy bỏ hành động
+     */
     public static File confirmRemoveImage(File currentFile, ImageView productImageView, VBox uploadPrompt) {
         boolean isConfirmed = NotificationController.showConfirmation(
                 "Xác nhận gỡ ảnh",

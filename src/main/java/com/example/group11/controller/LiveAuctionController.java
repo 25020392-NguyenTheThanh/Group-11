@@ -44,6 +44,13 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ResourceBundle;
 
+/**
+ * Bộ điều khiển phòng đấu giá trực tiếp (Live Auction Controller).
+ * Quản lý giao diện phòng đấu giá thời gian thực cho từng sản phẩm cụ thể,
+ * bao gồm hiển thị thông tin sản phẩm, đếm ngược thời gian, lịch sử đặt giá,
+ * biểu đồ biến động giá, thực hiện đặt giá thầu (Confirm Bid), theo dõi phòng đấu giá,
+ * và thống kê số lượng người xem trực tuyến.
+ */
 public class LiveAuctionController implements Initializable {
 
     @FXML private Button backButton;
@@ -77,10 +84,19 @@ public class LiveAuctionController implements Initializable {
     // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
     private static final java.util.Map<Integer, Stage> openStages = new java.util.HashMap<>();
 
+    /**
+     * Lấy đối tượng Stage cửa sổ giao diện phòng đấu giá đang mở dựa trên mã phiên đấu giá.
+     *
+     * @param auctionId Mã phiên đấu giá
+     * @return Đối tượng Stage tương ứng hoặc null nếu không tìm thấy
+     */
     public static Stage getOpenStage(int auctionId) {
         return openStages.get(auctionId);
     }
 
+    /**
+     * Đóng tất cả các cửa sổ phòng đấu giá đang được mở song song trên hệ thống.
+     */
     public static void closeAllOpenStages() {
         Platform.runLater(() -> {
             for (Stage stage : new java.util.ArrayList<>(openStages.values())) {
@@ -91,18 +107,33 @@ public class LiveAuctionController implements Initializable {
     }
 
     /**
-     * Dọn sạch danh sách phòng đấu giá đã truy cập (ví dụ khi người dùng đăng xuất hoặc đăng nhập).
+     * Dọn sạch danh sách phòng đấu giá đã truy cập và đóng tất cả cửa sổ đang mở
+     * (thường được gọi khi người dùng đăng xuất hoặc thay đổi tài khoản).
      */
     public static void clearEnteredAuctions() {
         enteredAuctionIds.clear();
         closeAllOpenStages();
     }
 
+    /**
+     * Khởi tạo các giá trị ban đầu cho bộ điều khiển giao diện phòng đấu giá trực tiếp.
+     *
+     * @param location Vị trí tương đối của file FXML nguồn
+     * @param resources Bộ tài nguyên dùng để bản địa hóa đối tượng
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Chuẩn bị ban đầu
     }
 
+    /**
+     * Thiết lập thông tin phiên đấu giá và người dùng hiện tại tham gia phòng.
+     * Cấu hình nút Theo dõi nếu là Bidder, lưu trữ thông tin Stage cửa sổ,
+     * đồng bộ thông tin chi tiết phiên đấu giá ban đầu từ server và bắt đầu đếm ngược.
+     *
+     * @param auction Đối tượng phiên đấu giá hiện tại
+     * @param user Đối tượng người dùng đang truy cập
+     */
     public void setAuctionAndUser(Auction auction, User user) {
         this.auction = auction;
         this.user = user;
@@ -157,6 +188,9 @@ public class LiveAuctionController implements Initializable {
         startCountdown();
     }
 
+    /**
+     * Bắt đầu luồng đếm ngược (Timeline) cập nhật thời gian còn lại của phiên đấu giá mỗi giây.
+     */
     private void startCountdown() {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
@@ -168,6 +202,10 @@ public class LiveAuctionController implements Initializable {
         countdownTimeline.play();
     }
 
+    /**
+     * Cập nhật nhãn hiển thị thời gian đếm ngược dựa trên trạng thái thực tế của phiên đấu giá.
+     * Nếu thời gian kết thúc, dừng đếm ngược và đồng bộ lại chi tiết phiên đấu giá.
+     */
     private void updateCountdown() {
         if (auction == null) return;
         LocalDateTime now = LocalDateTime.now();
@@ -190,7 +228,11 @@ public class LiveAuctionController implements Initializable {
         }
     }
 
-    // Đồng bộ chi tiết phiên đấu giá từ Server (incrementView = true nếu muốn đếm thêm lượt xem)
+    /**
+     * Gửi yêu cầu bất đồng bộ lên máy chủ để tải và đồng bộ lại chi tiết phiên đấu giá mới nhất.
+     *
+     * @param incrementView true nếu muốn tăng lượt xem (khi mới vào phòng), false nếu chỉ cập nhật thông thường
+     */
     private void refreshAuctionDetails(boolean incrementView) {
         if (auction == null) return;
 
@@ -217,6 +259,10 @@ public class LiveAuctionController implements Initializable {
         t.start();
     }
 
+    /**
+     * Đăng ký bộ xử lý nhận thông báo thời gian thực (realtime) từ máy chủ khi có lượt đặt giá mới,
+     * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
+     */
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
@@ -232,6 +278,10 @@ public class LiveAuctionController implements Initializable {
         });
     }
 
+    /**
+     * Cập nhật toàn bộ các thành phần hiển thị trên giao diện (tên sản phẩm, mô tả, trạng thái,
+     * giá cao nhất, số lượt đặt giá, số người xem, ảnh đại diện và bảng đặt giá thầu của Bidder).
+     */
     private void updateUI() {
         if (auction == null || auction.getItem() == null) return;
         Item item = auction.getItem();
@@ -312,6 +362,10 @@ public class LiveAuctionController implements Initializable {
         renderPriceChart();
     }
 
+    /**
+     * Kết xuất danh sách lịch sử các lượt đặt giá thầu (Bid Transactions) lên giao diện.
+     * Làm nổi bật lượt đặt giá thầu cao nhất hiện tại ở trên cùng.
+     */
     private void renderBidHistory() {
         bidHistoryContainer.getChildren().clear();
         List<BidTransaction> history = auction.getBidHistory();
@@ -357,6 +411,9 @@ public class LiveAuctionController implements Initializable {
         }
     }
 
+    /**
+     * Vẽ và cập nhật biểu đồ đường thể hiện lịch sử biến động giá thầu của phiên đấu giá.
+     */
     private void renderPriceChart() {
         if (priceChart == null) return;
         priceChart.getData().clear();
@@ -374,6 +431,11 @@ public class LiveAuctionController implements Initializable {
         priceChart.getData().add(series);
     }
 
+    /**
+     * Điều chỉnh (tăng) số tiền đặt giá thầu hiển thị trong ô nhập liệu thêm một lượng xác định.
+     *
+     * @param increment Lượng tiền muốn tăng thêm ($)
+     */
     private void adjustBidAmount(double increment) {
         if (auction == null) return;
         double currentVal;
@@ -385,21 +447,34 @@ public class LiveAuctionController implements Initializable {
         bidAmountField.setText(String.format("%.2f", currentVal + increment));
     }
 
+    /**
+     * Cộng thêm 100 $ vào ô nhập số tiền đặt giá thầu.
+     */
     @FXML
     void addBid100() {
         adjustBidAmount(100.0);
     }
 
+    /**
+     * Cộng thêm 500 $ vào ô nhập số tiền đặt giá thầu.
+     */
     @FXML
     void addBid500() {
         adjustBidAmount(500.0);
     }
 
+    /**
+     * Cộng thêm 1000 $ vào ô nhập số tiền đặt giá thầu.
+     */
     @FXML
     void addBid1000() {
         adjustBidAmount(1000.0);
     }
 
+    /**
+     * Xử lý xác nhận đặt giá thầu khi người dùng nhấn nút Xác nhận.
+     * Thực hiện kiểm tra tính hợp lệ của số tiền nhập, kiểm tra số dư ví và gửi yêu cầu đặt giá lên máy chủ.
+     */
     @FXML
     void handleConfirmBid() {
         if (auction == null) return;
@@ -461,6 +536,10 @@ public class LiveAuctionController implements Initializable {
         }
     }
 
+    /**
+     * Hiển thị hộp thoại chi tiết đầy đủ thông tin về sản phẩm đang đấu giá (loại sản phẩm,
+     * các thuộc tính đặc trưng như thương hiệu, họa sĩ, năm sản xuất,...).
+     */
     @FXML
     private void handleViewItemDetails() {
         if (auction == null || auction.getItem() == null) return;
@@ -489,6 +568,8 @@ public class LiveAuctionController implements Initializable {
 
     /**
      * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
+     *
+     * @param event Sự kiện hành động của JavaFX
      */
     @FXML
     private void handleBack(ActionEvent event) {
@@ -504,6 +585,8 @@ public class LiveAuctionController implements Initializable {
 
     /**
      * Thoát chính thức khỏi phòng đấu giá (bấm nút X). Giảm lượt xem và huỷ đăng ký observer trên server, sau đó đóng cửa sổ.
+     *
+     * @param event Sự kiện hành động của JavaFX
      */
     @FXML
     private void handleClose(ActionEvent event) {
@@ -532,6 +615,12 @@ public class LiveAuctionController implements Initializable {
         }
     }
 
+    /**
+     * Cập nhật kiểu dáng và trạng thái hiển thị của nút Theo dõi (Watchlist) trong phòng chi tiết.
+     *
+     * @param btn Đối tượng nút Button cần cập nhật
+     * @param isWatched Trạng thái theo dõi hiện tại
+     */
     private void updateWatchlistButton(Button btn, boolean isWatched) {
         btn.setText(isWatched ? "★ ĐANG THEO DÕI" : "☆ THEO DÕI");
         if (isWatched) {
@@ -545,6 +634,10 @@ public class LiveAuctionController implements Initializable {
         }
     }
 
+    /**
+     * Thực hiện thay đổi trạng thái theo dõi phiên đấu giá này (Thêm/Xóa khỏi Watchlist)
+     * ngay trong màn hình chi tiết phòng đấu giá.
+     */
     private void handleToggleWatchlistInDetail() {
         if (auction == null || !(user instanceof Bidder bidder)) return;
         boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());

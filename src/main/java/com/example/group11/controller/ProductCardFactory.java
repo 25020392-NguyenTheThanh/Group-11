@@ -21,13 +21,21 @@ import java.net.URL;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+/**
+ * Lớp nhà máy tạo giao diện thẻ sản phẩm (Product Card Factory).
+ * Cung cấp phương thức để xây dựng giao diện hiển thị thông tin sản phẩm trực quan dưới dạng thẻ (Card)
+ * dành riêng cho người bán (Seller).
+ */
 public class ProductCardFactory {
     /**
-     * Hàm tạo Card sản phẩm dùng riêng cho Seller
-     *  item Đối tượng Item polymorph (Art, Electronics, Vehicle) lấy từ DB
-     *  onDetailsClick Hành động xử lý khi nhấn nút CHI TIẾT
-     *  onEditClick Hành động xử lý khi nhấn nút SỬA
-     *  onActionClick Hành động xử lý khi nhấn nút XÓA
+     * Tạo một giao diện thẻ sản phẩm (Product Card) hiển thị thông tin của sản phẩm
+     * cùng các nút điều khiển Chi tiết, Sửa và Xóa cho người bán.
+     *
+     * @param item Đối tượng sản phẩm (Art, Electronics, hoặc Vehicle) chứa thông tin cần hiển thị
+     * @param onDetailsClick Hành động (BiConsumer) được thực thi khi nhấn nút "CHI TIẾT"
+     * @param onEditClick Hành động (BiConsumer) được thực thi khi nhấn nút "SỬA"
+     * @param onActionClick Hành động (BiConsumer) được thực thi khi xác nhận xóa sản phẩm
+     * @return VBox đối tượng giao diện JavaFX chứa thẻ sản phẩm hoàn chỉnh
      */
     public static VBox createProductCard(Item item, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onEditClick, BiConsumer<Item, VBox> onActionClick) {
         // 1. Lấy thông tin chung từ DB
@@ -244,6 +252,14 @@ public class ProductCardFactory {
         return card;
     }
 
+    /**
+     * Xử lý hiển thị hộp thoại xác nhận trước khi thực hiện xóa sản phẩm.
+     * Nếu người dùng đồng ý, hàm gọi lại (callback) onDeleteSuccess sẽ được kích hoạt để thực hiện hành động xóa.
+     *
+     * @param auctionId Mã định danh sản phẩm cần xóa
+     * @param cardNode Đối tượng giao diện thẻ sản phẩm tương ứng trên giao diện người dùng
+     * @param onDeleteSuccess Hàm callback nhận tham số là VBox thẻ sản phẩm khi người dùng xác nhận xóa thành công
+     */
     public static void handleDeleteAuctionAction(String auctionId, VBox cardNode, Consumer<VBox> onDeleteSuccess) {
         boolean isConfirmed = NotificationController.showConfirmation(
                 "Xác nhận xóa",

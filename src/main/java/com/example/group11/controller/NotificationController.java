@@ -7,9 +7,19 @@ import javafx.scene.control.DialogPane;
 
 import java.util.Optional;
 
+/**
+ * Bộ điều khiển hiển thị thông báo (Notification Controller) của ứng dụng.
+ * Quản lý việc hiển thị các hộp thoại thông báo, cảnh báo, xác nhận và báo lỗi
+ * đồng bộ với giao diện tối (Dark Theme) của hệ thống.
+ */
 public class NotificationController {
 
-    // Hiển thị thông báo thành công / thông tin hệ thống (Information)
+    /**
+     * Hiển thị thông báo thành công hoặc thông tin hệ thống (Information Dialog).
+     *
+     * @param title Tiêu đề của thông báo
+     * @param content Nội dung chi tiết của thông báo
+     */
     public static void showNotification(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("HANK AUCTIONS");
@@ -20,7 +30,12 @@ public class NotificationController {
         alert.showAndWait();
     }
 
-    // Hiển thị thông báo cảnh báo / lỗi thao tác (Warning)
+    /**
+     * Hiển thị thông báo cảnh báo hoặc lỗi thao tác từ người dùng (Warning Dialog).
+     *
+     * @param title Tiêu đề của cảnh báo
+     * @param content Nội dung chi tiết cảnh báo
+     */
     public static void showAlert(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("HANK AUCTIONS");
@@ -31,7 +46,16 @@ public class NotificationController {
         alert.showAndWait();
     }
 
-    // Hiển thị hộp thoại xác nhận hành động (Confirmation)
+    /**
+     * Hiển thị hộp thoại xác nhận hành động với hai lựa chọn Có/Không (Confirmation Dialog).
+     *
+     * @param title Tiêu đề của hộp thoại
+     * @param headerText Tiêu đề phụ (Header)
+     * @param contentText Nội dung cần người dùng xác nhận
+     * @param yesButtonText Nhãn nút đồng ý/xác nhận
+     * @param noButtonText Nhãn nút hủy/bỏ qua
+     * @return true nếu người dùng chọn nút đồng ý, ngược lại trả về false
+     */
     public static boolean showConfirmation(String title, String headerText, String contentText, String yesButtonText, String noButtonText) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("HANK AUCTIONS");
@@ -53,7 +77,13 @@ public class NotificationController {
         Optional<ButtonType> response = alert.showAndWait();
         return response.isPresent() && response.get() == buttonYes;
     }
-    // Hiển thị thông báo lỗi nghiêm trọng (Error)
+
+    /**
+     * Hiển thị thông báo lỗi nghiêm trọng của hệ thống hoặc lỗi thực thi (Error Dialog).
+     *
+     * @param title Tiêu đề của lỗi
+     * @param content Nội dung chi tiết lỗi
+     */
     public static void showError(String title, String content) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("HANK AUCTIONS");
@@ -118,10 +148,13 @@ public class NotificationController {
                     ".dialog-pane .text-field:focused {" +
                     "    -fx-border-color: #ffd700;" +
                     "}"
-    ).replace(" ", "%20"); // Mã hóa khoảng trắng để đảm bảo tính hợp lệ của URI CSS
+     ).replace(" ", "%20"); // Mã hóa khoảng trắng để đảm bảo tính hợp lệ của URI CSS
 
     /**
-     * Hàm hỗ trợ áp dụng giao diện tối cho Dialog
+     * Hàm hỗ trợ áp dụng giao diện tối (Dark Theme) cho hộp thoại.
+     * Loại bỏ các biểu tượng mặc định có khung trắng lỗi thời của hệ điều hành.
+     *
+     * @param dialog Đối tượng Dialog/Alert cần áp dụng giao diện tối
      */
     public static void applyDarkTheme(javafx.scene.control.Dialog<?> dialog) {
         DialogPane dialogPane = dialog.getDialogPane();

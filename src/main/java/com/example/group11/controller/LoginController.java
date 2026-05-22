@@ -31,6 +31,11 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 
 
+/**
+ * Bộ điều khiển giao diện Đăng nhập (Login Controller).
+ * Quản lý các chức năng đăng nhập, đăng ký tài khoản mới, hiển thị/ẩn mật khẩu,
+ * quên mật khẩu và mở các điều kiện điều khoản dịch vụ/chính sách bảo mật.
+ */
 public class LoginController implements Initializable {
 
     @FXML
@@ -86,6 +91,13 @@ public class LoginController implements Initializable {
     private boolean isPasswordVisible = false;
 
 
+    /**
+     * Khởi tạo các giá trị, thiết lập hiệu ứng động bập bênh và gắn các sự kiện
+     * ban đầu khi giao diện Đăng nhập được tải.
+     *
+     * @param location Vị trí tương đối của file FXML nguồn
+     * @param resources Bộ tài nguyên dùng để bản địa hóa đối tượng
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Thiết lập mô hình chuyển động.
@@ -102,6 +114,14 @@ public class LoginController implements Initializable {
         visiblePassword.textProperty().bindBidirectional(enterPassword.textProperty());
     }
 
+    /**
+     * Xử lý sự kiện đăng nhập khi người dùng nhấn nút Đăng nhập.
+     * Thực hiện kiểm tra rỗng, kết nối server, gửi yêu cầu đăng nhập và chuyển hướng màn hình
+     * tương ứng với vai trò (Bidder hoặc Seller).
+     *
+     * @param event Sự kiện hành động của JavaFX
+     * @throws IOException Nếu xảy ra lỗi vào/ra khi tải file FXML giao diện mới
+     */
     @FXML
     void handleLogin(ActionEvent event) throws IOException {
         ServerConnection connection = ServerConnection.getInstance();
@@ -163,6 +183,9 @@ public class LoginController implements Initializable {
     }
 
 
+    /**
+     * Hiển thị giao diện đăng ký tài khoản mới kèm theo hiệu ứng trượt tráo đổi vùng hiển thị.
+     */
     private void showSignUp() {
         VBox signUpDialog = createSignUpDialog();
         // Tráo đổi vị trí: SignUp bên trái, Door bên phải
@@ -172,6 +195,13 @@ public class LoginController implements Initializable {
 
     }
 
+    /**
+     * Tạo và cấu hình chương trình giao diện hộp thoại đăng ký tài khoản mới dưới dạng VBox.
+     * Thiết lập các ô nhập Username, Email, Mật khẩu (có chức năng ẩn/hiện), chọn vai trò (Role)
+     * và nút đăng ký tương tác với máy chủ.
+     *
+     * @return VBox đối tượng giao diện JavaFX chứa form đăng ký hoàn chỉnh
+     */
     private VBox createSignUpDialog() {
         VBox signUp = new VBox(20); // Spacing giữa các thành phần
         signUp.setPrefWidth(420.0);
@@ -306,7 +336,13 @@ public class LoginController implements Initializable {
         return signUp;
     }
 
-    // Hàm phụ để tạo TextField có style nhanh
+    /**
+     * Phương thức phụ hỗ trợ tạo nhanh một trường nhập liệu (TextField) được thiết kế sẵn kiểu dáng.
+     *
+     * @param prompt Gợi ý văn bản (Prompt text) hiển thị trong ô nhập
+     * @param icon Ký tự biểu tượng đại diện của trường nhập
+     * @return TextField đối tượng nhập liệu đã được định dạng CSS
+     */
     private TextField createStyledTextField(String prompt, String icon) {
         TextField tf = new TextField();
         tf.setPromptText(prompt);
@@ -314,6 +350,11 @@ public class LoginController implements Initializable {
         return tf;
     }
 
+    /**
+     * Chuyển đổi trạng thái ẩn/hiện của mật khẩu ở form đăng nhập.
+     * Thực hiện đồng bộ hóa nội dung văn bản và bảo toàn vị trí con trỏ chuột (Caret Position)
+     * giữa PasswordField (ẩn) và TextField (hiện).
+     */
     @FXML
     private void togglePasswordVisibility() {
         isPasswordVisible = !isPasswordVisible;
@@ -341,7 +382,12 @@ public class LoginController implements Initializable {
         }
     }
 
-    // Quên mật khẩu
+    /**
+     * Xử lý sự kiện khi người dùng nhấn vào liên kết Quên mật khẩu.
+     * Thực hiện chuyển hướng sang giao diện khôi phục mật khẩu mới.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     private void hanleClickForgotPassword(ActionEvent event) {
         FXMLLoader loader = GenerationSupport.changeScene(event, "forgotPassword-view.fxml", "Quên mật khẩu!");
@@ -352,13 +398,23 @@ public class LoginController implements Initializable {
 
     }
 
-    //Phương thức xử lý khi nhấn vào Điều khoản dịch vụ
+    /**
+     * Xử lý sự kiện khi người dùng nhấn vào liên kết Điều khoản dịch vụ.
+     * Mở tài liệu PDF điều khoản dịch vụ bằng ứng dụng mặc định của hệ thống.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     void handleOpenTerms(ActionEvent event) {
         LoginEffectHelper.openFile("documents/terms.pdf");
     }
 
-    //Phương thức xử lý khi nhấn vào Chính sách bảo mật
+    /**
+     * Xử lý sự kiện khi người dùng nhấn vào liên kết Chính sách bảo mật.
+     * Mở tài liệu PDF chính sách bảo mật bằng ứng dụng mặc định của hệ thống.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     void handleOpenPrivacy(ActionEvent event) {
         LoginEffectHelper.openFile("documents/privacy.pdf");

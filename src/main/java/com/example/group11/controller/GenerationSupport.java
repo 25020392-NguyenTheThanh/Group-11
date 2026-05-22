@@ -10,8 +10,19 @@ import javafx.scene.control.MenuItem;
 import javafx.stage.Stage;
 import java.io.IOException;
 
+/**
+ * Lớp hỗ trợ (Helper) quản lý việc chuyển đổi màn hình (Scene) và quản lý các cửa sổ (Stage) trong ứng dụng.
+ */
 public class GenerationSupport {
 
+    /**
+     * Chuyển đổi màn hình hiện tại của cửa sổ dựa trên sự kiện ActionEvent.
+     *
+     * @param event Sự kiện kích hoạt chuyển màn hình (ví dụ: bấm nút)
+     * @param fxmlFile Tên tệp FXML của màn hình mới cần tải lên
+     * @param title Tiêu đề mới của cửa sổ
+     * @return FXMLLoader đối tượng nạp FXML đã được sử dụng để tải cảnh mới
+     */
     public static FXMLLoader changeScene(ActionEvent event, String fxmlFile, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(LoginEffectHelper.class.getResource("/com/example/group11/" + fxmlFile));
@@ -32,6 +43,14 @@ public class GenerationSupport {
         }
     }
 
+    /**
+     * Chuyển đổi màn hình hiện tại dựa trên thành phần Node bất kỳ đang hiển thị.
+     *
+     * @param node Thành phần Node đang nằm trong Scene của Stage cần chuyển đổi
+     * @param fxmlFile Tên tệp FXML của màn hình mới cần tải lên
+     * @param title Tiêu đề mới của cửa sổ
+     * @return FXMLLoader đối tượng nạp FXML đã được sử dụng để tải cảnh mới
+     */
     public static FXMLLoader changeScene(Node node, String fxmlFile, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(GenerationSupport.class.getResource("/com/example/group11/" + fxmlFile));
@@ -68,6 +87,13 @@ public class GenerationSupport {
         }
     }
 
+    /**
+     * Mở một cửa sổ mới (Stage) để hiển thị một giao diện độc lập.
+     *
+     * @param fxmlFile Tên tệp FXML của màn hình cần mở
+     * @param title Tiêu đề của cửa sổ mới
+     * @return FXMLLoader đối tượng nạp FXML của cửa sổ mới
+     */
     public static FXMLLoader openNewStage(String fxmlFile, String title) {
         try {
             FXMLLoader loader = new FXMLLoader(GenerationSupport.class.getResource("/com/example/group11/" + fxmlFile));
@@ -83,7 +109,11 @@ public class GenerationSupport {
         }
     }
 
-    // Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong
+    /**
+     * Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong.
+     *
+     * @param menuButton MenuButton cần cấu hình tự động cập nhật nhãn
+     */
     public static void setupMenuButtonUpdate(MenuButton menuButton) {
         for (MenuItem item : menuButton.getItems()) {
             item.setOnAction(event -> {

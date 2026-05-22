@@ -13,6 +13,10 @@ import javafx.scene.text.Text;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+/**
+ * Bộ điều khiển giao diện khôi phục mật khẩu (Quên mật khẩu).
+ * Quản lý các bước xác thực tài khoản và đổi mật khẩu mới cho người dùng.
+ */
 public class ForgotPasswordController implements Initializable {
 
     @FXML
@@ -41,6 +45,12 @@ public class ForgotPasswordController implements Initializable {
     private UserManager userManager;
 
 
+    /**
+     * Khởi tạo bộ điều khiển khôi phục mật khẩu. Lấy instance của UserManager.
+     *
+     * @param location Vị trí tương đối của tài nguyên FXML
+     * @param resources Các tài nguyên được bản địa hóa
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
 
@@ -49,6 +59,12 @@ public class ForgotPasswordController implements Initializable {
     }
 
 
+    /**
+     * Xử lý xác thực tên đăng nhập của người dùng.
+     * Nếu tồn tại, chuyển sang màn hình nhập mật khẩu mới.
+     *
+     * @param event Sự kiện kích hoạt hành động từ nút bấm xác nhận
+     */
     @FXML
     private void handleVerifyUsername(ActionEvent event) {
         String usernameInput = usernameField.getText().trim();
@@ -69,6 +85,11 @@ public class ForgotPasswordController implements Initializable {
         }
     }
 
+    /**
+     * Xử lý cập nhật mật khẩu mới của người dùng vào hệ thống và chuyển lại về trang đăng nhập.
+     *
+     * @param event Sự kiện kích hoạt hành động từ nút lưu mật khẩu
+     */
     @FXML
     private void handleUpdatePassword(ActionEvent event) {
 
@@ -85,6 +106,11 @@ public class ForgotPasswordController implements Initializable {
         FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 
+    /**
+     * Xử lý hành động quay lại trang đăng nhập khi bấm nút quay lại.
+     *
+     * @param event Sự kiện kích hoạt hành động quay lại
+     */
     @FXML
     void handleBackToLogin(ActionEvent event) {
         FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");

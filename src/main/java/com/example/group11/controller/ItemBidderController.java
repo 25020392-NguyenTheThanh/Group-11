@@ -13,6 +13,9 @@ import javafx.scene.shape.Circle;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+/**
+ * Bộ điều khiển đại diện cho giao diện một sản phẩm đấu giá hiển thị cho Bidder.
+ */
 public class ItemBidderController implements Initializable {
 
     @FXML
@@ -63,6 +66,12 @@ public class ItemBidderController implements Initializable {
     @FXML
     private Label timerLabel;
 
+    /**
+     * Khởi tạo giao diện thẻ sản phẩm đấu giá của Bidder.
+     *
+     * @param location Vị trí tương đối của tài nguyên FXML
+     * @param resources Các tài nguyên được bản địa hóa
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
 

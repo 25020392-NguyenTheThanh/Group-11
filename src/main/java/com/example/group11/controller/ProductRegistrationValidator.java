@@ -11,9 +11,27 @@ import java.time.LocalDate;
 
 import static com.example.group11.controller.NotificationController.showAlert;
 
+/**
+ * Lớp kiểm tra tính hợp lệ dữ liệu đăng ký sản phẩm (Validator).
+ * Thực hiện các nghiệp vụ kiểm tra thông tin nhập vào từ form đăng ký và cập nhật sản phẩm.
+ */
 public class ProductRegistrationValidator {
 
-    // Kiểm tra tổng thể
+    /**
+     * Thực hiện kiểm tra toàn diện tất cả các điều kiện hợp lệ khi đăng ký sản phẩm mới.
+     * Bao gồm: kiểm tra bỏ trống, kiểm tra định dạng số và kiểm tra tính hợp lệ thời gian.
+     *
+     * @param productNameField Ô nhập tên sản phẩm
+     * @param categoryMenuButton Nút chọn danh mục sản phẩm
+     * @param startingPriceField Ô nhập giá khởi điểm
+     * @param minimumBidIncrementField Ô nhập bước giá tối thiểu
+     * @param startDatePicker Trình chọn ngày bắt đầu đấu giá
+     * @param endDatePicker Trình chọn ngày kết thúc đấu giá
+     * @param descriptionArea Vùng nhập mô tả sản phẩm
+     * @param selectedImageFile Tệp tin hình ảnh đã chọn
+     * @param imageDropzone Vùng kéo thả hình ảnh
+     * @return true nếu toàn bộ thông tin hợp lệ, ngược lại trả về false
+     */
     public static boolean validateAll (TextField productNameField, MenuButton categoryMenuButton, TextField startingPriceField,
                                        TextField minimumBidIncrementField, DatePicker startDatePicker, DatePicker endDatePicker,
                                        TextArea descriptionArea, File selectedImageFile, StackPane imageDropzone) {
@@ -23,7 +41,20 @@ public class ProductRegistrationValidator {
         );
     }
 
-    // Kiểm tra các ô nhập liệu có bị bỏ trống hay không
+    /**
+     * Kiểm tra xem các trường nhập liệu bắt buộc có bị bỏ trống hay không.
+     *
+     * @param productNameField Ô nhập tên sản phẩm
+     * @param categoryMenuButton Nút chọn danh mục sản phẩm
+     * @param startingPriceField Ô nhập giá khởi điểm
+     * @param minimumBidIncrementField Ô nhập bước giá tối thiểu
+     * @param startDatePicker Trình chọn ngày bắt đầu đấu giá
+     * @param endDatePicker Trình chọn ngày kết thúc đấu giá
+     * @param descriptionArea Vùng nhập mô tả sản phẩm
+     * @param selectedImageFile Tệp tin hình ảnh đã chọn
+     * @param imageDropzone Vùng kéo thả hình ảnh
+     * @return true nếu tất cả các trường được điền đầy đủ, ngược lại trả về false
+     */
     public static boolean validateEmptyFields(TextField productNameField, MenuButton categoryMenuButton, TextField startingPriceField,
                                         TextField minimumBidIncrementField, DatePicker startDatePicker, DatePicker endDatePicker,
                                         TextArea descriptionArea, File selectedImageFile, StackPane imageDropzone) {
@@ -86,7 +117,14 @@ public class ProductRegistrationValidator {
     }
 
 
-    //Kiểm tra định dạng số và logic toán học của Giá
+    /**
+     * Kiểm tra định dạng số và lô-gíc của giá khởi điểm và bước giá tối thiểu.
+     * Đảm bảo các giá trị lớn hơn 0 và bước giá không vượt quá giá khởi điểm.
+     *
+     * @param startingPriceField Ô nhập giá khởi điểm
+     * @param minimumBidIncrementField Ô nhập bước giá tối thiểu
+     * @return true nếu định dạng và logic số hợp lệ, ngược lại trả về false
+     */
     public static boolean validateNumericFormats(TextField startingPriceField,
                                            TextField minimumBidIncrementField) {
         double startingPrice;
@@ -130,7 +168,14 @@ public class ProductRegistrationValidator {
         return true; // Định dạng số hoàn toàn hợp lệ
     }
 
-    //Kiểm tra logic thời gian đấu giá
+    /**
+     * Kiểm tra logic thời gian đấu giá.
+     * Đảm bảo ngày bắt đầu không ở quá khứ và ngày kết thúc phải sau ngày bắt đầu ít nhất 1 ngày.
+     *
+     * @param startDatePicker Trình chọn ngày bắt đầu đấu giá
+     * @param endDatePicker Trình chọn ngày kết thúc đấu giá
+     * @return true nếu logic thời gian hợp lệ, ngược lại trả về false
+     */
     public static boolean validateDateTime(DatePicker startDatePicker, DatePicker endDatePicker) {
         LocalDate startDate = startDatePicker.getValue();
         LocalDate endDate = endDatePicker.getValue();
@@ -152,7 +197,19 @@ public class ProductRegistrationValidator {
         return true; // Thời gian hoàn toàn hợp lệ
     }
 
-    // Kiểm tra tổng thể khi sửa sản phẩm
+    /**
+     * Thực hiện kiểm tra tính hợp lệ khi cập nhật (sửa) sản phẩm hiện tại.
+     * Cho phép giữ nguyên hình ảnh cũ nếu không tải lên hình ảnh mới.
+     *
+     * @param productNameField Ô nhập tên sản phẩm
+     * @param categoryMenuButton Nút chọn danh mục sản phẩm
+     * @param startingPriceField Ô nhập giá khởi điểm
+     * @param descriptionArea Vùng nhập mô tả sản phẩm
+     * @param hasExistingImage Trạng thái sản phẩm hiện tại đã có ảnh lưu trên hệ thống hay chưa
+     * @param selectedImageFile Tệp tin hình ảnh mới đã chọn
+     * @param imageDropzone Vùng kéo thả hình ảnh
+     * @return true nếu thông tin chỉnh sửa hợp lệ, ngược lại trả về false
+     */
     public static boolean validateEdit(TextField productNameField, MenuButton categoryMenuButton, TextField startingPriceField,
                                        TextArea descriptionArea, boolean hasExistingImage, File selectedImageFile, StackPane imageDropzone) {
         // Kiểm tra tên

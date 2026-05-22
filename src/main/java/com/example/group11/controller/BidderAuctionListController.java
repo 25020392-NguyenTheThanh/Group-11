@@ -29,6 +29,12 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
+/**
+ * Bộ điều khiển danh sách đấu giá dành cho người tham gia đấu giá (Bidder Auction List Controller).
+ * Quản lý giao diện chính của người tham gia đấu giá bao gồm: hiển thị danh sách đấu giá,
+ * lọc phiên đấu giá, theo dõi (Watchlist), đấu giá (My Bids), lịch sử đấu giá (History),
+ * nạp tiền vào tài khoản và nhận thông báo thời gian thực (realtime).
+ */
 public class BidderAuctionListController implements Initializable {
 
     @FXML
@@ -98,6 +104,12 @@ public class BidderAuctionListController implements Initializable {
     private List<Auction> allAuctions = new ArrayList<>();
     private String currentTab = "DASHBOARD";
 
+    /**
+     * Thiết lập thông tin người dùng hiện tại (Bidder), cập nhật hiển thị số dư ví,
+     * tải danh sách đấu giá ban đầu và đăng ký lắng nghe thông báo thời gian thực.
+     *
+     * @param user Đối tượng người dùng hiện tại đăng nhập hệ thống
+     */
     public void setUser(User user) {
         this.user = user;
         if (user instanceof Bidder bidder) {
@@ -107,6 +119,13 @@ public class BidderAuctionListController implements Initializable {
         setupRealtimeNotifications();
     }
 
+    /**
+     * Khởi tạo các giá trị, định dạng giao diện ban đầu và đăng ký các bộ lắng nghe
+     * sự kiện cho các nút điều khiển, ô tìm kiếm và nạp tiền.
+     *
+     * @param location Vị trí tương đối của file FXML nguồn
+     * @param resources Bộ tài nguyên dùng để bản địa hóa đối tượng
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Mặc định khi mở lên, Dashboard sẽ ở trạng thái Active
@@ -137,7 +156,12 @@ public class BidderAuctionListController implements Initializable {
         });
     }
 
-    // Tự động cập nhật nhãn (Text) của MenuButton khi người dùng chọn một Item bên trong
+    /**
+     * Tự động cập nhật nhãn (Text) hiển thị của MenuButton tương ứng khi người dùng
+     * lựa chọn một MenuItem bộ lọc con bên trong, đồng thời áp dụng lại bộ lọc.
+     *
+     * @param menuButton Nút MenuButton cần thiết lập cập nhật
+     */
     private void setupMenuButtonUpdate(MenuButton menuButton) {
         for (MenuItem item : menuButton.getItems()) {
             item.setOnAction(event -> {
@@ -148,6 +172,12 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Xử lý chuyển đổi giữa các tab chức năng trên thanh Sidebar (Dashboard, My Bids, Watchlist, History, Settings).
+     * Làm nổi bật nút được chọn, cập nhật giao diện hiển thị và áp dụng bộ lọc dữ liệu tương ứng.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     void handleSwitchTab(ActionEvent event) {
         Button clickedButton = (Button) event.getSource();
@@ -178,6 +208,10 @@ public class BidderAuctionListController implements Initializable {
         System.out.println("Bidder đang xem tab: " + tabName);
     }
 
+    /**
+     * Gửi yêu cầu bất đồng bộ (Task) lên máy chủ để tải danh sách toàn bộ các phiên đấu giá.
+     * Hiển thị trạng thái tải và thông báo lỗi nếu có sự cố kết nối.
+     */
     private void loadAuctions() {
         Label loadingLabel = new Label("Đang kết nối máy chủ để tải danh sách...");
         loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
@@ -218,6 +252,10 @@ public class BidderAuctionListController implements Initializable {
         thread.start();
     }
 
+    /**
+     * Áp dụng đồng thời các bộ lọc dữ liệu: từ khóa tìm kiếm, trạng thái phiên đấu giá,
+     * danh mục sản phẩm và tab chức năng hiện tại để cập nhật danh sách hiển thị.
+     */
     private void applyFilters() {
         if (allAuctions == null) return;
 
@@ -250,6 +288,17 @@ public class BidderAuctionListController implements Initializable {
                 if (auction.getStatus() != AuctionStatus.FINISHED 
                         && auction.getStatus() != AuctionStatus.CANCELED 
                         && auction.getStatus() != AuctionStatus.PAID) {
+                    return false;
+                }
+                if (user instanceof Bidder bidder) {
+                    boolean won = (auction.getCurrentWinner() != null && auction.getCurrentWinner().getId() == bidder.getId()) 
+                            || bidder.getProfile().getWonAuctions().contains(auction.getId());
+                    boolean participated = bidder.getProfile().getParticipatedAuctions().contains(auction.getId()) 
+                            || auction.getBidHistory().stream().anyMatch(tx -> tx.getBidderId() == bidder.getId());
+                    if (!won && !participated) {
+                        return false;
+                    }
+                } else {
                     return false;
                 }
             }
@@ -287,6 +336,12 @@ public class BidderAuctionListController implements Initializable {
         renderAuctionCards(filtered);
     }
 
+    /**
+     * Hiển thị danh sách các thẻ phiên đấu giá (Auction Card) lên vùng lưới (GridPane) của giao diện.
+     * Sử dụng AuctionCardFactory để khởi tạo giao diện thẻ động cho từng phiên đấu giá.
+     *
+     * @param auctions Danh sách các phiên đấu giá đã qua bộ lọc cần kết xuất
+     */
     private void renderAuctionCards(List<Auction> auctions) {
         contentGrid.getChildren().clear();
         totalAuctionsLabel.setText(String.valueOf(auctions.size()));
@@ -310,7 +365,8 @@ public class BidderAuctionListController implements Initializable {
                     this::handleBid,          // Hàm callback xử lý đặt giá hiện tại của bạn
                     this::handleViewDetails,   // Hàm callback xử lý xem chi tiết hiện tại của bạn
                     isWatched,
-                    this::handleToggleWatchlist
+                    this::handleToggleWatchlist,
+                    this.user
             );
 
             int column = i % 3;
@@ -319,6 +375,11 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Xử lý sự kiện xem chi tiết phiên đấu giá. Chuyển hướng sang màn hình đấu giá trực tiếp (Live Auction).
+     *
+     * @param auction Phiên đấu giá cần xem chi tiết
+     */
     private void handleViewDetails(Auction auction) {
         try {
             FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
@@ -332,6 +393,12 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Xử lý sự kiện khi người dùng nhấn đặt giá nhanh từ màn hình danh sách.
+     * Hiển thị hộp thoại nhập số tiền, kiểm tra số dư ví và gửi yêu cầu đặt giá lên máy chủ.
+     *
+     * @param auction Phiên đấu giá muốn đặt giá thầu
+     */
     private void handleBid(Auction auction) {
         if (auction.getStatus() != AuctionStatus.RUNNING) {
             NotificationController.showError("Lỗi đặt giá", "Phiên đấu giá không ở trạng thái đang diễn ra (RUNNING).");
@@ -402,6 +469,12 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Thực hiện thêm hoặc xóa một phiên đấu giá khỏi danh sách theo dõi (Watchlist) của người dùng.
+     * Gửi yêu cầu tương ứng lên máy chủ và cập nhật lại giao diện.
+     *
+     * @param auction Phiên đấu giá cần thay đổi trạng thái theo dõi
+     */
     private void handleToggleWatchlist(Auction auction) {
         if (!(user instanceof Bidder bidder)) return;
         boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
@@ -440,6 +513,10 @@ public class BidderAuctionListController implements Initializable {
         t.start();
     }
 
+    /**
+     * Đăng ký bộ xử lý nhận thông báo thời gian thực (realtime) từ máy chủ.
+     * Cập nhật danh sách đấu giá hoặc hiển thị hộp thoại cảnh báo khi có sự thay đổi hoặc sự kiện đặc biệt.
+     */
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
@@ -457,6 +534,11 @@ public class BidderAuctionListController implements Initializable {
         });
     }
 
+    /**
+     * Thêm thông báo mới nhận được vào danh sách hiển thị của hộp thoại thông báo thả xuống (Dropdown).
+     *
+     * @param notification Đối tượng thông báo nhận được từ hệ thống
+     */
     private void addNotificationToDropdown(Notification notification) {
         if (notificationListContainer != null) {
             Label lbl = new Label(notification.getType() + ": " + notification.getData().toString());
@@ -467,6 +549,11 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Hiển thị hộp thoại cho phép người dùng nhập số tiền để nạp vào ví tài khoản.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     private void handleAddFunds(ActionEvent event) {
         TextInputDialog dialog = new TextInputDialog("1000");
@@ -503,6 +590,12 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Ẩn/Hiện hộp thoại thông tin cá nhân thả xuống (Profile Dropdown) ở góc trên bên phải.
+     * Đồng thời ẩn Dropdown thông báo nếu đang mở.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     private void toggleProfileDropdown(ActionEvent event) {
         if (notificationDropdown.isVisible()) {
@@ -515,6 +608,12 @@ public class BidderAuctionListController implements Initializable {
         profileDropdown.setManaged(!isVisible);
     }
 
+    /**
+     * Ẩn/Hiện hộp thoại danh sách thông báo thả xuống (Notification Dropdown).
+     * Đồng thời ẩn Dropdown thông tin cá nhân nếu đang mở.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     private void handleShowNotifications(ActionEvent event) {
         if (profileDropdown != null && profileDropdown.isVisible()) {
@@ -527,6 +626,11 @@ public class BidderAuctionListController implements Initializable {
         notificationDropdown.setManaged(!isCurrentlyVisible);
     }
 
+    /**
+     * Xử lý sự kiện khi người dùng nhấn xem trang thông tin hồ sơ cá nhân.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     private void handleViewProfile(ActionEvent event) {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
@@ -534,6 +638,12 @@ public class BidderAuctionListController implements Initializable {
         profileDropdown.setManaged(false);
     }
 
+    /**
+     * Xử lý sự kiện đăng xuất tài khoản. Hiển thị hộp thoại xác nhận, ngắt kết nối
+     * thời gian thực và chuyển hướng người dùng quay trở lại giao diện Đăng nhập.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
     @FXML
     private void handleLogout(ActionEvent event) {
         boolean confirm = NotificationController.showConfirmation(
@@ -563,7 +673,9 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    // Đưa tất cả các nút về trạng thái bình thường
+    /**
+     * Đưa tất cả các nút về trạng thái bình thường.
+     */
     private void resetAllButtons() {
         String inactiveStyle = "-fx-background-color: transparent; " +
                 "-fx-text-fill: #94A3B8; " +
@@ -577,7 +689,11 @@ public class BidderAuctionListController implements Initializable {
         btnSettings.setStyle(inactiveStyle);
     }
 
-    // Làm nổi bật nút đang được chọn (Active)
+    /**
+     * Làm nổi bật nút đang được chọn (Active).
+     *
+     * @param button Nút cần làm nổi bật
+     */
     private void setActiveStyle(Button button) {
         String activeStyle = "-fx-background-color: #112240; " +
                 "-fx-text-fill: #FFD700; " +

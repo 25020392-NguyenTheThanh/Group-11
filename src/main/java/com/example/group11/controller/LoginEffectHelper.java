@@ -11,8 +11,18 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Lớp trợ giúp (Helper) quản lý các hiệu ứng động (Animation) và các tác vụ UI liên quan đến màn hình đăng nhập.
+ */
 public class LoginEffectHelper {
 
+    /**
+     * Bắt đầu hiệu ứng chuyển động bập bênh mô phỏng chiếc cân cân bằng giữa Hộp (Box) và Tiền (Coin).
+     *
+     * @param scaleBar Thanh ngang của chiếc cân bập bênh (Rectangle)
+     * @param boxContainer Khối hộp phía bên trái của chiếc cân (VBox)
+     * @param coinContainer Khối tiền phía bên phải của chiếc cân (VBox)
+     */
     public static void startEquilibriumAnimation(Rectangle scaleBar, VBox boxContainer, VBox coinContainer) {
         Duration speed = Duration.seconds(1.8);
 
@@ -44,6 +54,14 @@ public class LoginEffectHelper {
         animCoin.play();
     }
 
+    /**
+     * Thực hiện hiệu ứng trượt tráo đổi vị trí giữa hai vùng Node (giao diện đăng nhập và hình ảnh cánh cửa).
+     *
+     * @param leftNode Vùng giao diện nằm bên trái trước khi tráo đổi
+     * @param rightNode Vùng giao diện nằm bên phải trước khi tráo đổi
+     * @param onFinishedAction Hành động Runnable cần thực thi ngay sau khi hiệu ứng di chuyển kết thúc
+     * @param rootHBox Vùng chứa chính (HBox) chứa cả hai Node
+     */
     public static void playSwitchAnimation(Node leftNode, Node rightNode, Runnable onFinishedAction, HBox rootHBox) {
         double width = rootHBox.getWidth() / 2; // Sử dụng một nửa chiều rộng thực tế của root
         Duration duration = Duration.seconds(0.6);
@@ -89,7 +107,11 @@ public class LoginEffectHelper {
         pt.play();
     }
 
-    // Hàm dùng chung để mở tệp bằng ứng dụng mặc định của hệ thống
+    /**
+     * Mở một tệp tài liệu bằng ứng dụng xem tài liệu mặc định của hệ điều hành.
+     *
+     * @param filePath Đường dẫn tương đối hoặc tuyệt đối đến tệp cần mở
+     */
     public static void openFile(String filePath) {
         try {
             File file = new File(filePath);
@@ -108,7 +130,11 @@ public class LoginEffectHelper {
 
     }
 
-    // Hiệu ứng gạch chân khi di chuột (Hover)
+    /**
+     * Thiết lập hiệu ứng gạch chân cho liên kết Hyperlink khi người dùng di chuột qua (Hover).
+     *
+     * @param link Liên kết Hyperlink cần cài đặt hiệu ứng
+     */
     public static void setupHoverEffect(Hyperlink link) {
         link.setOnMouseEntered(e -> link.setUnderline(true));
         link.setOnMouseExited(e -> link.setUnderline(false));

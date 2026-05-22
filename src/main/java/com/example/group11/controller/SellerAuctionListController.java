@@ -48,6 +48,11 @@ import static com.example.group11.controller.ImagesController.confirmRemoveImage
 import static com.example.group11.controller.ImagesController.displayImage;
 import static com.example.group11.controller.SellerUIHelper.*;
 
+/**
+ * Bộ điều khiển (Controller) cho màn hình danh sách sản phẩm và đấu giá của Người bán (Seller).
+ * Quản lý các chức năng: hiển thị danh sách sản phẩm cá nhân, bộ lọc tìm kiếm,
+ * biểu đồ phân tích doanh thu, lịch sử đơn hàng, đăng ký và sửa đổi sản phẩm đấu giá.
+ */
 public class SellerAuctionListController implements Initializable {
     @FXML
     private Button SystemNotification;
@@ -228,10 +233,24 @@ public class SellerAuctionListController implements Initializable {
     private List<Item> auctionItems = new ArrayList<>();
     private Map<Integer, Auction> itemAuctionMap = new HashMap<>();
 
+    /**
+     * Thiết lập thông tin người dùng hiện tại (Người bán).
+     *
+     * @param user Đối tượng người dùng
+     */
     public void setUser(User user) {
         this.user = user;
     }
 
+    /**
+     * Phương thức khởi tạo mặc định của JavaFX Controller.
+     * Thiết lập cấu hình ban đầu cho giao diện người bán bao gồm điều hướng các Tab,
+     * các bộ lọc tìm kiếm, bảng lịch sử đơn hàng, thực đơn danh mục và đăng ký bộ lắng nghe
+     * sự kiện thông báo thời gian thực từ máy chủ.
+     *
+     * @param location  Đường dẫn URL của file FXML nguồn
+     * @param resources Tài nguyên bản địa hóa
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         currentView = myListingsView;
@@ -267,6 +286,11 @@ public class SellerAuctionListController implements Initializable {
         setupRealtimeNotifications();
     }
 
+    /**
+     * Thiết lập kết nối nhận thông báo thời gian thực từ Server.
+     * Xử lý tự động tải lại danh sách sản phẩm khi nhận thấy có phiên đấu giá kết thúc
+     * hoặc trạng thái sản phẩm thay đổi.
+     */
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             addNotificationToUI(notification);
@@ -280,6 +304,12 @@ public class SellerAuctionListController implements Initializable {
     }
 
 
+    /**
+     * Thêm một thông báo mới vào giao diện danh sách thông báo thả xuống (Dropdown).
+     * Hỗ trợ định dạng tiêu đề và mô tả chi tiết tương ứng với từng loại thông báo.
+     *
+     * @param notification Đối tượng chứa dữ liệu thông báo từ Server
+     */
     private void addNotificationToUI(com.auction.network.Notification notification) {
         if (notificationListContainer == null) return;
 
@@ -329,6 +359,10 @@ public class SellerAuctionListController implements Initializable {
         notificationListContainer.getChildren().add(0, notifBox);
     }
 
+    /**
+     * Thiết lập các sự kiện lắng nghe bộ lọc tìm kiếm và sắp xếp.
+     * Tự động áp dụng bộ lọc mỗi khi người dùng thay đổi ô tìm kiếm hoặc chọn danh mục sắp xếp/trạng thái.
+     */
     private void setupFilters() {
         filterSearchId.textProperty().addListener((observable, oldValue, newValue) -> {
             applyFiltersAndSort();
@@ -349,6 +383,11 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Thực hiện lọc và sắp xếp danh sách sản phẩm dựa trên từ khóa tìm kiếm,
+     * trạng thái sản phẩm/phiên đấu giá và kiểu sắp xếp đã lựa chọn.
+     * Sau đó cập nhật lại giao diện lưới hiển thị sản phẩm.
+     */
     private void applyFiltersAndSort() {
         if (auctionItems == null) return;
 
@@ -401,6 +440,13 @@ public class SellerAuctionListController implements Initializable {
         renderProductCards(filteredItems);
     }
 
+    /**
+     * Vẽ và hiển thị danh sách các thẻ sản phẩm (Product Card) lên lưới contentGrid.
+     * Hỗ trợ cài đặt các nút chức năng: xem đấu giá trực tiếp, chỉnh sửa thông tin sản phẩm,
+     * và xóa sản phẩm (bao gồm giải phóng bộ nhớ ảnh vật lý trên đĩa cứng).
+     *
+     * @param items Danh sách các sản phẩm cần hiển thị
+     */
     private void renderProductCards(List<Item> items) {
         contentGrid.getChildren().clear();
         CalculatorView.updateCount(totalProductsLabel, items.size());
@@ -518,6 +564,12 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Xử lý sự kiện chuyển đổi giữa các Tab chức năng trên thanh Sidebar bên trái (My Listings, Analytics, Order History, Settings).
+     * Sử dụng Helper để thay đổi trạng thái nổi bật của nút và hiển thị view tương ứng.
+     *
+     * @param event Sự kiện nhấp chuột từ người dùng
+     */
     @FXML
     private void handleSwitchTab(ActionEvent event) {
         Button clickedButton = (Button) event.getSource();
@@ -542,6 +594,12 @@ public class SellerAuctionListController implements Initializable {
         SellerUIHelper.executeTabLogic(buttonId, contentGrid, this);
     }
 
+    /**
+     * Xử lý sự kiện khi người dùng bấm nút "Thêm sản phẩm" (AddItem).
+     * Làm sạch biểu mẫu đăng ký, mở khóa các trường thông tin đấu giá và hiển thị giao diện đăng ký.
+     *
+     * @param event Sự kiện nhấn nút
+     */
     @FXML
     void handleAddItem(ActionEvent event) {
         editingItem = null;
@@ -567,6 +625,12 @@ public class SellerAuctionListController implements Initializable {
         SellerUIHelper.showView(registerProductView, allViews);
     }
 
+    /**
+     * Quay trở lại màn hình hiển thị trước đó từ biểu mẫu đăng ký/chỉnh sửa sản phẩm.
+     * Cập nhật lại style của nút chức năng tương ứng trên Sidebar.
+     *
+     * @param event Sự kiện nhấn nút quay lại
+     */
     @FXML
     private void handleBackToListings(ActionEvent event) {
         if (lastView != null) {
@@ -582,6 +646,10 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Tải danh sách sản phẩm cá nhân và thông tin các phiên đấu giá từ Server.
+     * Thực hiện chạy tác vụ tải dữ liệu trong một luồng ngầm (Background Task) để không chặn luồng giao diện chính (UI Thread).
+     */
     public void loadMyListingView() {
         // 1. ƯU TIÊN ỨNG DỤNG TRƯỚC: Xóa sạch lưới UI cũ và đưa số lượng về 0 ngay lập tức
         contentGrid.getChildren().clear();
@@ -652,7 +720,11 @@ public class SellerAuctionListController implements Initializable {
         thread.start();
     }
 
-    // TÍNH NĂNG: Load dữ liệu biểu đồ
+    /**
+     * Tải và tính toán dữ liệu thống kê doanh thu theo từng tháng và từng danh mục sản phẩm (Electronics, Art, Vehicle).
+     * Cập nhật các chỉ số tổng hợp (Tổng doanh thu, số sản phẩm đã bán, tổng lượt đặt giá) lên giao diện
+     * và vẽ biểu đồ hình cột thống kê doanh thu.
+     */
     public void loadAnalyticsData() {
         // 1. Xóa dữ liệu cũ
         revenueChart.getData().clear();
@@ -747,6 +819,12 @@ public class SellerAuctionListController implements Initializable {
         revenueChart.getData().addAll(totalSeries, electronicsSeries, artSeries, vehicleSeries);
     }
 
+    /**
+     * Chuyển đổi một mốc thời gian thành ký tự viết tắt của tháng bằng tiếng Anh (ví dụ: Jan, Feb, Mar...).
+     *
+     * @param dateTime Thời điểm cần chuyển đổi
+     * @return Chuỗi viết tắt 3 ký tự của tháng
+     */
     private String getMonthAbbreviation(LocalDateTime dateTime) {
         if (dateTime == null) return "Jan";
         return switch (dateTime.getMonth()) {
@@ -766,7 +844,8 @@ public class SellerAuctionListController implements Initializable {
     }
 
     /**
-     * TÍNH NĂNG: Khởi tạo cấu trúc các cột của bảng Lịch sử đơn hàng và thiết lập hiển thị/tô màu.
+     * Khởi tạo cấu trúc các cột của bảng Lịch sử đơn hàng và thiết lập hiển thị/tô màu.
+     * Ánh xạ các thuộc tính của đơn hàng vào bảng và định dạng kiểu chữ, màu sắc theo trạng thái đơn hàng.
      */
     private void setupOrderTableColumns() {
         // Cài đặt các cell value factory để ánh xạ thuộc tính của Order vào từng cột
@@ -876,9 +955,9 @@ public class SellerAuctionListController implements Initializable {
     }
 
     /**
-     * TÍNH NĂNG: Tải và hiển thị lịch sử đơn hàng của người bán.
-     * Lấy tất cả các phiên đấu giá thuộc về người bán có trạng thái FINISHED hoặc PAID và đã xác định người thắng cuộc.
-     * Hỗ trợ tìm kiếm bộ lọc trực tiếp theo mã đơn, sản phẩm, người mua hoặc trạng thái.
+     * Tải và hiển thị danh sách lịch sử đơn hàng của người bán.
+     * Lọc lấy tất cả các phiên đấu giá thuộc về người bán có trạng thái FINISHED hoặc PAID và đã có người chiến thắng.
+     * Đồng thời đăng ký sự kiện tìm kiếm thời gian thực theo mã đơn, tên sản phẩm, người mua hoặc trạng thái.
      */
     public void loadOrderHistory() {
         System.out.println("Đang tải dữ liệu lịch sử đơn hàng...");
@@ -932,7 +1011,8 @@ public class SellerAuctionListController implements Initializable {
     }
 
     /**
-     * Cài đặt các danh mục bên trong MenuButton và lắng nghe sự kiện tuyển chọn
+     * Khởi tạo các danh mục sản phẩm (Electronics, Vehicle, Art) bên trong thực đơn thả xuống (MenuButton).
+     * Gắn kèm logic thay đổi biểu mẫu nhập động tương ứng với từng danh mục được chọn.
      */
     private void setupCategoryMenuItems() {
         MenuItem menuItemElectronics = new MenuItem("Electronics");
@@ -949,7 +1029,14 @@ public class SellerAuctionListController implements Initializable {
     }
 
 
-    // Xử lý thay đổi giao diện form nhập động tương ứng với danh mục được chọn
+    /**
+     * Xử lý thay đổi các trường nhập thuộc tính động của sản phẩm dựa trên danh mục được chọn.
+     * Tạo thêm Label và TextField tùy chọn tương ứng (Thương hiệu cho Electronics, Nghệ sĩ cho Art, Năm sản xuất cho Vehicle).
+     *
+     * @param categoryName Tên danh mục được chọn
+     * @param labelText    Tiêu đề hiển thị cho trường động
+     * @param promptText   Gợi ý nhập liệu cho trường động
+     */
     private void handleCategorySelection(String categoryName, String labelText, String promptText) {
         // 1. Cập nhật text hiển thị trên MenuButton
         categoryMenuButton.setText(categoryName);
@@ -980,6 +1067,13 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
+    /**
+     * Kích hoạt chế độ chỉnh sửa thông tin cho một sản phẩm cụ thể.
+     * Đưa thông tin sản phẩm hiện tại vào form nhập, khóa các trường liên quan đến cấu hình phiên đấu giá
+     * và đổi tiêu đề nút sang "LƯU THAY ĐỔI".
+     *
+     * @param item Đối tượng sản phẩm cần chỉnh sửa
+     */
     private void handleStartEditProduct(Item item) {
         editingItem = item;
 
@@ -1066,6 +1160,13 @@ public class SellerAuctionListController implements Initializable {
         SellerUIHelper.showView(registerProductView, allViews);
     }
 
+    /**
+     * Xử lý gửi biểu mẫu khi người dùng nhấn nút xác nhận (Lưu thay đổi hoặc Đăng ký sản phẩm mới).
+     * Xác thực thông tin nhập liệu, đóng gói dữ liệu và gửi yêu cầu (CREATE_ITEM / UPDATE_ITEM) tới Server.
+     * Nếu là sản phẩm mới, tự động gửi thêm yêu cầu tạo phiên đấu giá đi kèm (CREATE_AUCTION).
+     *
+     * @param event Sự kiện nhấn nút xác nhận
+     */
     @FXML
     private void handleSubmitProduct(ActionEvent event) {
         if (editingItem != null) {
@@ -1210,7 +1311,12 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    // Bấm vào nút Chuông -> Ẩn hoặc hiện khung thông báo (Chỉ xử lý UI mượt mà)
+    /**
+     * Bật/Tắt (Ẩn/Hiện) trình đơn thả xuống hiển thị danh sách các thông báo của hệ thống.
+     * Tự động ẩn danh sách thông tin tài khoản nếu nó đang mở để tránh chồng lấn giao diện.
+     *
+     * @param event Sự kiện nhấp nút thông báo
+     */
     @FXML
     private void handleToggleNotification(ActionEvent event) {
         if (profileDropdown != null && profileDropdown.isVisible()) {
@@ -1224,7 +1330,12 @@ public class SellerAuctionListController implements Initializable {
         notificationDropdown.setManaged(!isCurrentlyVisible);
     }
 
-    // Hàm bật/tắt menu tài khoản
+    /**
+     * Bật/Tắt (Ẩn/Hiện) trình đơn thả xuống chứa thông tin tài khoản cá nhân.
+     * Tự động ẩn danh sách thông báo hệ thống nếu nó đang mở để tránh chồng lấn giao diện.
+     *
+     * @param event Sự kiện nhấp nút ảnh đại diện
+     */
     @FXML
     private void handleToggleProfile(ActionEvent event) {
         // Nếu đang mở thông báo thì đóng thông báo lại để tránh đè giao diện
@@ -1239,7 +1350,11 @@ public class SellerAuctionListController implements Initializable {
         profileDropdown.setManaged(!isVisible);
     }
 
-    // Hàm xử lý khi nhấn "Thông tin cá nhân"
+    /**
+     * Xử lý sự kiện khi người dùng lựa chọn mục "Thông tin cá nhân".
+     *
+     * @param event Sự kiện nhấn nút
+     */
     @FXML
     private void handleViewProfile(ActionEvent event) {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
@@ -1248,7 +1363,13 @@ public class SellerAuctionListController implements Initializable {
         profileDropdown.setManaged(false);
     }
 
-    // Hàm xử lý khi nhấn "Đăng xuất"
+    /**
+     * Xử lý sự kiện đăng xuất tài khoản.
+     * Hiển thị hộp thoại xác nhận, dừng lắng nghe sự kiện từ Server, ngắt kết nối
+     * và chuyển hướng người dùng quay trở lại màn hình đăng nhập.
+     *
+     * @param event Sự kiện click nút đăng xuất
+     */
     @FXML
     private void handleLogout(ActionEvent event) {
         boolean confirm = NotificationController.showConfirmation(
@@ -1293,7 +1414,7 @@ public class SellerAuctionListController implements Initializable {
     }
 
     /**
-     * Xóa sạch toàn bộ dữ liệu đã nhập trên form đăng ký sản phẩm
+     * Xóa sạch dữ liệu và khôi phục trạng thái mặc định của biểu mẫu đăng ký sản phẩm.
      */
     private void clearRegistrationForm() {
         // 1. Xóa văn bản trong các ô TextField và TextArea
@@ -1317,6 +1438,14 @@ public class SellerAuctionListController implements Initializable {
         linkImageUrl = null;
     }
 
+    /**
+     * Xử lý việc chọn ảnh cho sản phẩm.
+     * Nếu chưa có ảnh, mở hộp thoại chọn tệp hình ảnh, sao chép file vào tài nguyên của dự án với tên ngẫu nhiên
+     * và cập nhật đường dẫn ảnh tương đối phục vụ việc lưu trữ trên Server database.
+     * Nếu đã có ảnh, yêu cầu người dùng xác nhận trước khi gỡ bỏ ảnh cũ.
+     *
+     * @param event Sự kiện chọn/xóa ảnh sản phẩm
+     */
     @FXML
     private void handleSelectImage(Event event) {
         if (selectedImageFile == null) {
