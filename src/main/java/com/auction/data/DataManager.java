@@ -1,5 +1,6 @@
 package com.auction.data;
 
+import com.auction.model.auction.Auction;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.user.User;
@@ -39,6 +40,17 @@ public class DataManager {
     }
 
     public List<User> getAllUsers() { return userRepo.findAll(); }
+    public boolean deleteItem(int id) {
+        return itemRepo.delete(id);
+    }
+
+    public boolean updateItem(Item item) {
+        return itemRepo.update(item);
+    }
+
+    public boolean updateItemStatus(int itemId, com.auction.model.item.ItemStatus status) {
+        return itemRepo.updateStatus(itemId, status);
+    }
 
     // Item
     public int        addItem(Item item)               { return itemRepo.add(item); }
@@ -54,7 +66,9 @@ public class DataManager {
     }
     public boolean startAuction(int auctionId)  { return auctionRepo.start(auctionId); }
     public boolean finishAuction(int auctionId) { return auctionRepo.finish(auctionId); }
-
+    public List<Auction> getAllAuctions() {
+        return auctionRepo.findAll();
+    }
     // BidTransaction
     public void saveBidTransaction(int auctionId, int bidderId, String bidderName, double amount) {
         bidRepo.save(auctionId, bidderId, bidderName, amount);

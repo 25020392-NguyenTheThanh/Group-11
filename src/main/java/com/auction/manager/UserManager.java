@@ -52,4 +52,19 @@ public class UserManager {
                 .filter(u -> u.getUsername().equals(username))
                 .findFirst().orElse(null);
     }
+    // Tìm user theo id.
+    public User findUserById(int id) {
+        return getUsers().stream()
+                .filter(u -> u.getId() == id)
+                .findFirst()
+                .orElse(null);
+    }
+    @Deprecated
+    public void loadFromDisk() {
+        System.out.println("[UserManager] loadFromDisk() đã bị bỏ — dữ liệu lấy từ MySQL.");
+    }
+
+    @Deprecated
+    public void saveToDisk() {
+        System.out.println("[UserManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");}
 }
