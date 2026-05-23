@@ -23,17 +23,16 @@ public class UserRepository {
      */
     public User authenticate(String username, String password) {
         // Chỉ query theo username, xác minh password bằng PasswordUtil.verify()
+        // Chỉ tìm theo username, KHÔNG đưa password vào SQL để tránh timing attack
         String sql = "SELECT * FROM users WHERE username = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-
             ps.setString(1, username);
-
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    String storedPassword = rs.getString("password");
-                    // verify() hỗ trợ cả plain text cũ lẫn hashed mới
-                    if (PasswordUtil.verify(password, storedPassword)) {
+                    String storedHash = rs.getString("password");
+                    // Verify hash — không so sánh plaintext
+                    if (PasswordUtil.verify(password, storedHash)) {
                         return mapper.map(con, rs);
                     }
                 }
@@ -61,10 +60,11 @@ public class UserRepository {
 
             // Bước 1: INSERT vào bảng users
             int newId;
+            String hashedPassword = PasswordUtil.hash(password);
             String sqlUser = "INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)";
             try (PreparedStatement ps = con.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, username);
-                ps.setString(2, PasswordUtil.hash(password));  // hash trước khi lưu DB
+                ps.setString(2, hashedPassword); // lưu hash, không lưu plaintext
                 ps.setString(3, email);
                 ps.setString(4, role.toUpperCase());
                 ps.executeUpdate();
@@ -92,6 +92,19 @@ public class UserRepository {
                 con.setAutoCommit(true);
                 con.close();
             } catch (SQLException ignored) {}
+        }
+    }
+    public boolean updatePassword(int userId, String newPlainPassword) {
+        String hashed = PasswordUtil.hash(newPlainPassword);
+        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, hashed);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] updatePassword lỗi: " + e.getMessage());
+            return false;
         }
     }
 

@@ -16,8 +16,8 @@ public class TestConnection {
         System.out.println("\n=== Test 2: Đăng ký tài khoản ===");
         RegisterPayload reg = new RegisterPayload();
         reg.username = "bidder01";
-        reg.password = "123456";
-        reg.email    = "bidder01@test.com";
+        reg.password = "123456Az";
+        reg.email    = "luuvanhoangson@gmail.com";
         reg.role     = "BIDDER";
 
         Response regResponse = conn.send(RequestType.REGISTER, reg);
