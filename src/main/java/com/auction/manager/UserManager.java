@@ -33,8 +33,8 @@ public class UserManager {
                 yield created;
             }
             case "USERNAME_EXISTS" -> throw new IllegalArgumentException("Username '" + username + "' đã tồn tại!");
-            case "EMAIL_EXISTS"    -> throw new IllegalArgumentException("Email '" + email + "' đã được đăng ký!");
-            default                -> throw new IllegalArgumentException("Đăng ký thất bại: " + result);
+            case "EMAIL_EXISTS" -> throw new IllegalArgumentException("Email '" + email + "' đã được đăng ký!");
+            default -> throw new IllegalArgumentException("Đăng ký thất bại: " + result);
         };
     }
 
@@ -67,4 +67,15 @@ public class UserManager {
     @Deprecated
     public void saveToDisk() {
         System.out.println("[UserManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");}
+
+    /** Đổi mật khẩu: hash rồi lưu DB, đồng thời cập nhật object trong RAM. */
+    public boolean updatePassword(User user, String newPassword) {
+        boolean ok = DataManager.getInstance().updatePassword(user.getId(), newPassword);
+        if (ok) {
+            // Cập nhật RAM để các thao tác tiếp theo trong session dùng đúng password
+            user.setPassWord(com.auction.security.PasswordUtil.hash(newPassword));
+        }
+        return ok;
+    }
+
 }

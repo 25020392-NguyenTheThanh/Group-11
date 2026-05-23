@@ -93,16 +93,22 @@ public class ForgotPasswordController implements Initializable {
     @FXML
     private void handleUpdatePassword(ActionEvent event) {
 
-        String pass = newPasswordField.getText();
+        String pass    = newPasswordField.getText();
         String confirm = confirmPasswordField.getText();
 
         if (pass.isEmpty() || !pass.equals(confirm)) {
             NotificationController.showAlert("Lỗi", "Mật khẩu không khớp hoặc đang để trống!");
+            return;   // BUG CŨ: thiếu return -> vẫn tiếp tục dù mật khẩu sai
         }
 
-        currentUser.setPassWord(pass);
-        NotificationController.showNotification("Thành công", "Mật khẩu của bạn đã được thay đổi.");
+        // Lưu mật khẩu mới (đã hash) xuống DB qua UserManager
+        boolean ok = userManager.updatePassword(currentUser, pass);
+        if (!ok) {
+            NotificationController.showAlert("Lỗi", "Không thể cập nhật mật khẩu, vui lòng thử lại!");
+            return;
+        }
 
+        NotificationController.showNotification("Thành công", "Mật khẩu của bạn đã được thay đổi.");
         FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
     }
 

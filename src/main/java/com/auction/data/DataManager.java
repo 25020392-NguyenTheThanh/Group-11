@@ -12,16 +12,16 @@ public class DataManager {
 
     private static DataManager instance;
 
-    private final UserRepository           userRepo;
-    private final ItemRepository           itemRepo;
-    private final AuctionRepository        auctionRepo;
+    private final UserRepository userRepo;
+    private final ItemRepository itemRepo;
+    private final AuctionRepository auctionRepo;
     private final BidTransactionRepository bidRepo;
 
     private DataManager() {
-        this.userRepo    = new UserRepository();
-        this.itemRepo    = new ItemRepository();
+        this.userRepo = new UserRepository();
+        this.itemRepo = new ItemRepository();
         this.auctionRepo = new AuctionRepository();
-        this.bidRepo     = new BidTransactionRepository();
+        this.bidRepo = new BidTransactionRepository();
     }
 
     public static synchronized DataManager getInstance() {
@@ -53,12 +53,12 @@ public class DataManager {
     }
 
     // Item
-    public int        addItem(Item item)               { return itemRepo.add(item); }
-    public List<Item> getItemsBySeller(int sellerId)   { return itemRepo.findBySeller(sellerId); }
-    public List<Item> getAllItems()                     { return itemRepo.findAll(); }
+    public int addItem(Item item) { return itemRepo.add(item); }
+    public List<Item> getItemsBySeller(int sellerId) { return itemRepo.findBySeller(sellerId); }
+    public List<Item> getAllItems() { return itemRepo.findAll(); }
 
     // Auction
-    public int     createAuction(int itemId,LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
+    public int createAuction(int itemId,LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
         return auctionRepo.create(itemId,startTime, endTime, minBidStep);
     }
 
@@ -114,4 +114,9 @@ public class DataManager {
     public boolean removeFromWatchlist(int bidderId, int auctionId) {
         return userRepo.removeFromWatchlist(bidderId, auctionId);
     }
+
+    public boolean updatePassword(int userId, String newPassword) {
+        return userRepo.updatePassword(userId, newPassword);
+    }
+
 }

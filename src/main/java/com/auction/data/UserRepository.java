@@ -185,7 +185,7 @@ public class UserRepository {
         String sql = switch (role.toUpperCase()) {
             case "BIDDER" -> "INSERT INTO bidders (user_id, balance) VALUES (?, 0)";
             case "SELLER" -> "INSERT INTO sellers (user_id, revenue) VALUES (?, 0)";
-            default       -> null;
+            default -> null;
         };
         if (sql == null) return;
         try (PreparedStatement ps = con.prepareStatement(sql)) {
@@ -193,4 +193,19 @@ public class UserRepository {
             ps.executeUpdate();
         }
     }
+
+    /** Cập nhật mật khẩu mới (đã hash) xuống DB cho user có id tương ứng. */
+    public boolean updatePassword(int userId, String newPassword) {
+        String sql = "UPDATE users SET password = ? WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, PasswordUtil.hash(newPassword));
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] updatePassword lỗi: " + e.getMessage());
+            return false;
+        }
+    }
+
 }
