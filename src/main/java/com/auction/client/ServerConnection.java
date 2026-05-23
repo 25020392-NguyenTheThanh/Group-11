@@ -4,11 +4,14 @@ import com.auction.network.Notification;
 import com.auction.network.Request;
 import com.auction.network.RequestType;
 import com.auction.network.Response;
+import javafx.application.Platform;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 // Class quản lý kết nối client tới server
@@ -36,8 +39,8 @@ public class ServerConnection {
     // Thread lắng nghe notification từ server
     private Thread listenerThread;
 
-    // Hàm xử lý notification
-    private Consumer<Notification> notificationHandler;
+    // Danh sách xử lý notification (Multicast)
+    private final List<Consumer<Notification>> notificationHandlers = new CopyOnWriteArrayList<>();
 
     // Flag đánh dấu có request đang gửi đi và chờ response
     private boolean requestInProgress = false;
@@ -138,13 +141,14 @@ public class ServerConnection {
                     if (obj instanceof Response r)
                         return r;
 
-                    if (obj instanceof Notification n
-                            && notificationHandler != null) {
+                    if (obj instanceof Notification n) {
                         final Notification notif = n;
                         // Chạy trên JavaFX thread
-                        javafx.application.Platform.runLater(
-                                () -> notificationHandler.accept(notif)
-                        );
+                        Platform.runLater(() -> {
+                            for (Consumer<Notification> handler : notificationHandlers) {
+                                handler.accept(notif);
+                            }
+                        });
                     }
                 }
             }
@@ -188,12 +192,14 @@ public class ServerConnection {
                         if (obj instanceof Response r) {
                             responseBuffer = r;
                             this.notifyAll();
-                        } else if (obj instanceof Notification n
-                                && notificationHandler != null) {
+                        } else if (obj instanceof Notification n) {
+                            final Notification notif = n;
                             // Chạy trên JavaFX thread
-                            javafx.application.Platform.runLater(
-                                    () -> notificationHandler.accept(n)
-                            );
+                            Platform.runLater(() -> {
+                                for (Consumer<Notification> handler : notificationHandlers) {
+                                    handler.accept(notif);
+                                }
+                            });
                         }
                     }
 
@@ -233,16 +239,31 @@ public class ServerConnection {
             this.notifyAll();
         }
 
-        this.notificationHandler = null;
+        this.notificationHandlers.clear();
         System.out.println("Đã dừng luồng lắng nghe thành công.");
     }
 
-    // Gán hàm xử lý notification
-    public void setNotificationHandler(
-            Consumer<Notification> handler
-    ) {
+    // Gán hàm xử lý notification (Tương thích ngược)
+    @Deprecated
+    public void setNotificationHandler(Consumer<Notification> handler) {
+        notificationHandlers.clear();
+        if (handler != null) {
+            notificationHandlers.add(handler);
+        }
+    }
 
-        this.notificationHandler = handler;
+    // Đăng ký nhận thông báo realtime
+    public void addNotificationHandler(Consumer<Notification> handler) {
+        if (handler != null && !notificationHandlers.contains(handler)) {
+            notificationHandlers.add(handler);
+        }
+    }
+
+    // Hủy đăng ký nhận thông báo realtime
+    public void removeNotificationHandler(Consumer<Notification> handler) {
+        if (handler != null) {
+            notificationHandlers.remove(handler);
+        }
     }
 
     // Kiểm tra trạng thái kết nối

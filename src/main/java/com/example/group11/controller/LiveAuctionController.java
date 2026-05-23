@@ -42,6 +42,7 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Bộ điều khiển phòng đấu giá trực tiếp (Live Auction Controller).
@@ -77,49 +78,25 @@ public class LiveAuctionController implements Initializable {
     private Timeline countdownTimeline;
     private Button watchlistButton;
 
+    private final Consumer<com.auction.network.Notification> realtimeListener = notification -> {
+        Platform.runLater(() -> {
+            System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
+            if ("BID_UPDATE".equals(notification.getType())
+                    || "AUCTION_ENDED".equals(notification.getType())
+                    || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
+                refreshAuctionDetails(false);
+            } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
+                NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
+            }
+        });
+    };
+
     // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
     private static final Set<Integer> enteredAuctionIds = new HashSet<>();
 
     // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
     private static final Map<Integer, Stage> openStages = new HashMap<>();
 
-    /**
-     * Lấy đối tượng Stage cửa sổ giao diện phòng đấu giá đang mở dựa trên mã phiên đấu giá.
-     *
-     * @param auctionId Mã phiên đấu giá
-     * @return Đối tượng Stage tương ứng hoặc null nếu không tìm thấy
-     */
-    public static Stage getOpenStage(int auctionId) {
-        return openStages.get(auctionId);
-    }
-
-    /**
-     * Đóng tất cả các cửa sổ phòng đấu giá đang được mở song song trên hệ thống.
-     */
-    public static void closeAllOpenStages() {
-        Platform.runLater(() -> {
-            for (Stage stage : new java.util.ArrayList<>(openStages.values())) {
-                stage.close();
-            }
-            openStages.clear();
-        });
-    }
-
-    /**
-     * Dọn sạch danh sách phòng đấu giá đã truy cập và đóng tất cả cửa sổ đang mở
-     * (thường được gọi khi người dùng đăng xuất hoặc thay đổi tài khoản).
-     */
-    public static void clearEnteredAuctions() {
-        enteredAuctionIds.clear();
-        closeAllOpenStages();
-    }
-
-    /**
-     * Khởi tạo các giá trị ban đầu cho bộ điều khiển giao diện phòng đấu giá trực tiếp.
-     *
-     * @param location Vị trí tương đối của file FXML nguồn
-     * @param resources Bộ tài nguyên dùng để bản địa hóa đối tượng
-     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Chuẩn bị ban đầu
@@ -163,10 +140,7 @@ public class LiveAuctionController implements Initializable {
                 if (stage != null) {
                     openStages.put(auction.getId(), stage);
                     stage.setOnCloseRequest(event -> {
-                        openStages.remove(auction.getId());
-                        if (countdownTimeline != null) {
-                            countdownTimeline.stop();
-                        }
+                        cleanupAndClose(true);
                     });
                 }
             }
@@ -186,6 +160,44 @@ public class LiveAuctionController implements Initializable {
         // 3. Chạy luồng đếm ngược
         startCountdown();
     }
+
+    /**
+     * Lấy đối tượng Stage cửa sổ giao diện phòng đấu giá đang mở dựa trên mã phiên đấu giá.
+     *
+     * @param auctionId Mã phiên đấu giá
+     * @return Đối tượng Stage tương ứng hoặc null nếu không tìm thấy
+     */
+    public static Stage getOpenStage(int auctionId) {
+        return openStages.get(auctionId);
+    }
+
+    /**
+     * Đóng tất cả các cửa sổ phòng đấu giá đang được mở song song trên hệ thống.
+     */
+    public static void closeAllOpenStages() {
+        Platform.runLater(() -> {
+            for (Stage stage : new java.util.ArrayList<>(openStages.values())) {
+                stage.close();
+            }
+            openStages.clear();
+        });
+    }
+
+    /**
+     * Dọn sạch danh sách phòng đấu giá đã truy cập và đóng tất cả cửa sổ đang mở
+     * (thường được gọi khi người dùng đăng xuất hoặc thay đổi tài khoản).
+     */
+    public static void clearEnteredAuctions() {
+        enteredAuctionIds.clear();
+        closeAllOpenStages();
+    }
+
+    /**
+     * Khởi tạo các giá trị ban đầu cho bộ điều khiển giao diện phòng đấu giá trực tiếp.
+     *
+     * @param location Vị trí tương đối của file FXML nguồn
+     * @param resources Bộ tài nguyên dùng để bản địa hóa đối tượng
+     */
 
     /**
      * Bắt đầu luồng đếm ngược (Timeline) cập nhật thời gian còn lại của phiên đấu giá mỗi giây.
@@ -263,18 +275,7 @@ public class LiveAuctionController implements Initializable {
      * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
-            Platform.runLater(() -> {
-                System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-                if ("BID_UPDATE".equals(notification.getType())
-                        || "AUCTION_ENDED".equals(notification.getType())
-                        || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
-                    refreshAuctionDetails(false);
-                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
-                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
-                }
-            });
-        });
+        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
     }
 
     /**
@@ -566,34 +567,19 @@ public class LiveAuctionController implements Initializable {
     }
 
     /**
-     * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
+     * Dọn dẹp tài nguyên và các bộ lắng nghe khi đóng phòng đấu giá trực tiếp.
      *
-     * @param event Sự kiện hành động của JavaFX
+     * @param decrementView true nếu muốn giảm lượt xem trên server
      */
-    @FXML
-    private void handleBack(ActionEvent event) {
+    private void cleanupAndClose(boolean decrementView) {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
-        Stage stage = (Stage) backButton.getScene().getWindow();
-        if (stage != null) {
-            openStages.remove(auction.getId());
-            stage.close();
-        }
-    }
+        openStages.remove(auction.getId());
+        enteredAuctionIds.remove(auction.getId());
+        ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
 
-    /**
-     * Thoát chính thức khỏi phòng đấu giá (bấm nút X). Giảm lượt xem và huỷ đăng ký observer trên server, sau đó đóng cửa sổ.
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
-    @FXML
-    private void handleClose(ActionEvent event) {
-        if (countdownTimeline != null) {
-            countdownTimeline.stop();
-        }
-        if (auction != null) {
-            enteredAuctionIds.remove(auction.getId());
+        if (decrementView && auction != null) {
             Task<Response> closeTask = new Task<>() {
                 @Override
                 protected Response call() throws Exception {
@@ -607,9 +593,32 @@ public class LiveAuctionController implements Initializable {
             t.setDaemon(true);
             t.start();
         }
+    }
+
+    /**
+     * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
+    @FXML
+    private void handleBack(ActionEvent event) {
+        cleanupAndClose(false);
+        Stage stage = (Stage) backButton.getScene().getWindow();
+        if (stage != null) {
+            stage.close();
+        }
+    }
+
+    /**
+     * Thoát chính thức khỏi phòng đấu giá (bấm nút X). Giảm lượt xem và huỷ đăng ký observer trên server, sau đó đóng cửa sổ.
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
+    @FXML
+    private void handleClose(ActionEvent event) {
+        cleanupAndClose(true);
         Stage stage = (Stage) closeButton.getScene().getWindow();
         if (stage != null) {
-            openStages.remove(auction.getId());
             stage.close();
         }
     }

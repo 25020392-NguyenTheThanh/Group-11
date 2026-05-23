@@ -226,6 +226,16 @@ public class SellerAuctionListController implements Initializable {
 
     private User user;
 
+    private final Consumer<Notification> realtimeListener = notification -> {
+        addNotificationToUI(notification);
+
+        String type = notification.getType();
+        if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
+            System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
+            loadMyListingView();
+        }
+    };
+
     private String linkImageUrl;
 
 
@@ -292,15 +302,7 @@ public class SellerAuctionListController implements Initializable {
      * hoặc trạng thái sản phẩm thay đổi.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
-            addNotificationToUI(notification);
-
-            String type = notification.getType();
-            if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
-                System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
-                loadMyListingView();
-            }
-        });
+        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
     }
 
 

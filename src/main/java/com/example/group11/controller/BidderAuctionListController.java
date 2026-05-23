@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 /**
  * Bộ điều khiển danh sách đấu giá dành cho người tham gia đấu giá (Bidder Auction List Controller).
@@ -129,6 +130,33 @@ public class BidderAuctionListController implements Initializable {
 
     private VBox selectedPackageNode = null;
     private static final java.util.Set<Integer> toppedUpBidders = new java.util.HashSet<>();
+
+    private final Consumer<Notification> realtimeListener = notification -> {
+        Platform.runLater(() -> {
+            System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
+            addNotificationToDropdown(notification);
+
+            String type = notification.getType();
+
+            if ("BID_UPDATE".equals(type)) {
+                Object data = notification.getData();
+
+                if (data instanceof BidUpdateData upd) {
+                    // Cập nhật đúng card mà không reload toàn bộ
+                    updateAuctionCardPrice(upd.auctionId, upd.newHighestBid,
+                            upd.winnerUsername, upd.totalBids);
+                } else {
+                    // fallback nếu server cũ
+                    loadAuctions();
+                }
+
+            } else if ("AUCTION_ENDED".equals(type)
+                    || "ITEM_STATUS_CHANGED".equals(type)) {
+                loadAuctions(); // reload để cập nhật trạng thái card
+            }
+        });
+    };
+
 
     /**
      * Thiết lập thông tin người dùng hiện tại (Bidder), cập nhật hiển thị số dư ví,
@@ -409,7 +437,7 @@ public class BidderAuctionListController implements Initializable {
             VBox productCard = AuctionCardFactory.createAuctionCard(
                     auction,
                     this::handleBid,          // Hàm callback xử lý đặt giá hiện tại của bạn
-                    this::handleViewDetails,   // Hàm callback xử lý xem chi tiết hiện tại của bạn   // Hàm callback xử lý xem chi tiết hiện tại của bạn
+                    this::openLiveAuction,   // Hàm callback xử lý xem chi tiết hiện tại của bạn   // Hàm callback xử lý xem chi tiết hiện tại của bạn
                     isWatched,
                     this::handleToggleWatchlist,
                     this.user
@@ -422,78 +450,56 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-//    // Thay handleViewDetails bằng openLiveAuction
-//    private void openLiveAuction(Auction auction) {
-//        // Gọi GET_AUCTION_DETAIL để server đăng ký handler này là Observer
-//        Task<Response> task = new Task<>() {
-//            @Override
-//            protected Response call() {
-//                return ServerConnection.getInstance()
-//                        .send(RequestType.GET_AUCTION_DETAIL, auction.getId());
-//            }
-//        };
-//
-//        task.setOnSucceeded(evt -> {
-//            Response res = task.getValue();
-//            if (res == null || !res.isSuccess()) {
-//                NotificationController.showError("Lỗi",
-//                        "Không thể tải chi tiết phiên: "
-//                                + (res != null ? res.getMessage() : "mất kết nối"));
-//                return;
-//            }
-//
-//            Auction detailed = (Auction) res.getData();
-//
-//            try {
-//                FXMLLoader loader = new FXMLLoader(
-//                        getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
-//                Parent root = loader.load();
-//
-//                LiveAuctionController liveCtrl = loader.getController();
-//                liveCtrl.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
-//
-//                Stage stage = new Stage();
-//                stage.setTitle("Đấu giá trực tiếp — " + detailed.getItem().getName());
-//                stage.setScene(new javafx.scene.Scene(root));
-//                // Khi đóng cửa sổ Live, khôi phục handler về màn hình danh sách
-//                stage.setOnCloseRequest(e -> {
-//                    liveCtrl.clearEnteredAuctions();
-//                    // Khôi phục realtime handler về BidderAuctionListController
-//                    setupRealtimeNotifications();
-//                });
-//                stage.show();
-//
-//            } catch (java.io.IOException e) {
-//                NotificationController.showError("Lỗi UI",
-//                        "Không thể mở màn hình đấu giá.\n" + e.getMessage());
-//            }
-//        });
-//
-//        task.setOnFailed(evt ->
-//                NotificationController.showError("Lỗi mạng", "Không thể kết nối server.")
-//        );
-//
-//        Thread th = new Thread(task);
-//        th.setDaemon(true);
-//        th.start();
-//    }
-    /**
-     * Xử lý sự kiện xem chi tiết phiên đấu giá. Chuyển hướng sang màn hình đấu giá trực tiếp (Live Auction).
-     *
-     * @param auction Phiên đấu giá cần xem chi tiết
-     */
-    private void handleViewDetails(Auction auction) {
-        try {
-            FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
-            if (loader != null) {
-                LiveAuctionController controller = loader.getController();
-                controller.setAuctionAndUser(auction, user);
+    // Thay handleViewDetails bằng openLiveAuction
+    private void openLiveAuction(Auction auction) {
+        // Gọi GET_AUCTION_DETAIL để server đăng ký handler này là Observer
+        Task<Response> task = new Task<>() {
+            @Override
+            protected Response call() {
+                return ServerConnection.getInstance()
+                        .send(RequestType.GET_AUCTION_DETAIL, new GetAuctionDetailPayload(auction.getId(), true));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            NotificationController.showError("Lỗi chuyển trang", "Không thể mở trang đấu giá trực tiếp.");
-        }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response res = task.getValue();
+            if (res == null || !res.isSuccess()) {
+                NotificationController.showError("Lỗi",
+                        "Không thể tải chi tiết phiên: "
+                                + (res != null ? res.getMessage() : "mất kết nối"));
+                return;
+            }
+
+            Auction detailed = (Auction) res.getData();
+
+            try {
+                FXMLLoader loader = new FXMLLoader(
+                        getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
+                Parent root = loader.load();
+
+                LiveAuctionController liveCtrl = loader.getController();
+                liveCtrl.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
+
+                Stage stage = new Stage();
+                stage.setTitle("Đấu giá trực tiếp — " + detailed.getItem().getName());
+                stage.setScene(new javafx.scene.Scene(root));
+                stage.show();
+
+            } catch (java.io.IOException e) {
+                NotificationController.showError("Lỗi UI",
+                        "Không thể mở màn hình đấu giá.\n" + e.getMessage());
+            }
+        });
+
+        task.setOnFailed(evt ->
+                NotificationController.showError("Lỗi mạng", "Không thể kết nối server.")
+        );
+
+        Thread th = new Thread(task);
+        th.setDaemon(true);
+        th.start();
     }
+
 
     /**
      * Xử lý sự kiện khi người dùng nhấn đặt giá nhanh từ màn hình danh sách.
@@ -620,31 +626,7 @@ public class BidderAuctionListController implements Initializable {
      * Cập nhật danh sách đấu giá hoặc hiển thị hộp thoại cảnh báo khi có sự thay đổi hoặc sự kiện đặc biệt.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
-            Platform.runLater(() -> {
-                System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-                addNotificationToDropdown(notification);
-
-                String type = notification.getType();
-
-                if ("BID_UPDATE".equals(type)) {
-                    Object data = notification.getData();
-
-                    if (data instanceof BidUpdateData upd) {
-                        // Cập nhật đúng card mà không reload toàn bộ
-                        updateAuctionCardPrice(upd.auctionId, upd.newHighestBid,
-                                upd.winnerUsername, upd.totalBids);
-                    } else {
-                        // fallback nếu server cũ
-                        loadAuctions();
-                    }
-
-                } else if ("AUCTION_ENDED".equals(type)
-                        || "ITEM_STATUS_CHANGED".equals(type)) {
-                    loadAuctions(); // reload để cập nhật trạng thái card
-                }
-            });
-        });
+        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
     }
     /**
      * Cập nhật giá realtime trên card đấu giá đang hiển thị,
