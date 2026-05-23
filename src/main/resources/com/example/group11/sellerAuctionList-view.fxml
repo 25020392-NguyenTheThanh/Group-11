@@ -89,7 +89,7 @@
             <left>
                 <VBox prefWidth="240.0" spacing="2.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent #1E2D45 transparent transparent;" BorderPane.alignment="CENTER">
                     <children>
-                        <VBox spacing="10.0" style="-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12;">
+                        <VBox fx:id="auctionLive" onMouseClicked="#handleHammerPortalClick" spacing="10.0" style="-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;">
                             <padding><Insets bottom="15.0" left="15.0" right="15.0" top="15.0" /></padding>
                             <VBox.margin><Insets bottom="20.0" left="15.0" right="15.0" top="20.0" /></VBox.margin>
                             <children>

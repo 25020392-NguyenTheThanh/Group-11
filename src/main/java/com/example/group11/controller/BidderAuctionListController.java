@@ -234,6 +234,14 @@ public class BidderAuctionListController implements Initializable {
                 });
             }
         }
+        if (auctionLive != null) {
+            auctionLive.setOnMouseEntered(e -> {
+                auctionLive.setStyle("-fx-background-color: rgba(17, 34, 64, 0.85); -fx-background-radius: 12; -fx-cursor: hand;");
+            });
+            auctionLive.setOnMouseExited(e -> {
+                auctionLive.setStyle("-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;");
+            });
+        }
     }
 
     /**
@@ -286,6 +294,22 @@ public class BidderAuctionListController implements Initializable {
 
         applyFilters();
         System.out.println("Bidder đang xem tab: " + tabName);
+    }
+
+    @FXML
+    private void handleHammerPortalClick(MouseEvent event) {
+        searchBar.clear();
+        auctionStatus.setText("TRẠNG THÁI");
+        auctionProduct.setText("SẢN PHẨM");
+        resetAllButtons();
+        setActiveStyle(btnDashboardS);
+        currentTab = "DASHBOARD";
+        headerSection.setVisible(true);
+        headerSection.setManaged(true);
+        contentGrid.setVisible(true);
+        contentGrid.setManaged(true);
+        loadAuctions();
+        System.out.println("Hammer Portal clicked: reset to Dashboard and reloaded auctions.");
     }
 
     /**

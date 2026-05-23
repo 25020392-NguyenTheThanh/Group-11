@@ -114,7 +114,7 @@
             <left>
                 <VBox prefWidth="240.0" spacing="2.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent #1E2D45 transparent transparent;" BorderPane.alignment="CENTER">
                     <children>
-                        <VBox fx:id="auctionLive" spacing="5.0" style="-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12;">
+                        <VBox fx:id="auctionLive" onMouseClicked="#handleHammerPortalClick" spacing="5.0" style="-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;">
                             <children>
                                 <Label text="Hammer Portal" textFill="WHITE"><font><Font name="System Bold" size="14.0" /></font></Label>
                                 <Label text="Live Marketplace" textFill="#94a3b8"><font><Font size="10.0" /></font></Label>

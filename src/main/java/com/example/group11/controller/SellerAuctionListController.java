@@ -56,6 +56,9 @@ import static com.example.group11.controller.SellerUIHelper.*;
  */
 public class SellerAuctionListController implements Initializable {
     @FXML
+    private VBox auctionLive;
+
+    @FXML
     private Button SystemNotification;
 
     @FXML
@@ -302,6 +305,15 @@ public class SellerAuctionListController implements Initializable {
         setupCategoryMenuItems();
 
         setupRealtimeNotifications();
+
+        if (auctionLive != null) {
+            auctionLive.setOnMouseEntered(e -> {
+                auctionLive.setStyle("-fx-background-color: rgba(17, 34, 64, 0.85); -fx-background-radius: 12; -fx-cursor: hand;");
+            });
+            auctionLive.setOnMouseExited(e -> {
+                auctionLive.setStyle("-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;");
+            });
+        }
     }
 
     /**
@@ -602,6 +614,29 @@ public class SellerAuctionListController implements Initializable {
         SellerUIHelper.showView(currentView, allViews);
 
         SellerUIHelper.executeTabLogic(buttonId, contentGrid, this);
+    }
+
+    @FXML
+    private void handleHammerPortalClick(Event event) {
+        // Reset bộ lọc
+        filterSearchId.clear();
+        filterStatus.setText("TRẠNG THÁI");
+        filterSort.setText("SẮP XẾP");
+
+        VBox targetView = myListingsView;
+        if (currentView != targetView) {
+            lastView = currentView;
+            lastButton = SellerUIHelper.findActiveButton(allButtons);
+        }
+
+        SellerUIHelper.resetAllButtons(allButtons);
+        SellerUIHelper.setActiveStyle(btnMyListings);
+
+        currentView = targetView;
+        SellerUIHelper.showView(currentView, allViews);
+
+        SellerUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
+        System.out.println("Hammer Portal clicked: reset to My Listings and reloaded products.");
     }
 
     /**
