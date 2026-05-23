@@ -71,6 +71,9 @@ public class LiveAuctionController implements Initializable {
     @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
     @FXML private Button closeButton; // Nút X thoát hẳn phòng
     @FXML private Button autoBidButton ;
+    @FXML private Button cancelAutoBidButton;  // nút hủy riêng
+    @FXML private Label autoBidStatusLabel;    // hiện trạng thái
+
 
     @FXML private LineChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
@@ -762,6 +765,14 @@ public class LiveAuctionController implements Initializable {
                         Response resp = task.getValue();
                         if (resp.isSuccess()) {
                             autoBidEnabled = true;
+                            autoBidButton.setVisible(false);
+                            autoBidStatusLabel.setText("Auto-Bid đang chạy (tối đa "
+                                    + String.format("%,.0f₫", maxBid) + ")");
+                            autoBidStatusLabel.setVisible(true);
+                            cancelAutoBidButton.setVisible(true);
+                            autoBidButton.setManaged(false);
+                            autoBidStatusLabel.setManaged(true);
+                            cancelAutoBidButton.setManaged(true);
                             NotificationController.showAlert("Auto-Bid",
                                     "Auto-Bid đã bật: tối đa " + String.format("%,.0f₫", maxBid));
                         } else {
@@ -779,21 +790,25 @@ public class LiveAuctionController implements Initializable {
 
     @FXML
     private void onAutoBidClicked(){
-        if (autoBidEnabled) {
-            // Đang bật → bấm lần 2 để hủy
-            Task<Response> task = new Task<>() {
-                @Override protected Response call() {
-                    return ServerConnection.getInstance().cancelAutoBid(auction.getId());
-                }
-            };
-            task.setOnSucceeded(e -> Platform.runLater(() -> {
-                autoBidEnabled = false;
-                autoBidButton.setText("Bật Auto-Bid");
-                autoBidButton.setStyle("-fx-background-color: #6c5ce7; -fx-text-fill: white; -fx-font-size: 13px; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 12; -fx-cursor: hand;");
-            }));
-            new Thread(task).start();
-        } else {
-            showAutoBidDialog();
-        }
+        showAutoBidDialog();
+    }
+    @FXML
+    private void onCancelAutoBidClicked() {
+        Task<Response> task = new Task<>() {
+            @Override protected Response call() {
+                return ServerConnection.getInstance().cancelAutoBid(auction.getId());
+            }
+        };
+        task.setOnSucceeded(e -> Platform.runLater(() -> {
+            autoBidEnabled = false;
+            autoBidButton.setDisable(false);
+            autoBidButton.setVisible(true);
+            cancelAutoBidButton.setVisible(false);
+            autoBidStatusLabel.setVisible(false);
+            autoBidButton.setManaged(true);
+            cancelAutoBidButton.setManaged(false);
+            autoBidStatusLabel.setManaged(false);
+        }));
+        new Thread(task).start();
     }
 }
