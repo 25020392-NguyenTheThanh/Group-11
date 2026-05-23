@@ -426,11 +426,18 @@ public class LiveAuctionController implements Initializable {
 
         if (yAxis != null) {
             yAxis.setAutoRanging(false);
-            yAxis.setLowerBound(1000.0);
-            yAxis.setTickUnit(1000.0);
+            yAxis.setLowerBound(100.0);
             double highestBid = auction.getCurrentHighestBid();
-            double upper = Math.max(2000.0, highestBid + 1000.0);
+            double upper = Math.max(200.0, highestBid + 100.0);
             yAxis.setUpperBound(upper);
+
+            // Tự động giãn khoảng chia (tick unit) khi khoảng giá quá rộng để đảm bảo thẩm mỹ trực quan
+            double range = upper - 100.0;
+            if (range > 1500.0) {
+                yAxis.setTickUnit(Math.ceil(range / 10.0 / 100.0) * 100.0);
+            } else {
+                yAxis.setTickUnit(100.0);
+            }
         }
 
         XYChart.Series<Number, Number> series = new XYChart.Series<>();

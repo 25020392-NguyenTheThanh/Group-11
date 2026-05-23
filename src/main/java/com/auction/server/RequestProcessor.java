@@ -151,6 +151,9 @@ public class RequestProcessor {
                 }
             }
 
+            // Gửi thông báo cập nhật số dư cho chính bidder để đồng bộ giao diện chính (dashboard)
+            handler.sendNotification(new Notification("BALANCE_UPDATE", bidder.getBalance()));
+
             return Response.ok(bidder.getBalance()); // Trả về số dư mới để client cập nhật
         } catch (Exception e) {
             return Response.error(e.getMessage());

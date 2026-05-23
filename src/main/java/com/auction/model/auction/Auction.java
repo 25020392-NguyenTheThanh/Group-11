@@ -150,6 +150,11 @@ public class Auction implements Subject, Serializable {
             throw new AuctionClosedException(String.format(
                     "Phiên #%d không ở trạng thái RUNNING (hiện: %s)", id, status));
 
+        // Chặn đặt giá liên tiếp khi đang giữ giá cao nhất
+        if (currentWinner != null && currentWinner.getId() == bidder.getId()) {
+            throw new InvalidBidException("Bạn đã là người đặt giá cao nhất, không thể đặt giá tiếp.");
+        }
+
         // Kiê tra số dư
         if (bidder.getBalance() < amount)
             throw new InvalidBidException(String.format(
