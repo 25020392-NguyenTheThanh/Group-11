@@ -424,6 +424,15 @@ public class LiveAuctionController implements Initializable {
         if (priceChart == null) return;
         priceChart.getData().clear();
 
+        if (yAxis != null) {
+            yAxis.setAutoRanging(false);
+            yAxis.setLowerBound(1000.0);
+            yAxis.setTickUnit(1000.0);
+            double highestBid = auction.getCurrentHighestBid();
+            double upper = Math.max(2000.0, highestBid + 1000.0);
+            yAxis.setUpperBound(upper);
+        }
+
         XYChart.Series<Number, Number> series = new XYChart.Series<>();
         List<BidTransaction> history = auction.getBidHistory();
 

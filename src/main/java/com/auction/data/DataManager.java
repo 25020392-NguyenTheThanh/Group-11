@@ -114,4 +114,8 @@ public class DataManager {
     public boolean removeFromWatchlist(int bidderId, int auctionId) {
         return userRepo.removeFromWatchlist(bidderId, auctionId);
     }
+
+    public boolean markBidderToppedUp(int bidderId) {
+        return userRepo.markBidderToppedUp(bidderId);
+    }
 }

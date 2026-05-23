@@ -13,10 +13,12 @@ import java.util.List;
 public class Bidder extends User implements Observer {
     private double balance; // số dư của ví
     private final BidderProfile profile ; // id phiên đấu giá đã từng thắng
+    private boolean hasToppedUp; // trạng thái đã nạp tiền (chỉ được nạp 1 lần)
 
-    public Bidder(int id, String username, String password, String email,double balance) {
+    public Bidder(int id, String username, String password, String email, double balance, boolean hasToppedUp) {
         super(id, username, password, email);
         this.balance = balance;
+        this.hasToppedUp = hasToppedUp;
         this.profile = new BidderProfile(id);
     }
     public double getBalance() {
@@ -38,6 +40,14 @@ public class Bidder extends User implements Observer {
 
     public void setBalance(double balance) {
         this.balance = balance;
+    }
+
+    public boolean hasToppedUp() {
+        return hasToppedUp;
+    }
+
+    public void setHasToppedUp(boolean hasToppedUp) {
+        this.hasToppedUp = hasToppedUp;
     }
 
     public BidderProfile getProfile() { return profile; }

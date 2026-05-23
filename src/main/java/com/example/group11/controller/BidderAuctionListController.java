@@ -174,7 +174,7 @@ public class BidderAuctionListController implements Initializable {
         this.user = user;
         if (user instanceof Bidder bidder) {
             walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
-            if (toppedUpBidders.contains(bidder.getId())) {
+            if (bidder.hasToppedUp()) {
                 addFundsBtn.setDisable(true);
             }
         }
@@ -725,7 +725,7 @@ public class BidderAuctionListController implements Initializable {
     @FXML
     private void handleAddFunds(ActionEvent event) {
         if (user instanceof Bidder bidder) {
-            if (toppedUpBidders.contains(bidder.getId())) {
+            if (bidder.hasToppedUp()) {
                 NotificationController.showAlert("Thông báo", "Bạn đã nạp tiền trước đó rồi, không thể nạp thêm!");
                 return;
             }
@@ -764,14 +764,14 @@ public class BidderAuctionListController implements Initializable {
         for (Node child : clickedNode.getChildren()) {
             if (child instanceof Label) {
                 Label lbl = (Label) child;
-                if (lbl.getText().contains("đ")) {
+                if (lbl.getText().contains("đ") || lbl.getText().contains("$")) {
                     packageLabel = lbl.getText();
                     break;
                 }
             }
         }
         if (packageLabel.isEmpty()) {
-            packageLabel = String.format("%,.0fđ", amount);
+            packageLabel = String.format("$%,.0f", amount);
         }
 
         boolean confirm = NotificationController.showConfirmation(
@@ -790,6 +790,7 @@ public class BidderAuctionListController implements Initializable {
                     double newBalance = (Double) res.getData();
                     // Cập nhật lại đối tượng bidder ở phía client
                     bidder.topUp(amount);
+                    bidder.setHasToppedUp(true);
                     walletBalance.setText(String.format("%,.2f", newBalance));
 
                     // Lưu trạng thái đã nạp tiền

@@ -38,7 +38,8 @@ public class UserMapper {
 
             default -> { // BIDDER
                 double balance = fetchBidderBalance(con, id);
-                Bidder b = new Bidder(id, username, password, email, balance);
+                boolean hasToppedUp = fetchBidderHasToppedUp(con, id);
+                Bidder b = new Bidder(id, username, password, email, balance, hasToppedUp);
                 List<Integer> participated = fetchBidderParticipated(con, id);
                 for (int auctionId : participated) {
                     b.getProfile().addParticipatedAuction(auctionId);
@@ -57,6 +58,16 @@ public class UserMapper {
     }
 
     // private helpers
+
+    private boolean fetchBidderHasToppedUp(Connection con, int userId) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT has_topped_up FROM bidders WHERE user_id = ?")) {
+            ps.setInt(1, userId);
+            try (ResultSet r = ps.executeQuery()) {
+                return r.next() && r.getBoolean("has_topped_up");
+            }
+        }
+    }
 
     private double fetchSellerRevenue(Connection con, int userId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(

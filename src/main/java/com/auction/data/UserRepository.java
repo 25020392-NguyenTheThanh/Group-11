@@ -9,6 +9,22 @@ import java.util.List;
 
 public class UserRepository {
 
+    static {
+        try (Connection con = DatabaseConnection.getConnection()) {
+            DatabaseMetaData meta = con.getMetaData();
+            try (ResultSet rs = meta.getColumns(null, null, "bidders", "has_topped_up")) {
+                if (!rs.next()) {
+                    try (Statement st = con.createStatement()) {
+                        st.execute("ALTER TABLE bidders ADD COLUMN has_topped_up TINYINT NOT NULL DEFAULT 0");
+                        System.out.println("[Database Migration] Added has_topped_up column to bidders table.");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[Database Migration] Error check/add has_topped_up: " + e.getMessage());
+        }
+    }
+
     private final DatabaseConnection db;
     private final UserMapper mapper;
 
@@ -191,6 +207,18 @@ public class UserRepository {
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, userId);
             ps.executeUpdate();
+        }
+    }
+
+    public boolean markBidderToppedUp(int bidderId) {
+        String sql = "UPDATE bidders SET has_topped_up = 1 WHERE user_id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, bidderId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] markBidderToppedUp lỗi: " + e.getMessage());
+            return false;
         }
     }
 }

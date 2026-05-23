@@ -402,12 +402,18 @@ public class RequestProcessor {
 
         try {
             Bidder bidder = (Bidder) user;
+            if (bidder.hasToppedUp()) {
+                return Response.error("Bạn đã nạp tiền trước đó rồi, không thể nạp thêm!");
+            }
+
             double newBalance = bidder.getBalance() + amount;
 
             // Đồng bộ trực tiếp vào cơ sở dữ liệu
             boolean success = DataManager.getInstance().updateBidderBalance(bidder.getId(), newBalance);
             if (success) {
+                DataManager.getInstance().markBidderToppedUp(bidder.getId());
                 bidder.topUp(amount);
+                bidder.setHasToppedUp(true);
                 return Response.ok(bidder.getBalance());
             } else {
                 return Response.error("Không thể cập nhật số dư vào cơ sở dữ liệu");
