@@ -24,7 +24,7 @@ public class AuctionSystemTest {
         LocalDateTime endTime = startTime.plusDays(1);
 
         Auction auction = new Auction(1, item , startTime , endTime , 20);
-        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);
+        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000,true);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
         auction.placeBid(bidder ,1500);
@@ -40,7 +40,7 @@ public class AuctionSystemTest {
         LocalDateTime endTime = LocalDateTime.of(2026, 5, 30, 10, 30);
 
         Auction auction = new Auction(1, item , startTime , endTime , 20);
-        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);
+        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000,true);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
         assertThrows(InvalidBidException.class , () -> auction.placeBid(bidder , 1000));
@@ -56,7 +56,7 @@ public class AuctionSystemTest {
         LocalDateTime endTime = LocalDateTime.now().plusDays(1);
 
         Auction auction = new Auction(1, item , startTime, endTime, 100);
-        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000);
+        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000,true);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.FINISHED);
         assertThrows(AuctionClosedException.class,() -> auction.placeBid(bidder, 3000));
@@ -72,8 +72,8 @@ public class AuctionSystemTest {
         LocalDateTime endTime = startTime.plusDays(1);
 
         Auction auction = new Auction(1, item , startTime , endTime ,100);
-        Bidder bidder_1 = new Bidder(1,"Tuan","123","123@gmail",3000);
-        Bidder bidder_2 = new Bidder(2,"Tuan_2","1234","1234@gmail",4000);
+        Bidder bidder_1 = new Bidder(1,"Tuan","123","123@gmail",3000,true);
+        Bidder bidder_2 = new Bidder(2,"Tuan_2","1234","1234@gmail",4000,true);
         bidder_1.setAuthenticated(true);
         bidder_2.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);

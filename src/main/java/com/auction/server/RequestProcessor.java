@@ -264,9 +264,12 @@ public class RequestProcessor {
         Auction auction = AuctionManager.getInstance().createAuction(item, p.startTime, p.endTime, p.minBidStep);
         if (auction == null) return Response.error("Không thể tạo phiên — sản phẩm không ở trạng thái AVAILABLE");
 
-        // Đúng thứ tự: start() đổi status RAM trước, rồi mới sync xuống DB
-        auction.start();
-        DataManager.getInstance().startAuction(auction.getId());
+        // Chỉ kích hoạt (start) phiên đấu giá nếu thời gian bắt đầu đã đến hoặc ở quá khứ
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        if (p.startTime == null || !p.startTime.isAfter(now)) {
+            auction.start();
+            com.auction.data.DataManager.getInstance().startAuction(auction.getId());
+        }
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại

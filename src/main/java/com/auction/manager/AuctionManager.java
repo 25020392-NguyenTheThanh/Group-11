@@ -98,10 +98,23 @@ public class AuctionManager {
 
     public void loadAuctionsFromDatabase() {
         List<Auction> dbAuctions = DataManager.getInstance().getAllAuctions();
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
         for (Auction a : dbAuctions) {
             List<BidTransaction> history = DataManager.getInstance().getBidHistory(a.getId());
             a.getBidHistory().clear();
             a.getBidHistory().addAll(history);
+
+            // Tự động kích hoạt nếu phiên OPEN đã đến giờ bắt đầu lúc khởi động server
+            if (a.getStatus() == AuctionStatus.OPEN && (a.getStartTime() == null || !a.getStartTime().isAfter(now))) {
+                try {
+                    a.start();
+                    DataManager.getInstance().startAuction(a.getId());
+                    System.out.println("Tự động kích hoạt phiên #" + a.getId() + " lúc khởi chạy Server.");
+                } catch (Exception e) {
+                    System.err.println("Lỗi khi tự động kích hoạt phiên #" + a.getId() + " lúc khởi chạy Server: " + e.getMessage());
+                }
+            }
+
             auctions.put(a.getId(), a);
         }
         int maxId = dbAuctions.stream().mapToInt(Auction::getId).max().orElse(0);

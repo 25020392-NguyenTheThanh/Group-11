@@ -31,6 +31,25 @@ public class AuctionTimer {
     private void checkExpiredAuctions(){
         List<Auction> auctions = AuctionManager.getInstance().getAuctions();
         for (Auction auction : auctions){
+            // Tự động kích hoạt phiên OPEN đã đến giờ bắt đầu
+            if (auction.getStatus() == AuctionStatus.OPEN) {
+                LocalDateTime now = LocalDateTime.now();
+                if (auction.getStartTime() == null || !auction.getStartTime().isAfter(now)) {
+                    try {
+                        auction.start();
+                        DataManager.getInstance().startAuction(auction.getId());
+
+                        // Phát thông báo realtime cho tất cả client
+                        String msg = "Phiên #" + auction.getId() + " [" + auction.getItem().getName() + "] đã bắt đầu!";
+                        server.broadcast(new Notification("AUCTION_ENDED", msg));
+                        server.broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
+                        System.out.println("Timer kích hoạt phiên #" + auction.getId() + " sang RUNNING.");
+                    } catch (Exception e) {
+                        System.err.println("Lỗi khi tự động kích hoạt phiên #" + auction.getId() + ": " + e.getMessage());
+                    }
+                }
+            }
+
             // Kiểm tra phiên sắp kết thúc (dưới 5 phút)
             if (auction.getStatus() == AuctionStatus.RUNNING) {
                 LocalDateTime now = LocalDateTime.now();
@@ -52,8 +71,8 @@ public class AuctionTimer {
                     AuctionManager.getInstance().finishAuction(auction.getId());
                     
                     com.auction.model.item.ItemStatus newStatus = (auction.getCurrentWinner() != null)
-                            ? com.auction.model.item.ItemStatus.SOLD
-                            : com.auction.model.item.ItemStatus.UNSOLD;
+                             ? com.auction.model.item.ItemStatus.SOLD
+                             : com.auction.model.item.ItemStatus.UNSOLD;
                     com.auction.manager.ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
 
                     if (auction.getCurrentWinner() != null) {
