@@ -159,4 +159,16 @@ public class AuctionRepository {
             ps.executeUpdate();
         }
     }
+    public boolean updateEndTime(int auctionId, java.time.LocalDateTime newEndTime) {
+        String sql = "UPDATE auctions SET end_time = ? WHERE id = ?";
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setObject(1, newEndTime);
+            ps.setInt(2, auctionId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("updateEndTime lỗi: " + e.getMessage());
+            return false;
+        }
+    }
 }

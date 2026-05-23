@@ -1,9 +1,6 @@
 package com.auction.client;
 
-import com.auction.network.Notification;
-import com.auction.network.Request;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
+import com.auction.network.*;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -258,5 +255,13 @@ public class ServerConnection {
 
         if (socket != null)
             socket.close();
+    }
+
+    public Response setAutoBid(int auctionId, double maxBid, double increment) {
+        return send(RequestType.SET_AUTO_BID, new AutoBidPayload(auctionId, maxBid, increment));
+    }
+
+    public Response cancelAutoBid(int auctionId) {
+        return send(RequestType.CANCEL_AUTO_BID, auctionId);
     }
 }

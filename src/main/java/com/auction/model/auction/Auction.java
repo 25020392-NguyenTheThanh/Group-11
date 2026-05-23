@@ -13,7 +13,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.auction.model.auction.AutoBidConfig;
 
 // Auction đóng vai trò là Subject — notify tất cả observer khi có thay đổi
 // sửa thêm một số chỗ tránh race condition!!
@@ -31,6 +34,13 @@ public class Auction implements Subject, Serializable {
     private transient CopyOnWriteArrayList<Observer> observers; // không lưu vào file
     private final double minBidStep; // bước giá tối thiểu
     private int viewCount; // số lượt xem
+    private Map<Integer , AutoBidConfig> autoBidConfigs = new ConcurrentHashMap<>();
+
+    // Anti-sniping: ngưỡng giây cuối mà nếu có bid sẽ gia hạn
+    private static final long SNIPE_WINDOW_SECONDS = 30;   // bid trong 30s cuối → gia hạn
+    private static final long EXTENSION_SECONDS    = 60;   // gia hạn thêm 60s
+    private int extensionCount = 0;                        // số lần đã gia hạn
+    private static final int MAX_EXTENSIONS        = 5;    // tối đa 5 lần
 
     public Auction(int id, Item item, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
         this.id = id;
@@ -174,6 +184,9 @@ public class Auction implements Subject, Serializable {
         currentHighestBid = amount;
         currentWinner = bidder;
 
+        checkAndExtend();
+        triggerAutoBid(bidder);
+
         String msg = String.format(
                 "🔔 Phiên " + id + " — " + bidder.getUsername() + " vừa đặt " + amount + "₫ | Giá cao nhất hiện tại: " + currentHighestBid);
         System.out.println(msg);
@@ -245,6 +258,8 @@ public class Auction implements Subject, Serializable {
         status = status_;
     }
 
+    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime ; }
+
     // Lấy số lượt xem của phiên đấu giá
     public int getViewCount() {
         return viewCount;
@@ -266,4 +281,70 @@ public class Auction implements Subject, Serializable {
     public void restoreViewCount(int viewCount) {
         this.viewCount = viewCount;
     }
+
+    // bidder đăng kí auto-bid cho phiên này
+    public synchronized void registerAutoBid(AutoBidConfig config){
+        autoBidConfigs.put(config.getBidderId() , config);
+        String msg = String.format("Auto-Bid: %s đặt auto-bid tối đa %,.0f₫ (bước +%,.0f₫)",
+                config.getBidderUsername() , config.getMaxBid() , config.getIncrement());
+        notifyObservers(msg);
+    }
+
+    // hủy auto-bid
+    public synchronized void cancelAutoBid(int bidderId){
+        autoBidConfigs.remove(bidderId);
+    }
+
+    /** Kích hoạt auto-bid sau khi có người đặt giá thủ công.
+     *  Tìm config auto-bid hợp lệ nhất (maxBid cao nhất) khác người vừa thắng,
+     *  nếu có thì tự động đặt giá thêm 1 bước.
+     */
+
+    private void triggerAutoBid(Bidder justBidder){
+        // tìm auto-bid config tốt nhất của người khác vừa thắng
+        AutoBidConfig best = null ;
+        for (AutoBidConfig cfg : autoBidConfigs.values()){
+            if (cfg.getBidderId() == justBidder.getId()) continue ;
+            double nextBid = currentHighestBid + cfg.getIncrement();
+            if (nextBid > cfg.getMaxBid()) continue ;
+            if (best == null || cfg.getMaxBid() > best.getMaxBid()){
+                best = cfg ;
+            }
+        }
+        if (best == null) return ;
+        // Tìm Bidder object từ observers hoặc bỏ qua nếu không có trong RAM
+        // (server sẽ inject bidder thực qua triggerAutoBidWithBidder)
+
+        final AutoBidConfig chosen = best ;
+        notifyObservers("AUTO_BID_TRIGGER:" + chosen.getBidderId() + ":" + (currentHighestBid + chosen.getIncrement()));
+    }
+    public Map<Integer , AutoBidConfig> getAutoBidConfigs(){
+        return autoBidConfigs ;
+    }
+
+    /**
+     * Anti-sniping: kiểm tra xem bid vừa đặt có trong snipe window không.
+     * Nếu có → gia hạn endTime, thông báo tất cả observer.
+     * Gọi từ placeBid() sau khi bid thành công.
+     */
+
+    private void checkAndExtend() {
+        if (extensionCount >= MAX_EXTENSIONS) return;
+        long secondsLeft = java.time.Duration.between(LocalDateTime.now(), endTime).toSeconds();
+        if (secondsLeft > 0 && secondsLeft <= SNIPE_WINDOW_SECONDS) {
+            endTime = endTime.plusSeconds(EXTENSION_SECONDS);
+            extensionCount++;
+            DataManager.getInstance().updateAuctionEndTime(id, endTime);
+            String msg = String.format(
+                    "Anti-Snipe! Phiên #%d được gia hạn thêm %ds (lần %d/%d) — kết thúc lúc %s",
+                    id, EXTENSION_SECONDS, extensionCount, MAX_EXTENSIONS,
+                    endTime.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+            System.out.println(msg);
+            notifyObservers(msg);
+            notifyObservers("TIME_EXTENDED:" + endTime.toString()); // client parse để cập nhật đồng hồ
+
+        }
+    }
+
+    public int getExtensionCount() {return extensionCount ;}
 }
