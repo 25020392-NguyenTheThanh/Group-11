@@ -230,6 +230,10 @@ public class SellerAuctionListController implements Initializable {
 
     private User user;
 
+    private int unreadNotificationsCount = 0;
+    private Label badgeLabel;
+    private StackPane badgeContainer;
+
     private final Consumer<Notification> realtimeListener = notification -> {
         addNotificationToUI(notification);
 
@@ -237,6 +241,15 @@ public class SellerAuctionListController implements Initializable {
         if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
             System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
             loadMyListingView();
+        }
+
+        if (notificationDropdown != null && !notificationDropdown.isVisible()) {
+            if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+                // ignore
+            } else {
+                unreadNotificationsCount++;
+                updateNotificationBadge(unreadNotificationsCount);
+            }
         }
     };
 
@@ -314,6 +327,7 @@ public class SellerAuctionListController implements Initializable {
                 auctionLive.setStyle("-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;");
             });
         }
+        setupNotificationBadge();
     }
 
     /**
@@ -400,7 +414,16 @@ public class SellerAuctionListController implements Initializable {
         timeLabel.setTextFill(javafx.scene.paint.Color.web("#94a3b8"));
         timeLabel.setFont(new Font(10.0));
 
-        header.getChildren().addAll(titleLabel, spacer, timeLabel);
+        Label btnDelete = new Label("✕");
+        btnDelete.setStyle("-fx-text-fill: #94A3B8; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 0 0 0 8;");
+        btnDelete.setOnMouseEntered(e -> btnDelete.setStyle("-fx-text-fill: #EF4444; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 0 0 0 8;"));
+        btnDelete.setOnMouseExited(e -> btnDelete.setStyle("-fx-text-fill: #94A3B8; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 0 0 0 8;"));
+        btnDelete.setOnMouseClicked(e -> {
+            e.consume(); // ngăn sự kiện click lan truyền lên VBox
+            notificationListContainer.getChildren().remove(notifBox);
+        });
+
+        header.getChildren().addAll(titleLabel, spacer, timeLabel, btnDelete);
 
         Label descLabel = new Label(desc);
         descLabel.setTextFill(javafx.scene.paint.Color.web("#94A3B8"));
@@ -428,6 +451,38 @@ public class SellerAuctionListController implements Initializable {
 
         // Đưa thông báo mới lên đầu danh sách
         notificationListContainer.getChildren().add(0, notifBox);
+    }
+
+    private void setupNotificationBadge() {
+        Label bellLabel = new Label("🔔");
+        bellLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: white;");
+
+        badgeLabel = new Label("0");
+        badgeLabel.setStyle("-fx-background-color: #E11D48; -fx-text-fill: white; -fx-font-size: 9px; -fx-font-weight: bold; -fx-background-radius: 8px; -fx-padding: 1 4 1 4; -fx-min-width: 14px; -fx-alignment: center;");
+        badgeLabel.setVisible(false);
+        badgeLabel.setManaged(false);
+
+        badgeContainer = new StackPane();
+        badgeContainer.getChildren().addAll(bellLabel, badgeLabel);
+        StackPane.setAlignment(badgeLabel, javafx.geometry.Pos.TOP_RIGHT);
+        badgeLabel.setTranslateX(8);
+        badgeLabel.setTranslateY(-6);
+
+        SystemNotification.setGraphic(badgeContainer);
+        SystemNotification.setText("");
+    }
+
+    private void updateNotificationBadge(int count) {
+        if (badgeLabel != null) {
+            if (count > 0) {
+                badgeLabel.setText(String.valueOf(count));
+                badgeLabel.setVisible(true);
+                badgeLabel.setManaged(true);
+            } else {
+                badgeLabel.setVisible(false);
+                badgeLabel.setManaged(false);
+            }
+        }
     }
 
     /**
@@ -1440,6 +1495,11 @@ public class SellerAuctionListController implements Initializable {
         // Đảo ngược trạng thái hiển thị
         notificationDropdown.setVisible(!isCurrentlyVisible);
         notificationDropdown.setManaged(!isCurrentlyVisible);
+
+        if (!isCurrentlyVisible) {
+            unreadNotificationsCount = 0;
+            updateNotificationBadge(0);
+        }
     }
 
     /**

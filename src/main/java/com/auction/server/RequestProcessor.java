@@ -271,6 +271,9 @@ public class RequestProcessor {
         if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể tạo sản phẩm");
 
         CreateItemPayload p = (CreateItemPayload) request.getPayload();
+        if (p.startingPrice < 100) {
+            return Response.error("Giá khởi điểm tối thiểu là 100!");
+        }
         ItemFactory factory = switch (p.type.toUpperCase()){
             case "ART"     -> new ArtFactory(p.artist);
             case "VEHICLE" -> new VehicleFactory(p.year);
@@ -306,6 +309,14 @@ public class RequestProcessor {
             com.auction.data.DataManager.getInstance().startAuction(auction.getId());
         }
         handler.sendNotification(new Notification("AUCTION_CREATED", String.format("Phiên đấu giá cho sản phẩm [%s] đã được tạo thành công!", item.getName())));
+
+        // Gửi thông báo đấu giá mới cho tất cả các client là Bidder
+        for (ClientHandler client : handler.getServer().getConnectedClients()) {
+            User u = client.getLoggedInUser();
+            if (u instanceof Bidder) {
+                client.sendNotification(new Notification("NEW_AUCTION", String.format("Sản phẩm mới [%s] vừa lên sàn đấu giá! Hãy tham gia ngay.", item.getName())));
+            }
+        }
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại
@@ -358,6 +369,9 @@ public class RequestProcessor {
         }
 
         UpdateItemPayload p = (UpdateItemPayload) request.getPayload();
+        if (p.startingPrice < 100) {
+            return Response.error("Giá khởi điểm phải lớn hơn hoặc bằng 100!");
+        }
         Item existingItem = ItemManager.getInstance().findItem(p.id);
         if (existingItem == null) {
             return Response.error("Sản phẩm không tồn tại");

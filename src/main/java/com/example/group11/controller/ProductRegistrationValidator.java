@@ -133,8 +133,8 @@ public class ProductRegistrationValidator {
         // 1. Ép kiểu giá khởi điểm
         try {
             startingPrice = Double.parseDouble(startingPriceField.getText().trim());
-            if (startingPrice <= 0) {
-                showAlert("Lỗi định dạng", "Giá khởi điểm phải là một số lớn hơn 0!");
+            if (startingPrice < 100) {
+                showAlert("Lỗi định dạng", "Giá khởi điểm tối thiểu là  100!");
                 startingPriceField.requestFocus();
                 return false;
             }
@@ -237,8 +237,8 @@ public class ProductRegistrationValidator {
         double startingPrice;
         try {
             startingPrice = Double.parseDouble(startingPriceField.getText().trim());
-            if (startingPrice <= 0) {
-                showAlert("Lỗi định dạng", "Giá khởi điểm phải là một số lớn hơn 0!");
+            if (startingPrice < 100) {
+                showAlert("Lỗi định dạng", "Giá khởi điểm phải lớn hơn hoặc bằng 100!");
                 startingPriceField.requestFocus();
                 return false;
             }

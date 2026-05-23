@@ -131,6 +131,10 @@ public class BidderAuctionListController implements Initializable {
     private VBox selectedPackageNode = null;
     private static final java.util.Set<Integer> toppedUpBidders = new java.util.HashSet<>();
 
+    private int unreadNotificationsCount = 0;
+    private Label badgeLabel;
+    private StackPane badgeContainer;
+
     private final Consumer<Notification> realtimeListener = notification -> {
         Platform.runLater(() -> {
             System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
@@ -151,13 +155,23 @@ public class BidderAuctionListController implements Initializable {
                 }
 
             } else if ("AUCTION_ENDED".equals(type)
-                    || "ITEM_STATUS_CHANGED".equals(type)) {
+                    || "ITEM_STATUS_CHANGED".equals(type)
+                    || "NEW_AUCTION".equals(type)) {
                 loadAuctions(); // reload để cập nhật trạng thái card
             } else if ("BALANCE_UPDATE".equals(type)) {
                 if (user instanceof Bidder bidder) {
                     double newBalance = (Double) notification.getData();
                     bidder.setBalance(newBalance);
                     walletBalance.setText(String.format("%,.2f", newBalance));
+                }
+            }
+
+            if (notificationDropdown != null && !notificationDropdown.isVisible()) {
+                if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+                    // ignore
+                } else {
+                    unreadNotificationsCount++;
+                    updateNotificationBadge(unreadNotificationsCount);
                 }
             }
         });
@@ -242,6 +256,7 @@ public class BidderAuctionListController implements Initializable {
                 auctionLive.setStyle("-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;");
             });
         }
+        setupNotificationBadge();
     }
 
     /**
@@ -746,8 +761,41 @@ public class BidderAuctionListController implements Initializable {
             case "AUCTION_LOST" -> "❌ " + text;
             case "PRODUCT_APPROVED" -> "✔️ " + text;
             case "AUCTION_CREATED" -> "📅 " + text;
+            case "NEW_AUCTION" -> "🆕 " + text;
             default -> "[" + type + "] " + text;
         };
+    }
+
+    private void setupNotificationBadge() {
+        Label bellLabel = new Label("🔔");
+        bellLabel.setStyle("-fx-font-size: 20px; -fx-text-fill: white;");
+
+        badgeLabel = new Label("0");
+        badgeLabel.setStyle("-fx-background-color: #E11D48; -fx-text-fill: white; -fx-font-size: 9px; -fx-font-weight: bold; -fx-background-radius: 8px; -fx-padding: 1 4 1 4; -fx-min-width: 14px; -fx-alignment: center;");
+        badgeLabel.setVisible(false);
+        badgeLabel.setManaged(false);
+
+        badgeContainer = new StackPane();
+        badgeContainer.getChildren().addAll(bellLabel, badgeLabel);
+        StackPane.setAlignment(badgeLabel, javafx.geometry.Pos.TOP_RIGHT);
+        badgeLabel.setTranslateX(8);
+        badgeLabel.setTranslateY(-6);
+
+        SystemNotification.setGraphic(badgeContainer);
+        SystemNotification.setText("");
+    }
+
+    private void updateNotificationBadge(int count) {
+        if (badgeLabel != null) {
+            if (count > 0) {
+                badgeLabel.setText(String.valueOf(count));
+                badgeLabel.setVisible(true);
+                badgeLabel.setManaged(true);
+            } else {
+                badgeLabel.setVisible(false);
+                badgeLabel.setManaged(false);
+            }
+        }
     }
 
     private void addNotificationToDropdown(Notification notification) {
@@ -756,13 +804,31 @@ public class BidderAuctionListController implements Initializable {
                 return;
             }
             String friendlyMsg = getFriendlyMessage(notification);
+
+            javafx.scene.layout.HBox notifItemBox = new javafx.scene.layout.HBox(8);
+            notifItemBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            notifItemBox.setStyle("-fx-background-color: #1E2D45; -fx-padding: 8; -fx-background-radius: 4;");
+            notifItemBox.setMaxWidth(220);
+
             Label lbl = new Label(friendlyMsg);
             lbl.setWrapText(true);
-            lbl.setStyle("-fx-text-fill: white; -fx-background-color: #1E2D45; -fx-padding: 8; -fx-background-radius: 4; -fx-font-size: 11px;");
-            lbl.setMaxWidth(220);
+            lbl.setStyle("-fx-text-fill: white; -fx-font-size: 11px;");
+            javafx.scene.layout.HBox.setHgrow(lbl, javafx.scene.layout.Priority.ALWAYS);
+            lbl.setMaxWidth(180);
+
+            Label btnDelete = new Label("✕");
+            btnDelete.setStyle("-fx-text-fill: #94A3B8; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 12px;");
+            btnDelete.setOnMouseEntered(e -> btnDelete.setStyle("-fx-text-fill: #EF4444; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 12px;"));
+            btnDelete.setOnMouseExited(e -> btnDelete.setStyle("-fx-text-fill: #94A3B8; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 12px;"));
+            btnDelete.setOnMouseClicked(e -> {
+                notificationListContainer.getChildren().remove(notifItemBox);
+            });
+
+            notifItemBox.getChildren().addAll(lbl, btnDelete);
 
             if ("AUCTION_WON".equals(notification.getType())) {
-                lbl.setStyle(lbl.getStyle() + " -fx-cursor: hand; -fx-border-color: #10B981; -fx-border-width: 1; -fx-border-radius: 4;");
+                notifItemBox.setStyle(notifItemBox.getStyle() + " -fx-border-color: #10B981; -fx-border-width: 1; -fx-border-radius: 4;");
+                lbl.setStyle(lbl.getStyle() + " -fx-cursor: hand;");
                 lbl.setOnMouseClicked(e -> {
                     // Chuyển tới tab HISTORY
                     btnHistory.fire();
@@ -772,7 +838,7 @@ public class BidderAuctionListController implements Initializable {
                 });
             }
 
-            notificationListContainer.getChildren().add(0, lbl);
+            notificationListContainer.getChildren().add(0, notifItemBox);
         }
     }
 
@@ -946,6 +1012,11 @@ public class BidderAuctionListController implements Initializable {
         boolean isCurrentlyVisible = notificationDropdown.isVisible();
         notificationDropdown.setVisible(!isCurrentlyVisible);
         notificationDropdown.setManaged(!isCurrentlyVisible);
+
+        if (!isCurrentlyVisible) {
+            unreadNotificationsCount = 0;
+            updateNotificationBadge(0);
+        }
     }
 
     /**
