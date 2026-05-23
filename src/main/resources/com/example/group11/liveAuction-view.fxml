@@ -102,9 +102,9 @@
                     <Label style="-fx-text-fill: #ffb95f; -fx-font-size: 12px; -fx-font-weight: bold;" text="BÀN ĐẶT GIÁ" />
 
                     <HBox spacing="10">
-                        <Button onAction="#addBid100" maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+\$100" HBox.hgrow="ALWAYS" />
-                        <Button onAction="#addBid500" maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+\$500" HBox.hgrow="ALWAYS" />
-                        <Button onAction="#addBid1000" maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+\$1,000" HBox.hgrow="ALWAYS" />
+                        <Button onAction="#addBid100" maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+$100" HBox.hgrow="ALWAYS" />
+                        <Button onAction="#addBid500" maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+$500" HBox.hgrow="ALWAYS" />
+                        <Button onAction="#addBid1000" maxWidth="Infinity" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 4; -fx-background-radius: 4; -fx-padding: 8; -fx-cursor: hand;" text="+$1,000" HBox.hgrow="ALWAYS" />
                     </HBox>
 
                     <!-- PHẦN ĐÃ CHỈNH SỬA: THÊM KÍ HIỆU $ -->

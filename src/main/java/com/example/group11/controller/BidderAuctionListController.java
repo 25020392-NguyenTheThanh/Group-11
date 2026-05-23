@@ -731,12 +731,47 @@ public class BidderAuctionListController implements Initializable {
      *
      * @param notification Đối tượng thông báo nhận được từ hệ thống
      */
+    private String getFriendlyMessage(Notification notification) {
+        String type = notification.getType();
+        Object data = notification.getData();
+        String text = data != null ? data.toString() : "";
+
+        return switch (type) {
+            case "OUTBID" -> "⚠️ Bạn đã bị vượt giá! " + text;
+            case "BID_SUCCESS" -> "✅ " + text;
+            case "PAYMENT_SUCCESS" -> "💰 " + text;
+            case "ENDING_SOON" -> "⏳ " + text;
+            case "WATCHLIST_STARTED" -> "▶️ " + text;
+            case "AUCTION_WON" -> "🏆 Chúc mừng! " + text;
+            case "AUCTION_LOST" -> "❌ " + text;
+            case "PRODUCT_APPROVED" -> "✔️ " + text;
+            case "AUCTION_CREATED" -> "📅 " + text;
+            default -> "[" + type + "] " + text;
+        };
+    }
+
     private void addNotificationToDropdown(Notification notification) {
         if (notificationListContainer != null) {
-            Label lbl = new Label(notification.getType() + ": " + notification.getData().toString());
+            if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+                return;
+            }
+            String friendlyMsg = getFriendlyMessage(notification);
+            Label lbl = new Label(friendlyMsg);
             lbl.setWrapText(true);
             lbl.setStyle("-fx-text-fill: white; -fx-background-color: #1E2D45; -fx-padding: 8; -fx-background-radius: 4; -fx-font-size: 11px;");
             lbl.setMaxWidth(220);
+
+            if ("AUCTION_WON".equals(notification.getType())) {
+                lbl.setStyle(lbl.getStyle() + " -fx-cursor: hand; -fx-border-color: #10B981; -fx-border-width: 1; -fx-border-radius: 4;");
+                lbl.setOnMouseClicked(e -> {
+                    // Chuyển tới tab HISTORY
+                    btnHistory.fire();
+                    // Đóng dropdown thông báo
+                    notificationDropdown.setVisible(false);
+                    notificationDropdown.setManaged(false);
+                });
+            }
+
             notificationListContainer.getChildren().add(0, lbl);
         }
     }

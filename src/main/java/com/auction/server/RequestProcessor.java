@@ -146,13 +146,32 @@ public class RequestProcessor {
                     if (u != null && u.getId() == previousWinner.getId() && u instanceof Bidder b) {
                         b.setBalance(newBalance);
                         client.sendNotification(new Notification("BALANCE_UPDATE", newBalance));
+                        client.sendNotification(new Notification("OUTBID", String.format("Bạn đã bị vượt giá ở phiên #%d [%s]! Giá cao nhất hiện tại là $%,.2f.", auction.getId(), auction.getItem().getName(), payload.amount)));
                         break;
                     }
                 }
             }
 
-            // Gửi thông báo cập nhật số dư cho chính bidder để đồng bộ giao diện chính (dashboard)
+            // Gửi thông báo đặt giá thành công cho chính bidder
             handler.sendNotification(new Notification("BALANCE_UPDATE", bidder.getBalance()));
+            handler.sendNotification(new Notification("BID_SUCCESS", String.format("Đặt giá thành công $%,.2f cho phiên #%d [%s].", payload.amount, auction.getId(), auction.getItem().getName())));
+
+            // Gửi thông báo diễn biến phiên đấu giá cho Seller
+            for (ClientHandler client : handler.getServer().getConnectedClients()) {
+                User u = client.getLoggedInUser();
+                if (u != null && u.getId() == auction.getItem().getOwnerId()) {
+                    if (auction.getBidHistory().size() == 1) {
+                        client.sendNotification(new Notification("SELLER_FIRST_BID", String.format("Đã có người đặt giá đầu tiên cho sản phẩm [%s] của bạn: $%,.2f.", auction.getItem().getName(), payload.amount)));
+                    }
+                    if (auction.getBidHistory().size() % 5 == 0) {
+                        client.sendNotification(new Notification("SELLER_BID_SURGE", String.format("Sản phẩm [%s] của bạn đang thu hút sự quan tâm với %d lượt đặt giá!", auction.getItem().getName(), auction.getBidHistory().size())));
+                    }
+                    if (payload.amount >= auction.getItem().getStartingPrice() * 2) {
+                        client.sendNotification(new Notification("SELLER_PRICE_MILESTONE", String.format("Sản phẩm [%s] của bạn đã vượt mốc giá gấp đôi giá khởi điểm: $%,.2f!", auction.getItem().getName(), payload.amount)));
+                    }
+                    break;
+                }
+            }
 
             return Response.ok(bidder.getBalance()); // Trả về số dư mới để client cập nhật
         } catch (Exception e) {
@@ -202,6 +221,18 @@ public class RequestProcessor {
             handler.getServer().broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
             handler.getServer().broadcast(new Notification("AUCTION_ENDED", "Phiên " + auction.getId() + " đã được thanh toán thành công!"));
 
+            // Gửi thông báo trực tiếp cho Bidder thanh toán thành công
+            handler.sendNotification(new Notification("PAYMENT_SUCCESS", String.format("Xác nhận thanh toán thành công cho phiên #%d [%s]. Số tiền: $%,.2f.", auction.getId(), auction.getItem().getName(), auction.getCurrentHighestBid())));
+
+            // Gửi thông báo trực tiếp cho Seller đã nhận được thanh toán
+            for (ClientHandler client : handler.getServer().getConnectedClients()) {
+                User u = client.getLoggedInUser();
+                if (u != null && u.getId() == auction.getItem().getOwnerId()) {
+                    client.sendNotification(new Notification("SELLER_PAYMENT_RECEIVED", String.format("Người mua @%s đã thanh toán $%,.2f cho sản phẩm [%s] của bạn. Giao dịch đã hoàn tất!", auction.getCurrentWinner().getUsername(), auction.getCurrentHighestBid(), auction.getItem().getName())));
+                    break;
+                }
+            }
+
             return Response.ok("Thanh toán thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
@@ -247,6 +278,7 @@ public class RequestProcessor {
         };
         Item item = ItemManager.getInstance().createItem(factory, user.getId(), p.name, p.description, p.startingPrice, p.imageUrl);
         if (item == null) return Response.error("Không thể tạo sản phẩm, vui lòng thử lại.");
+        handler.sendNotification(new Notification("PRODUCT_APPROVED", String.format("Sản phẩm [%s] của bạn đã được phê duyệt và tạo thành công!", item.getName())));
         return Response.ok(item);
     }
     // Seller tạo phiên đấu giá từ item
@@ -273,6 +305,7 @@ public class RequestProcessor {
             auction.start();
             com.auction.data.DataManager.getInstance().startAuction(auction.getId());
         }
+        handler.sendNotification(new Notification("AUCTION_CREATED", String.format("Phiên đấu giá cho sản phẩm [%s] đã được tạo thành công!", item.getName())));
         return Response.ok(auction);
     }
     // lấy danh sách item của user hiện tại

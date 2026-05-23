@@ -334,6 +334,9 @@ public class SellerAuctionListController implements Initializable {
      */
     private void addNotificationToUI(com.auction.network.Notification notification) {
         if (notificationListContainer == null) return;
+        if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+            return;
+        }
 
         VBox notifBox = new VBox(4.0);
         notifBox.setStyle("-fx-background-color: #1E2D45; -fx-padding: 10; -fx-background-radius: 8; -fx-cursor: hand;");
@@ -346,13 +349,49 @@ public class SellerAuctionListController implements Initializable {
         titleLabel.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 12.0));
 
         String type = notification.getType();
-        if ("AUCTION_ENDED".equals(type)) {
-            titleLabel.setText("🏁 Phiên đấu giá kết thúc");
-        } else if ("ITEM_STATUS_CHANGED".equals(type)) {
-            titleLabel.setText("🔄 Trạng thái sản phẩm thay đổi");
-        } else {
-            titleLabel.setText("🔔 Thông báo hệ thống");
+        String title = "🔔 Thông báo hệ thống";
+        String desc = notification.getData() != null ? notification.getData().toString() : "";
+
+        switch (type) {
+            case "SELLER_FIRST_BID":
+                title = "🎉 Lượt đặt giá đầu tiên (\"mở bát\")";
+                break;
+            case "SELLER_BID_SURGE":
+                title = "🔥 Lượt đặt giá tăng vọt";
+                break;
+            case "SELLER_PRICE_MILESTONE":
+                title = "📈 Mốc giá mới";
+                break;
+            case "SELLER_PAYMENT_RECEIVED":
+                title = "💰 Đã nhận thanh toán";
+                break;
+            case "SELLER_AUCTION_SUCCESS":
+                title = "🏆 Đấu giá thành công";
+                break;
+            case "SELLER_AUCTION_FAILED":
+                title = "❌ Đấu giá thất bại";
+                break;
+            case "PRODUCT_APPROVED":
+                title = "✔️ Sản phẩm được phê duyệt";
+                break;
+            case "AUCTION_CREATED":
+                title = "📅 Đăng ký đấu giá thành công";
+                break;
+            case "AUCTION_ENDED":
+                title = "🏁 Phiên đấu giá kết thúc";
+                break;
+            case "ITEM_STATUS_CHANGED":
+                title = "🔄 Trạng thái sản phẩm thay đổi";
+                if (notification.getData() != null) {
+                    desc = "Sản phẩm ID: " + notification.getData() + " đã cập nhật trạng thái mới.";
+                }
+                break;
+            default:
+                title = "🔔 [" + type + "] Thông báo";
+                break;
         }
+
+        titleLabel.setText(title);
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -363,19 +402,29 @@ public class SellerAuctionListController implements Initializable {
 
         header.getChildren().addAll(titleLabel, spacer, timeLabel);
 
-        Label descLabel = new Label();
-        if (notification.getData() != null) {
-            if ("ITEM_STATUS_CHANGED".equals(type)) {
-                descLabel.setText("Sản phẩm ID: " + notification.getData() + " đã cập nhật trạng thái mới.");
-            } else {
-                descLabel.setText(notification.getData().toString());
-            }
-        }
+        Label descLabel = new Label(desc);
         descLabel.setTextFill(javafx.scene.paint.Color.web("#94A3B8"));
         descLabel.setFont(new Font(11.0));
         descLabel.setWrapText(true);
 
         notifBox.getChildren().addAll(header, descLabel);
+
+        // Nút bấm chuyển đến tab tương ứng
+        if ("SELLER_PAYMENT_RECEIVED".equals(type) || "SELLER_AUCTION_SUCCESS".equals(type)) {
+            notifBox.setStyle(notifBox.getStyle() + " -fx-border-color: #38BDF8; -fx-border-width: 1;");
+            notifBox.setOnMouseClicked(e -> {
+                btnOrderHistory.fire();
+                notificationDropdown.setVisible(false);
+                notificationDropdown.setManaged(false);
+            });
+        } else if ("PRODUCT_APPROVED".equals(type) || "AUCTION_CREATED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
+            notifBox.setStyle(notifBox.getStyle() + " -fx-border-color: #ffd700; -fx-border-width: 1;");
+            notifBox.setOnMouseClicked(e -> {
+                btnMyListings.fire();
+                notificationDropdown.setVisible(false);
+                notificationDropdown.setManaged(false);
+            });
+        }
 
         // Đưa thông báo mới lên đầu danh sách
         notificationListContainer.getChildren().add(0, notifBox);
