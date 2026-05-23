@@ -45,7 +45,7 @@ public class AuctionRepository {
                 if (!winnerIsNull && winnerId > 0) {
                     User winner = UserManager.getInstance().findUserById(winnerId);
                     if (winner instanceof com.auction.model.user.Bidder b) {
-//                        auction.restoreCurrentWinner(b);
+                        auction.restoreCurrentWinner(b);
                     }
                 }
                 list.add(auction);

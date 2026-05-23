@@ -36,6 +36,10 @@ public class Bidder extends User implements Observer {
         balance -= amount;
     }
 
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
     public BidderProfile getProfile() { return profile; }
 
     @Override

@@ -190,7 +190,7 @@ public class ProductCardFactory {
         Label tStart = new Label("GIÁ KHỞI ĐIỂM");
         tStart.setStyle("-fx-text-fill: rgba(255,255,255,0.4); -fx-font-weight: bold;");
         tStart.setFont(new Font(8.0));
-        Label vStart = new Label(startPrice + " $");
+        Label vStart = new Label(String.format("%,.2f $", item.getStartingPrice()));
         vStart.setStyle("-fx-text-fill: rgba(255,255,255,0.8);");
         vStart.setFont(new Font(11.0));
         startPriceBox.getChildren().addAll(tStart, vStart);

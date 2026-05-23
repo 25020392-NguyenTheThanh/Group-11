@@ -163,6 +163,13 @@ public class Auction implements Subject, Serializable {
                     "Giá đặt phải >= %,.0f₫  (giá cao nhất %,.0f₫ + bước tối thiểu %,.0f₫)",
                     minAccepted, currentHighestBid, minBidStep));
 
+        // Hoàn tiền cho người ra giá cao nhất trước đó (nếu có)
+        if (currentWinner != null) {
+            currentWinner.topUp(currentHighestBid);
+            DataManager.getInstance().updateBidderBalance(currentWinner.getId(), currentWinner.getBalance());
+        }
+
+        // Khấu trừ tiền của new bidder
         bidder.deduct(amount);
         // Đồng bộ số dư mới của bidder xuống DB ngay lập tức
         DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
@@ -193,6 +200,10 @@ public class Auction implements Subject, Serializable {
 
     public void restoreHighestBid(double bid) {
         this.currentHighestBid = bid;
+    }
+
+    public void restoreCurrentWinner(Bidder winner) {
+        this.currentWinner = winner;
     }
 
     public boolean hasObserver(Observer observer) {

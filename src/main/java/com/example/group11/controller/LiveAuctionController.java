@@ -85,6 +85,12 @@ public class LiveAuctionController implements Initializable {
                     || "AUCTION_ENDED".equals(notification.getType())
                     || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                 refreshAuctionDetails(false);
+            } else if ("BALANCE_UPDATE".equals(notification.getType())) {
+                if (user instanceof Bidder bidder) {
+                    double newBalance = (Double) notification.getData();
+                    bidder.setBalance(newBalance);
+                    System.out.println("Cập nhật số dư realtime cho " + bidder.getUsername() + ": " + newBalance);
+                }
             } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
                 NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
             }
@@ -513,7 +519,8 @@ public class LiveAuctionController implements Initializable {
                 if (res != null && res.isSuccess()) {
                     NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
                     if (user instanceof Bidder bidder) {
-                        bidder.deduct(bidAmount);
+                        double newBalance = (Double) res.getData();
+                        bidder.setBalance(newBalance);
                         bidder.getProfile().addParticipatedAuction(auction.getId());
                     }
                     refreshAuctionDetails(false);
@@ -550,8 +557,8 @@ public class LiveAuctionController implements Initializable {
         details.append("Mô tả: ").append(item.getDescription()).append("\n");
         details.append("Trạng thái sản phẩm: ").append(item.getStatus()).append("\n");
         details.append("Trạng thái đấu giá: ").append(auction.getStatus()).append("\n");
-        details.append("Giá cao nhất hiện tại: ").append(String.format("%.2f", auction.getCurrentHighestBid())).append(" $\n");
-        details.append("Bước giá tối thiểu: ").append(String.format("%.2f", auction.getMinBidStep())).append(" $\n");
+        details.append("Giá cao nhất hiện tại: ").append(String.format("%,.2f", auction.getCurrentHighestBid())).append(" $\n");
+        details.append("Bước giá tối thiểu: ").append(String.format("%,.2f", auction.getMinBidStep())).append(" $\n");
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         details.append("Thời gian kết thúc: ").append(auction.getEndTime() != null ? auction.getEndTime().format(formatter) : "N/A").append("\n");
 

@@ -37,6 +37,7 @@ public class RequestProcessor {
                 case ADD_TO_WATCHLIST -> handleAddToWatchlist(request, handler);
                 case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
                 case TOP_UP         -> handleTopUp(request, handler);
+                case CONFIRM_PAYMENT -> handleConfirmPayment(request, handler);
             };
         } catch (Exception e) {
             // Safety net: bắt mọi exception chưa được xử lý trong handler
@@ -121,6 +122,11 @@ public class RequestProcessor {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
             if (auction == null) return Response.error("Phiên không tồn tại");
             Bidder bidder = (Bidder) user;
+
+            // Lưu thông tin người thắng cuộc trước đó để gửi thông báo hoàn tiền
+            Bidder previousWinner = auction.getCurrentWinner();
+            double previousHighestBid = auction.getCurrentHighestBid();
+
             auction.placeBid(bidder, payload.amount);
             bidder.getProfile().addParticipatedAuction(payload.auctionId);
 
@@ -131,7 +137,69 @@ public class RequestProcessor {
                     bidder.getUsername(),
                     payload.amount
             );
-            return Response.ok("Đặt giá thành công");
+
+            // Gửi thông báo hoàn tiền cho người bị vượt mặt (nếu online)
+            if (previousWinner != null && previousWinner.getId() != bidder.getId()) {
+                double newBalance = previousWinner.getBalance();
+                for (ClientHandler client : handler.getServer().getConnectedClients()) {
+                    User u = client.getLoggedInUser();
+                    if (u != null && u.getId() == previousWinner.getId() && u instanceof Bidder b) {
+                        b.setBalance(newBalance);
+                        client.sendNotification(new Notification("BALANCE_UPDATE", newBalance));
+                        break;
+                    }
+                }
+            }
+
+            return Response.ok(bidder.getBalance()); // Trả về số dư mới để client cập nhật
+        } catch (Exception e) {
+            return Response.error(e.getMessage());
+        }
+    }
+
+    private static Response handleConfirmPayment(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) {
+            return Response.error("Bạn cần đăng nhập để thanh toán");
+        }
+        if (!(user instanceof Bidder)) {
+            return Response.error("Chỉ người mua (Bidder) mới có quyền thanh toán!");
+        }
+
+        if (request.getPayload() == null || !(request.getPayload() instanceof Integer)) {
+            return Response.error("Mã phiên thanh toán không hợp lệ!");
+        }
+
+        int auctionId = (Integer) request.getPayload();
+        try {
+            Auction auction = AuctionManager.getInstance().findAuctionById(auctionId);
+            if (auction == null) return Response.error("Phiên không tồn tại");
+
+            if (auction.getStatus() != com.auction.model.auction.AuctionStatus.FINISHED) {
+                return Response.error("Phiên đấu giá chưa kết thúc hoặc đã được thanh toán!");
+            }
+
+            if (auction.getCurrentWinner() == null || auction.getCurrentWinner().getId() != user.getId()) {
+                return Response.error("Bạn không phải người thắng phiên đấu giá này!");
+            }
+
+            // Đổi trạng thái trong RAM
+            auction.markPaid();
+
+            // Lưu trạng thái vào database
+            DataManager.getInstance().finishAuction(auctionId, "PAID");
+
+            // Cập nhật doanh thu cho người bán trong database
+            DataManager.getInstance().updateSellerRevenue(
+                    auction.getItem().getOwnerId(),
+                    auction.getCurrentHighestBid()
+            );
+
+            // Phát sóng thông báo cho tất cả client
+            handler.getServer().broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
+            handler.getServer().broadcast(new Notification("AUCTION_ENDED", "Phiên " + auction.getId() + " đã được thanh toán thành công!"));
+
+            return Response.ok("Thanh toán thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
         }

@@ -57,10 +57,6 @@ public class AuctionTimer {
                     com.auction.manager.ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
 
                     if (auction.getCurrentWinner() != null) {
-                        DataManager.getInstance().updateSellerRevenue(
-                                auction.getItem().getOwnerId(),
-                                auction.getCurrentHighestBid()
-                        );
                         // Persist bidder won auction
                         DataManager.getInstance().saveBidderWon(
                                 auction.getCurrentWinner().getId(),

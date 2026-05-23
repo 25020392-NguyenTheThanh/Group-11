@@ -11,6 +11,7 @@ import com.auction.network.*;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
 import com.auction.model.item.ItemStatus;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -250,6 +251,13 @@ public class SellerAuctionListController implements Initializable {
      */
     public void setUser(User user) {
         this.user = user;
+        if (user instanceof com.auction.model.user.Seller seller) {
+            Platform.runLater(() -> {
+                if (walletBalance != null) {
+                    walletBalance.setText(String.format("%,.2f", seller.getRevenue()));
+                }
+            });
+        }
     }
 
     /**
@@ -701,6 +709,7 @@ public class SellerAuctionListController implements Initializable {
 
                 // Thực hiện lọc, sắp xếp và render các card sản phẩm
                 applyFiltersAndSort();
+                updateHeaderRevenue();
             } else {
                 String errorMsg = (itemsResponse != null) ? itemsResponse.getMessage() : "Không thể kết nối tới máy chủ!";
                 NotificationController.showError(
@@ -777,26 +786,28 @@ public class SellerAuctionListController implements Initializable {
 
                         soldCount++;
                         double price = auction.getCurrentHighestBid();
-                        totalRevenue += price;
+                        if (auction.getStatus() == AuctionStatus.PAID) {
+                            totalRevenue += price;
 
-                        String monthAbbr = getMonthAbbreviation(auction.getEndTime());
+                            String monthAbbr = getMonthAbbreviation(auction.getEndTime());
 
-                        // Add to total
-                        totalMap.put(monthAbbr, totalMap.get(monthAbbr) + price);
+                            // Add to total
+                            totalMap.put(monthAbbr, totalMap.get(monthAbbr) + price);
 
-                        // Add to category
-                        String category = item.getCategory();
-                        if (category != null) {
-                            switch (category.toUpperCase()) {
-                                case "ELECTRONICS":
-                                    electronicsMap.put(monthAbbr, electronicsMap.get(monthAbbr) + price);
-                                    break;
-                                case "ART":
-                                    artMap.put(monthAbbr, artMap.get(monthAbbr) + price);
-                                    break;
-                                case "VEHICLE":
-                                    vehicleMap.put(monthAbbr, vehicleMap.get(monthAbbr) + price);
-                                    break;
+                            // Add to category
+                            String category = item.getCategory();
+                            if (category != null) {
+                                switch (category.toUpperCase()) {
+                                    case "ELECTRONICS":
+                                        electronicsMap.put(monthAbbr, electronicsMap.get(monthAbbr) + price);
+                                        break;
+                                    case "ART":
+                                        artMap.put(monthAbbr, artMap.get(monthAbbr) + price);
+                                        break;
+                                    case "VEHICLE":
+                                        vehicleMap.put(monthAbbr, vehicleMap.get(monthAbbr) + price);
+                                        break;
+                                }
                             }
                         }
                     }
@@ -819,6 +830,21 @@ public class SellerAuctionListController implements Initializable {
 
         // 4. Đưa tất cả series vào biểu đồ
         revenueChart.getData().addAll(totalSeries, electronicsSeries, artSeries, vehicleSeries);
+    }
+
+    private void updateHeaderRevenue() {
+        double totalPaidRevenue = 0.0;
+        if (auctionItems != null && itemAuctionMap != null) {
+            for (Item item : auctionItems) {
+                Auction auction = itemAuctionMap.get(item.getId());
+                if (auction != null && auction.getStatus() == AuctionStatus.PAID && auction.getCurrentWinner() != null) {
+                    totalPaidRevenue += auction.getCurrentHighestBid();
+                }
+            }
+        }
+        if (walletBalance != null) {
+            walletBalance.setText(String.format("%,.2f", totalPaidRevenue));
+        }
     }
 
     /**

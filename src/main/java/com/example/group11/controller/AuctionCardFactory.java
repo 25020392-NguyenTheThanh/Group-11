@@ -228,7 +228,7 @@ public class AuctionCardFactory {
         lblStartTitle.setStyle("-fx-text-fill: rgba(255,255,255,0.4); -fx-font-weight: bold;");
         lblStartTitle.setFont(Font.font("System", 8.0));
 
-        Label startingPriceLabel = new Label(String.format("%.2f $", item.getStartingPrice()));
+        Label startingPriceLabel = new Label(String.format("%,.2f $", item.getStartingPrice()));
         startingPriceLabel.setStyle("-fx-text-fill: rgba(255,255,255,0.8);");
         startingPriceLabel.setFont(Font.font("System", 11.0));
         startPriceBox.getChildren().addAll(lblStartTitle, startingPriceLabel);
@@ -248,7 +248,7 @@ public class AuctionCardFactory {
             lblCurrentTitle.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
         }
 
-        Label currentPriceLabel = new Label(String.format("%.2f $", auction.getCurrentHighestBid()));
+        Label currentPriceLabel = new Label(String.format("%,.2f $", auction.getCurrentHighestBid()));
         if (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID) {
             currentPriceLabel.setStyle("-fx-text-fill: #10B981; -fx-font-weight: bold;");
         } else if (auction.getStatus() == AuctionStatus.CANCELED) {
@@ -324,11 +324,21 @@ public class AuctionCardFactory {
         bidButton.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(bidButton, Priority.ALWAYS);
 
+        boolean isWinner = false;
+        if (user instanceof Bidder bidder) {
+            isWinner = (auction.getCurrentWinner() != null && auction.getCurrentWinner().getId() == bidder.getId()) 
+                    || bidder.getProfile().getWonAuctions().contains(auction.getId());
+        }
+
         // Thiết lập trạng thái và màu sắc kích hoạt nút ĐẶT GIÁ
         if (auction.getStatus() == AuctionStatus.RUNNING) {
             bidButton.setText("ĐẶT GIÁ");
             bidButton.setDisable(false);
             bidButton.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-font-weight: bold; -fx-padding: 6; -fx-background-radius: 2; -fx-cursor: hand;");
+        } else if (auction.getStatus() == AuctionStatus.FINISHED && isWinner) {
+            bidButton.setText("THANH TOÁN");
+            bidButton.setDisable(false);
+            bidButton.setStyle("-fx-background-color: #10B981; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 6; -fx-background-radius: 2; -fx-cursor: hand;");
         } else {
             bidButton.setDisable(true);
             if (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID) {

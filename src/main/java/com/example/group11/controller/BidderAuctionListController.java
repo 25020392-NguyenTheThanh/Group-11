@@ -153,6 +153,12 @@ public class BidderAuctionListController implements Initializable {
             } else if ("AUCTION_ENDED".equals(type)
                     || "ITEM_STATUS_CHANGED".equals(type)) {
                 loadAuctions(); // reload để cập nhật trạng thái card
+            } else if ("BALANCE_UPDATE".equals(type)) {
+                if (user instanceof Bidder bidder) {
+                    double newBalance = (Double) notification.getData();
+                    bidder.setBalance(newBalance);
+                    walletBalance.setText(String.format("%,.2f", newBalance));
+                }
             }
         });
     };
@@ -167,7 +173,7 @@ public class BidderAuctionListController implements Initializable {
     public void setUser(User user) {
         this.user = user;
         if (user instanceof Bidder bidder) {
-            walletBalance.setText(String.format("%.2f", bidder.getBalance()));
+            walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
             if (toppedUpBidders.contains(bidder.getId())) {
                 addFundsBtn.setDisable(true);
             }
@@ -508,6 +514,10 @@ public class BidderAuctionListController implements Initializable {
      * @param auction Phiên đấu giá muốn đặt giá thầu
      */
     private void handleBid(Auction auction) {
+        if (auction.getStatus() == AuctionStatus.FINISHED) {
+            handleConfirmPayment(auction);
+            return;
+        }
         if (auction.getStatus() != AuctionStatus.RUNNING) {
             NotificationController.showError("Lỗi đặt giá", "Phiên đấu giá không ở trạng thái đang diễn ra (RUNNING).");
             return;
@@ -518,7 +528,7 @@ public class BidderAuctionListController implements Initializable {
         TextInputDialog dialog = new TextInputDialog(String.format("%.2f", minAccepted));
         dialog.setTitle("Đặt giá thầu");
         dialog.setHeaderText("Đấu giá cho sản phẩm: " + auction.getItem().getName());
-        dialog.setContentText(String.format("Nhập số tiền đấu giá (Tối thiểu %.2f $):", minAccepted));
+        dialog.setContentText(String.format("Nhập số tiền đấu giá (Tối thiểu %,.2f $):", minAccepted));
 
         NotificationController.applyDarkTheme(dialog);
 
@@ -528,7 +538,7 @@ public class BidderAuctionListController implements Initializable {
                 double bidAmount = Double.parseDouble(result.get());
                 if (bidAmount < minAccepted) {
                     NotificationController.showError("Lỗi đặt giá",
-                            String.format("Số tiền đặt giá phải tối thiểu %.2f $", minAccepted));
+                            String.format("Số tiền đặt giá phải tối thiểu %,.2f $", minAccepted));
                     return;
                 }
 
@@ -552,9 +562,10 @@ public class BidderAuctionListController implements Initializable {
                     if (res != null && res.isSuccess()) {
                         NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
                         if (user instanceof Bidder bidder) {
-                            bidder.deduct(bidAmount);
+                            double newBalance = (Double) res.getData();
+                            bidder.setBalance(newBalance);
                             bidder.getProfile().addParticipatedAuction(auction.getId());
-                            walletBalance.setText(String.format("%.2f", bidder.getBalance()));
+                            walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
                         }
                         loadAuctions();
                     } else {
@@ -574,6 +585,44 @@ public class BidderAuctionListController implements Initializable {
             } catch (NumberFormatException e) {
                 NotificationController.showError("Lỗi định dạng", "Vui lòng nhập một số hợp lệ.");
             }
+        }
+    }
+
+    private void handleConfirmPayment(Auction auction) {
+        boolean confirm = NotificationController.showConfirmation(
+                "Xác nhận thanh toán",
+                "Bạn có chắc chắn muốn thanh toán cho sản phẩm: " + auction.getItem().getName() + "?",
+                "Số tiền thanh toán: " + String.format("%,.2f $", auction.getCurrentHighestBid()),
+                "Thanh toán",
+                "Hủy"
+        );
+
+        if (confirm) {
+            Task<Response> payTask = new Task<>() {
+                @Override
+                protected Response call() throws Exception {
+                    return ServerConnection.getInstance().send(RequestType.CONFIRM_PAYMENT, auction.getId());
+                }
+            };
+
+            payTask.setOnSucceeded(evt -> {
+                Response res = payTask.getValue();
+                if (res != null && res.isSuccess()) {
+                    NotificationController.showNotification("Thành công", "Đã xác nhận thanh toán thành công!");
+                    loadAuctions();
+                } else {
+                    String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                    NotificationController.showError("Lỗi thanh toán", "Không thể thanh toán.\nChi tiết: " + errMsg);
+                }
+            });
+
+            payTask.setOnFailed(evt -> {
+                NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu thanh toán.");
+            });
+
+            Thread t = new Thread(payTask);
+            t.setDaemon(true);
+            t.start();
         }
     }
 
@@ -741,7 +790,7 @@ public class BidderAuctionListController implements Initializable {
                     double newBalance = (Double) res.getData();
                     // Cập nhật lại đối tượng bidder ở phía client
                     bidder.topUp(amount);
-                    walletBalance.setText(String.format("%.2f", newBalance));
+                    walletBalance.setText(String.format("%,.2f", newBalance));
 
                     // Lưu trạng thái đã nạp tiền
                     toppedUpBidders.add(bidder.getId());
