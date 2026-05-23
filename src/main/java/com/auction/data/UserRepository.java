@@ -94,19 +94,6 @@ public class UserRepository {
             } catch (SQLException ignored) {}
         }
     }
-    public boolean updatePassword(int userId, String newPlainPassword) {
-        String hashed = PasswordUtil.hash(newPlainPassword);
-        String sql = "UPDATE users SET password = ? WHERE id = ?";
-        try (Connection con = db.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, hashed);
-            ps.setInt(2, userId);
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("[UserRepository] updatePassword lỗi: " + e.getMessage());
-            return false;
-        }
-    }
 
     // Lấy toàn bộ danh sách người dùng.
     public List<User> findAll() {
