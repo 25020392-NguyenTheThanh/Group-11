@@ -87,7 +87,9 @@ public class ClientHandler implements Runnable , Observer {
                 out.reset();
             }
         } catch (IOException e) {
-            System.err.println("Lỗi gửi notification : " + e.getMessage());
+            // Socket đã chết — dọn dẹp để không broadcast vào socket rác nữa
+            System.err.println("Lỗi gửi notification (socket chết): " + e.getMessage());
+            cleanup();
         }
     }
 

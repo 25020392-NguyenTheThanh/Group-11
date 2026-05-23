@@ -70,6 +70,13 @@ public class DataManager {
         return auctionRepo.start(auctionId);
     }
 
+    /** Kết thúc phiên — truyền đúng finalStatus ("FINISHED" hoặc "CANCELED"). */
+    public boolean finishAuction(int auctionId, String finalStatus) {
+        return auctionRepo.finish(auctionId, finalStatus);
+    }
+
+    /** @deprecated dùng finishAuction(id, status). */
+    @Deprecated
     public boolean finishAuction(int auctionId) {
         return auctionRepo.finish(auctionId);
     }

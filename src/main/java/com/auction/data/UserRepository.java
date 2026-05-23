@@ -1,6 +1,7 @@
 package com.auction.data;
 
 import com.auction.model.user.User;
+import com.auction.security.PasswordUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -21,15 +22,21 @@ public class UserRepository {
      * return User nếu đúng thông tin, {@code null} nếu sai.
      */
     public User authenticate(String username, String password) {
-        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        // Chỉ query theo username, xác minh password bằng PasswordUtil.verify()
+        String sql = "SELECT * FROM users WHERE username = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, username);
-            ps.setString(2, password);
 
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return mapper.map(con, rs);
+                if (rs.next()) {
+                    String storedPassword = rs.getString("password");
+                    // verify() hỗ trợ cả plain text cũ lẫn hashed mới
+                    if (PasswordUtil.verify(password, storedPassword)) {
+                        return mapper.map(con, rs);
+                    }
+                }
             }
         } catch (SQLException e) {
             System.err.println("[UserRepository] authenticate lỗi: " + e.getMessage());
@@ -57,7 +64,7 @@ public class UserRepository {
             String sqlUser = "INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)";
             try (PreparedStatement ps = con.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, username);
-                ps.setString(2, password);
+                ps.setString(2, PasswordUtil.hash(password));  // hash trước khi lưu DB
                 ps.setString(3, email);
                 ps.setString(4, role.toUpperCase());
                 ps.executeUpdate();

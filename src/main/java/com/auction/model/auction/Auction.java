@@ -1,5 +1,6 @@
 package com.auction.model.auction;
 
+import com.auction.data.DataManager;
 import com.auction.exception.AuctionClosedException;
 import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
@@ -163,6 +164,9 @@ public class Auction implements Subject, Serializable {
                     minAccepted, currentHighestBid, minBidStep));
 
         bidder.deduct(amount);
+        // Đồng bộ số dư mới của bidder xuống DB ngay lập tức
+        DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
+
         // FIX: lưu vào lịch sử — phiên bản gốc bỏ sót hoàn toàn
         BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount);
         bidHistory.add(tx);

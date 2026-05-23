@@ -294,7 +294,7 @@ public class SellerAuctionListController implements Initializable {
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             addNotificationToUI(notification);
-            
+
             String type = notification.getType();
             if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
                 System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
@@ -772,13 +772,13 @@ public class SellerAuctionListController implements Initializable {
                     // Check if the auction ended successfully (with a winner, and status is FINISHED or PAID)
                     if ((auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID)
                             && auction.getCurrentWinner() != null) {
-                        
+
                         soldCount++;
                         double price = auction.getCurrentHighestBid();
                         totalRevenue += price;
 
                         String monthAbbr = getMonthAbbreviation(auction.getEndTime());
-                        
+
                         // Add to total
                         totalMap.put(monthAbbr, totalMap.get(monthAbbr) + price);
 
@@ -961,7 +961,7 @@ public class SellerAuctionListController implements Initializable {
      */
     public void loadOrderHistory() {
         System.out.println("Đang tải dữ liệu lịch sử đơn hàng...");
-        
+
         List<Order> orders = new ArrayList<>();
         if (auctionItems != null && itemAuctionMap != null) {
             for (Item item : auctionItems) {
@@ -1264,24 +1264,24 @@ public class SellerAuctionListController implements Initializable {
             Response response = ServerConnection.getInstance().send(RequestType.CREATE_ITEM, createItemPayload);
             if (response != null && response.isSuccess()) {
                 System.out.println("[DATABASE] Đã lưu sản phẩm vào cơ sở dữ liệu thành công!");
-                
+
                 Item createdItem = (Item) response.getData();
                 if (createdItem != null) {
                     CreateAuctionPayload createAuctionPayload = new CreateAuctionPayload();
                     createAuctionPayload.itemId = createdItem.getId();
-                    
+
                     if (startDatePicker.getValue() != null) {
                         createAuctionPayload.startTime = startDatePicker.getValue().atStartOfDay();
                     } else {
                         createAuctionPayload.startTime = LocalDateTime.now();
                     }
-                    
+
                     if (endDatePicker.getValue() != null) {
                         createAuctionPayload.endTime = endDatePicker.getValue().atTime(23, 59, 59);
                     } else {
                         createAuctionPayload.endTime = LocalDateTime.now().plusDays(7);
                     }
-                    
+
                     try {
                         createAuctionPayload.minBidStep = Double.parseDouble(minimumBidIncrementField.getText().trim());
                     } catch (NumberFormatException e) {
@@ -1383,13 +1383,10 @@ public class SellerAuctionListController implements Initializable {
             try {
                 System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
                 LiveAuctionController.clearEnteredAuctions();
-
-//                Response response = ServerConnection.getInstance().send(RequestType.LOGOUT, null);
-
-                // 3. KIỂM TRA PHẢN HỒI TỪ SERVER
-//                if (response != null && response.isSuccess()) {
-//                    System.out.println("Server xác nhận: " + response.getMessage());
-
+                // Gửi LOGOUT lên server TRƯỚC khi cắt kết nối để server dọn observer
+                try {
+                    ServerConnection.getInstance().send(RequestType.LOGOUT, null);
+                } catch (Exception ignored) {}
                 ServerConnection.getInstance().stopListening();
                 ServerConnection.getInstance().disconnect();
                 FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng nhập");

@@ -68,23 +68,23 @@ public class ServerConnection {
     }
 
     // Kết nối tới server
-    public void connect() throws IOException {
+    public synchronized void connect() throws IOException {
 
-        // Tạo socket
+        // Reset hoàn toàn trạng thái cũ trước khi kết nối mới
+        listenerThread    = null;
+        responseBuffer    = null;
+        requestInProgress = false;
+
+        // Tạo socket với timeout đọc 30 giây để tránh block vô hạn
         socket = new Socket(HOST, PORT);
+        socket.setSoTimeout(30_000); // 30 s read timeout
 
-        // Tạo output stream trước
-        // tránh deadlock
-        out = new ObjectOutputStream(
-                socket.getOutputStream()
-        );
-
+        // Tạo output stream trước — tránh deadlock
+        out = new ObjectOutputStream(socket.getOutputStream());
         out.flush();
 
         // Tạo input stream
-        in = new ObjectInputStream(
-                socket.getInputStream()
-        );
+        in = new ObjectInputStream(socket.getInputStream());
 
         System.out.println("Đã kết nối tới server");
     }
@@ -118,8 +118,14 @@ public class ServerConnection {
 
             // Nếu listener thread đang chạy, ta đợi nó đọc và thông báo
             if (listenerThread != null && listenerThread.isAlive()) {
+                long deadline = System.currentTimeMillis() + 30_000; // 30 s timeout
                 while (responseBuffer == null) {
-                    this.wait();
+                    long remaining = deadline - System.currentTimeMillis();
+                    if (remaining <= 0) {
+                        // Timeout: tránh block vô hạn nếu listener thread chết
+                        return Response.error("Không nhận được phản hồi từ server (timeout)");
+                    }
+                    this.wait(remaining);
                 }
                 Response r = responseBuffer;
                 responseBuffer = null; // consume
@@ -214,11 +220,19 @@ public class ServerConnection {
         System.out.println("Đang dừng luồng lắng nghe (listenerThread)...");
 
         if (listenerThread != null && listenerThread.isAlive()) {
-            // Gửi tín hiệu ngắt (interrupt) tới thread
             listenerThread.interrupt();
         }
+        // Đóng socket để unblock in.readObject() đang chờ I/O — interrupt() không đủ
+        try {
+            if (socket != null && !socket.isClosed()) socket.close();
+        } catch (IOException ignored) {}
 
-        // Hủy bỏ handler để tránh rò rỉ bộ nhớ hoặc xử lý nhầm dữ liệu cũ
+        // Đánh thức send() nếu đang wait() chờ responseBuffer
+        synchronized (this) {
+            requestInProgress = false;
+            this.notifyAll();
+        }
+
         this.notificationHandler = null;
         System.out.println("Đã dừng luồng lắng nghe thành công.");
     }

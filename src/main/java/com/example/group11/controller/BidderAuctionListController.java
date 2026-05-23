@@ -331,8 +331,8 @@ public class BidderAuctionListController implements Initializable {
                     return false;
                 }
             } else if (currentTab.equals("HISTORY")) {
-                if (auction.getStatus() != AuctionStatus.FINISHED 
-                        && auction.getStatus() != AuctionStatus.CANCELED 
+                if (auction.getStatus() != AuctionStatus.FINISHED
+                        && auction.getStatus() != AuctionStatus.CANCELED
                         && auction.getStatus() != AuctionStatus.PAID) {
                     return false;
                 }
@@ -366,9 +366,9 @@ public class BidderAuctionListController implements Initializable {
             // 4. Lọc theo từ khóa tìm kiếm (ID, Tên, Mô tả)
             if (!query.isEmpty()) {
                 String idStr = String.valueOf(auction.getId());
-                String itemName = (auction.getItem() != null && auction.getItem().getName() != null) 
+                String itemName = (auction.getItem() != null && auction.getItem().getName() != null)
                         ? auction.getItem().getName().toLowerCase() : "";
-                String itemDesc = (auction.getItem() != null && auction.getItem().getDescription() != null) 
+                String itemDesc = (auction.getItem() != null && auction.getItem().getDescription() != null)
                         ? auction.getItem().getDescription().toLowerCase() : "";
 
                 if (!idStr.contains(query) && !itemName.contains(query) && !itemDesc.contains(query)) {
@@ -521,7 +521,7 @@ public class BidderAuctionListController implements Initializable {
             try {
                 double bidAmount = Double.parseDouble(result.get());
                 if (bidAmount < minAccepted) {
-                    NotificationController.showError("Lỗi đặt giá", 
+                    NotificationController.showError("Lỗi đặt giá",
                             String.format("Số tiền đặt giá phải tối thiểu %.2f $", minAccepted));
                     return;
                 }
@@ -888,6 +888,10 @@ public class BidderAuctionListController implements Initializable {
             try {
                 System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
                 LiveAuctionController.clearEnteredAuctions();
+                // Gửi LOGOUT lên server TRƯỚC khi cắt kết nối để server dọn observer
+                try {
+                    ServerConnection.getInstance().send(com.auction.network.RequestType.LOGOUT, null);
+                } catch (Exception ignored) {}
                 ServerConnection.getInstance().stopListening();
                 ServerConnection.getInstance().disconnect();
                 FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng nhập");

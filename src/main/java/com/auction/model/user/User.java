@@ -2,6 +2,7 @@ package com.auction.model.user;
 
 import com.auction.exception.AuthenticationException;
 import com.auction.model.entity.Entity;
+import com.auction.security.PasswordUtil;
 // fix thêm trạng thái hoạt động!
 public abstract class User extends Entity {
     private String username ;
@@ -32,7 +33,8 @@ public abstract class User extends Entity {
     // trả về các role : BIDDER , SELLER , ADMIN
 
     public void login(String password) {
-        if (!this.password.equals(password)) {
+        // Hỗ trợ cả mật khẩu đã hash (mới) lẫn plain text (cũ, chưa migrate)
+        if (!PasswordUtil.verify(password, this.password)) {
             throw new AuthenticationException("Wrong password");
         }
         this.authenticated = true;

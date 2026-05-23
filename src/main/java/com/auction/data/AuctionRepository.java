@@ -109,7 +109,15 @@ public class AuctionRepository {
         return setStatus(auctionId, "RUNNING");
     }
 
-    // Kết thúc phiên đấu giá (RUNNING → FINISHED).
+    // Kết thúc phiên đấu giá — ghi đúng trạng thái (FINISHED hoặc CANCELED) xuống DB.
+    public boolean finish(int auctionId, String finalStatus) {
+        return setStatus(auctionId, finalStatus);
+    }
+
+    /**
+     * @deprecated dùng finish(id, status) để truyền đúng trạng thái.
+     */
+    @Deprecated
     public boolean finish(int auctionId) {
         return setStatus(auctionId, "FINISHED");
     }

@@ -20,23 +20,31 @@ import com.auction.pattern.factory.VehicleFactory;
 // điều phối request từ client gửi lên server
 public class RequestProcessor {
     // hàm trung tâm
-    public static Response process(Request request , ClientHandler handler) {
-        return switch (request.getType()) {
-            case LOGIN          -> handleLogin(request, handler);
-            case REGISTER       -> handleRegister(request);
-            case LOGOUT         -> handleLogout(handler);
-            case GET_AUCTIONS   -> handleGetAuctions();
-            case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request, handler);
-            case PLACE_BID      -> handlePlaceBid(request, handler);
-            case CREATE_ITEM    -> handleCreateItem(request, handler);
-            case CREATE_AUCTION -> handleCreateAuction(request, handler);
-            case GET_MY_ITEMS   -> handleGetMyItems(handler);
-            case DELETE_ITEM    -> handleDeleteItem(request, handler);
-            case UPDATE_ITEM    -> handleUpdateItem(request, handler);
-            case ADD_TO_WATCHLIST -> handleAddToWatchlist(request, handler);
-            case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
-            case TOP_UP         -> handleTopUp(request, handler);
-        };
+    public static Response process(Request request, ClientHandler handler) {
+        try {
+            return switch (request.getType()) {
+                case LOGIN          -> handleLogin(request, handler);
+                case REGISTER       -> handleRegister(request);
+                case LOGOUT         -> handleLogout(handler);
+                case GET_AUCTIONS   -> handleGetAuctions();
+                case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request, handler);
+                case PLACE_BID      -> handlePlaceBid(request, handler);
+                case CREATE_ITEM    -> handleCreateItem(request, handler);
+                case CREATE_AUCTION -> handleCreateAuction(request, handler);
+                case GET_MY_ITEMS   -> handleGetMyItems(handler);
+                case DELETE_ITEM    -> handleDeleteItem(request, handler);
+                case UPDATE_ITEM    -> handleUpdateItem(request, handler);
+                case ADD_TO_WATCHLIST -> handleAddToWatchlist(request, handler);
+                case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
+                case TOP_UP         -> handleTopUp(request, handler);
+            };
+        } catch (Exception e) {
+            // Safety net: bắt mọi exception chưa được xử lý trong handler
+            // Tránh crash connection khi có lỗi bất ngờ
+            System.err.println("[RequestProcessor] Unhandled exception in "
+                    + request.getType() + ": " + e.getMessage());
+            return Response.error("Lỗi xử lý yêu cầu: " + e.getMessage());
+        }
     } // vi phạm OCP
 
     // kiểm tra danh tính
@@ -62,10 +70,21 @@ public class RequestProcessor {
 
     // đăng kí tài khoản mới
     private static Response handleRegister(Request request){
+        if (request.getPayload() == null || !(request.getPayload() instanceof RegisterPayload)) {
+            return Response.error("Dữ liệu đăng ký không hợp lệ!");
+        }
         RegisterPayload p = (RegisterPayload) request.getPayload();
-        User user = UserManager.getInstance().register(p.username , p.password , p.email , p.role);
-        if (user == null) return Response.error("Username đã tồn tại");
-        return Response.ok(user);
+        try {
+            User user = UserManager.getInstance().register(p.username, p.password, p.email, p.role);
+            if (user == null) return Response.error("Đăng ký thất bại, vui lòng thử lại.");
+            return Response.ok(user);
+        } catch (IllegalArgumentException e) {
+            // USERNAME_EXISTS, EMAIL_EXISTS hoặc lỗi DB từ UserManager
+            return Response.error(e.getMessage());
+        } catch (Exception e) {
+            System.err.println("[handleRegister] Lỗi không xác định: " + e.getMessage());
+            return Response.error("Lỗi hệ thống khi đăng ký: " + e.getMessage());
+        }
     }
 
     // xử lý đăng xuất

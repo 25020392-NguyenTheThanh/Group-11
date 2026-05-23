@@ -71,9 +71,13 @@ public class AuctionManager {
         DataManager.getInstance().saveBidTransaction(auctionId, bidderId, bidderName, amount);
     }
 
-    // Kết thúc phiên: cập nhật status trong MySQL.
+    // Kết thúc phiên: cập nhật đúng trạng thái (FINISHED hoặc CANCELED) trong MySQL.
     public void finishAuction(int auctionId) {
-        DataManager.getInstance().finishAuction(auctionId);
+        Auction auction = auctions.get(auctionId);
+        String finalStatus = (auction != null)
+                ? auction.getStatus().name()   // lấy trạng thái thực tế từ RAM
+                : "FINISHED";
+        DataManager.getInstance().finishAuction(auctionId, finalStatus);
     }
 
     public List<Auction> getAuctions() {
