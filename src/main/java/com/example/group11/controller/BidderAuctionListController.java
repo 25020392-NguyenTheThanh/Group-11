@@ -356,7 +356,12 @@ public class BidderAuctionListController implements Initializable {
             if (profileView != null) {
                 profileView.setVisible(true);
                 profileView.setManaged(true);
-                loadProfileData();
+                // Rebuild profile view từ factory mỗi khi mở tab
+                profileView.getChildren().clear();
+                VBox builtProfile = ProfileViewFactory.create(user, msg ->
+                    NotificationController.showNotification("Đổi mật khẩu", msg)
+                );
+                profileView.getChildren().add(builtProfile);
             }
         } else {
             headerSection.setVisible(true);
@@ -1204,30 +1209,22 @@ public class BidderAuctionListController implements Initializable {
         button.setStyle(activeStyle);
     }
 
+    /**
+     * Tải dữ liệu profile vào view.
+     * Sau khi chuyển sang dùng ProfileViewFactory, phương thức này vẫn giữ để tương thích
+     * với các nơi khác gọi (điển hình: handleViewProfile dropdown).
+     */
     public void loadProfileData() {
-        if (user == null) return;
-        profileIdLabel.setText(String.valueOf(user.getId()));
-        profileUsernameLabel.setText(user.getUsername());
-        profileEmailLabel.setText(user.getEmail());
-        profileRoleLabel.setText(user.getRole());
-
-        if (user instanceof Bidder bidder) {
-            profileBalanceLabel.setText(String.format("%,.2f $", bidder.getBalance()));
-
-            // Won auctions
-            int wonCount = bidder.getProfile() != null && bidder.getProfile().getWonAuctions() != null
-                    ? bidder.getProfile().getWonAuctions().size() : 0;
-            profileWonCountLabel.setText(wonCount + " phiên");
-
-            // Participated auctions
-            int bidCount = bidder.getProfile() != null && bidder.getProfile().getParticipatedAuctions() != null
-                    ? bidder.getProfile().getParticipatedAuctions().size() : 0;
-            profileBidCountLabel.setText(bidCount + " phiên");
-        }
-
-        currentPasswordField.clear();
-        newPasswordField.clear();
-        confirmNewPasswordField.clear();
+        if (profileView == null || user == null) return;
+        profileView.getChildren().clear();
+        VBox builtProfile = ProfileViewFactory.create(user, msg ->
+            NotificationController.showNotification("Đổi mật khẩu", msg)
+        );
+        profileView.getChildren().add(builtProfile);
+        // Xóa các FXML label cũ không còn dùng
+        if (currentPasswordField != null) currentPasswordField.clear();
+        if (newPasswordField != null)     newPasswordField.clear();
+        if (confirmNewPasswordField != null) confirmNewPasswordField.clear();
     }
 
     @FXML

@@ -1582,22 +1582,23 @@ public class SellerAuctionListController implements Initializable {
         handleSwitchTab(new ActionEvent(btnSettings, null));
     }
 
+    /**
+     * Tải giao diện thông tin cá nhân vào profileView bằng ProfileViewFactory.
+     * Thay thế hoàn toàn cách set text vào FXML label cũ.
+     */
     public void loadProfileData() {
-        if (user == null) return;
-        profileIdLabel.setText(String.valueOf(user.getId()));
-        profileUsernameLabel.setText(user.getUsername());
-        profileEmailLabel.setText(user.getEmail());
-        profileRoleLabel.setText(user.getRole());
-
-        if (user instanceof Seller seller) {
-            profileRevenueLabel.setText(String.format("%,.2f $", seller.getRevenue()));
-            profileItemsCountLabel.setText((seller.getListedItems() != null ? seller.getListedItems().size() : 0) + " sản phẩm");
-        }
-
-        currentPasswordField.clear();
-        newPasswordField.clear();
-        confirmNewPasswordField.clear();
+        if (user == null || profileView == null) return;
+        profileView.getChildren().clear();
+        VBox builtProfile = ProfileViewFactory.create(user, msg ->
+            NotificationController.showNotification("Đổi mật khẩu", msg)
+        );
+        profileView.getChildren().add(builtProfile);
+        // Xóa input cũ nếu còn tham chiếu FXML
+        if (currentPasswordField != null) currentPasswordField.clear();
+        if (newPasswordField != null)     newPasswordField.clear();
+        if (confirmNewPasswordField != null) confirmNewPasswordField.clear();
     }
+
 
     @FXML
     private void handleChangePassword(ActionEvent event) {
