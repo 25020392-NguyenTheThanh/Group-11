@@ -276,7 +276,7 @@ public class LiveAuctionController implements Initializable {
      * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
+        ServerConnection.getInstance().addNotificationHandler(notification -> {
             Platform.runLater(() -> {
                 String type = notification.getType();
                 // Chỉ xử lý notification liên quan đến phiên này

@@ -292,7 +292,7 @@ public class SellerAuctionListController implements Initializable {
      * hoặc trạng thái sản phẩm thay đổi.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
+        ServerConnection.getInstance().addNotificationHandler(notification -> {
             addNotificationToUI(notification);
 
             String type = notification.getType();

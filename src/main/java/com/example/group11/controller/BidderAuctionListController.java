@@ -637,7 +637,7 @@ public class BidderAuctionListController implements Initializable {
      * Cập nhật danh sách đấu giá hoặc hiển thị hộp thoại cảnh báo khi có sự thay đổi hoặc sự kiện đặc biệt.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
+        ServerConnection.getInstance().addNotificationHandler(notification -> {
             Platform.runLater(() -> {
                 System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
                 addNotificationToDropdown(notification);
