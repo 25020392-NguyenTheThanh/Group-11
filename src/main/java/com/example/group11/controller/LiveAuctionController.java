@@ -91,6 +91,20 @@ public class LiveAuctionController implements Initializable {
                     || "AUCTION_ENDED".equals(notification.getType())
                     || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                 refreshAuctionDetails(false);
+            } else if ("TIME_EXTENDED".equals(notification.getType())) {
+                try {
+                    String newEndStr = (String) notification.getData();
+                    LocalDateTime newEndTime = LocalDateTime.parse(newEndStr);
+                    if (auction != null) {
+                        auction.setEndTime(newEndTime);
+                        System.out.println("Giao diện: Đã cập nhật ngay thời gian kết thúc mới = " + newEndTime);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Lỗi parse thời gian kết thúc: " + e.getMessage());
+                }
+                refreshAuctionDetails(false);
+                NotificationController.showAlert("Gia hạn phiên!",
+                        "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
             } else if ("BALANCE_UPDATE".equals(notification.getType())) {
                 if (user instanceof Bidder bidder) {
                     double newBalance = (Double) notification.getData();
@@ -99,6 +113,9 @@ public class LiveAuctionController implements Initializable {
                 }
             } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
                 NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
+            } else if ("NEW_AUCTION".equals(notification.getType())) {
+                String text = notification.getData() != null ? notification.getData().toString() : "";
+                NotificationController.showNotification("Sản phẩm mới!", text);
             }
         });
     };
@@ -328,23 +345,7 @@ public class LiveAuctionController implements Initializable {
      * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().setNotificationHandler(notification -> {
-            Platform.runLater(() -> {
-                System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-                if ("BID_UPDATE".equals(notification.getType())
-                        || "AUCTION_ENDED".equals(notification.getType())
-                        || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
-                    refreshAuctionDetails(false);
-                } else if ("TIME_EXTENDED".equals(notification.getType())) {
-                    // Anti-sniping: server gia hạn endTime, cập nhật lại auction rồi thông báo
-                    refreshAuctionDetails(false);
-                    NotificationController.showAlert("Gia hạn phiên!",
-                            "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
-                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
-                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
-                }
-            });
-        });
+        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
     }
 
     /**
@@ -403,6 +404,28 @@ public class LiveAuctionController implements Initializable {
                 confirmBidButton.setStyle("-fx-background-color: #262626; -fx-text-fill: #555555; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12;");
             } else {
                 confirmBidButton.setStyle("-fx-background-color: #ffb95f; -fx-text-fill: #2a1700; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12; -fx-cursor: hand;");
+            }
+
+            // Đồng bộ trạng thái Auto-Bid từ server
+            if (auction.getAutoBidConfigs() != null && auction.getAutoBidConfigs().containsKey(user.getId())) {
+                com.auction.model.auction.AutoBidConfig cfg = auction.getAutoBidConfigs().get(user.getId());
+                autoBidEnabled = true;
+                autoBidButton.setVisible(false);
+                autoBidStatusLabel.setText("Auto-Bid đang chạy (tối đa " + String.format("$%,.0f", cfg.getMaxBid()) + ")");
+                autoBidStatusLabel.setVisible(true);
+                cancelAutoBidButton.setVisible(true);
+                autoBidButton.setManaged(false);
+                autoBidStatusLabel.setManaged(true);
+                cancelAutoBidButton.setManaged(true);
+            } else {
+                autoBidEnabled = false;
+                autoBidButton.setVisible(isRunning);
+                autoBidButton.setDisable(!isRunning);
+                cancelAutoBidButton.setVisible(false);
+                autoBidStatusLabel.setVisible(false);
+                autoBidButton.setManaged(true);
+                cancelAutoBidButton.setManaged(false);
+                autoBidStatusLabel.setManaged(false);
             }
         }
 
@@ -537,7 +560,7 @@ public class LiveAuctionController implements Initializable {
         // Trục X và Y
         xAxis.setLabel("Lượt đặt");
         xAxis.setTickUnit(1);
-        yAxis.setLabel("Giá (₫)");
+        yAxis.setLabel("Giá ($)");
         yAxis.setForceZeroInRange(false);
     }
     private void attachTooltip(XYChart.Data<Number, Number> point, int idx,
@@ -545,10 +568,10 @@ public class LiveAuctionController implements Initializable {
         String text;
         if (idx == 0) {
             text = "Giá khởi điểm\n"
-                    + String.format("%,.0f₫", point.getYValue().doubleValue());
+                    + String.format("$%,.0f", point.getYValue().doubleValue());
         } else {
             BidTransaction tx = history.get(idx - 1);
-            text = String.format("Bid #%d\n%s\n%,.0f₫",
+            text = String.format("Bid #%d\n%s\n$%,.0f",
                     idx, tx.getBidderUsername(), tx.getAmount());
         }
         javafx.scene.control.Tooltip tp = new javafx.scene.control.Tooltip(text);
@@ -837,7 +860,7 @@ public class LiveAuctionController implements Initializable {
         Label maxBidLabel = new Label("Giá tối đa ($):");
         maxBidLabel.setStyle("-fx-text-fill: #d0c6ab; -fx-font-weight: bold; -fx-font-size: 13px;");
 
-        Label incrementLabel = new Label("Bước tăng mỗi lần (₫):");
+        Label incrementLabel = new Label("Bước tăng mỗi lần ($):");
         incrementLabel.setStyle("-fx-text-fill: #d0c6ab; -fx-font-weight: bold; -fx-font-size: 13px;");
 
         VBox maxBidBox = new VBox(6, maxBidLabel, maxBidField);
@@ -880,14 +903,14 @@ public class LiveAuctionController implements Initializable {
                             autoBidEnabled = true;
                             autoBidButton.setVisible(false);
                             autoBidStatusLabel.setText("Auto-Bid đang chạy (tối đa "
-                                    + String.format("%,.0f₫", maxBid) + ")");
+                                    + String.format("$%,.0f", maxBid) + ")");
                             autoBidStatusLabel.setVisible(true);
                             cancelAutoBidButton.setVisible(true);
                             autoBidButton.setManaged(false);
                             autoBidStatusLabel.setManaged(true);
                             cancelAutoBidButton.setManaged(true);
                             NotificationController.showAlert("Auto-Bid",
-                                    "Auto-Bid đã bật: tối đa " + String.format("%,.0f₫", maxBid));
+                                    "Auto-Bid đã bật: tối đa " + String.format("$%,.0f", maxBid));
                         } else {
                             NotificationController.showError("Auto-Bid thất bại", resp.getMessage());
                         }

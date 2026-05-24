@@ -173,11 +173,7 @@ public class AuctionTimer {
                 if (!(u instanceof com.auction.model.user.Bidder bidder)) return;
 
                 try {
-                    auction.placeBid(bidder, nextBid);
-                    AuctionManager.getInstance().recordBid(
-                            auction.getId(), bidderId, bidder.getUsername(), nextBid);
-                    server.broadcast(new Notification("BID_UPDATE",
-                            "Auto-bid: " + bidder.getUsername() + " đặt " + nextBid + "₫"));
+                    auction.placeBid(bidder, nextBid, true);
                 } catch (Exception e) {
                     System.err.println("[AutoBid] lỗi phiên " + auction.getId() + ": " + e.getMessage());
                 }

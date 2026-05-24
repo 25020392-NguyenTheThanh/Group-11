@@ -76,7 +76,12 @@ public class ClientHandler implements Runnable , Observer {
 
     @Override
     public void send(String message) {
-        sendNotification(new Notification("BID_UPDATE", message));
+        if (message.startsWith("TIME_EXTENDED:")) {
+            String timeStr = message.substring("TIME_EXTENDED:".length());
+            sendNotification(new Notification("TIME_EXTENDED", timeStr));
+        } else {
+            sendNotification(new Notification("BID_UPDATE", message));
+        }
     }
 
     public synchronized void sendNotification(Notification notification) {

@@ -155,9 +155,12 @@ public class BidderAuctionListController implements Initializable {
                 }
 
             } else if ("AUCTION_ENDED".equals(type)
-                    || "ITEM_STATUS_CHANGED".equals(type)
-                    || "NEW_AUCTION".equals(type)) {
+                    || "ITEM_STATUS_CHANGED".equals(type)) {
                 loadAuctions(); // reload để cập nhật trạng thái card
+            } else if ("NEW_AUCTION".equals(type)) {
+                loadAuctions();
+                String text = notification.getData() != null ? notification.getData().toString() : "";
+                NotificationController.showNotification("Sản phẩm mới!", text);
             } else if ("BALANCE_UPDATE".equals(type)) {
                 if (user instanceof Bidder bidder) {
                     double newBalance = (Double) notification.getData();

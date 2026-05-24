@@ -17,6 +17,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import com.auction.model.auction.AutoBidConfig;
+import com.auction.server.ClientHandler;
+import com.auction.manager.UserManager;
+import com.auction.manager.AuctionManager;
+import com.auction.network.Notification;
 
 // Auction đóng vai trò là Subject — notify tất cả observer khi có thay đổi
 // sửa thêm một số chỗ tránh race condition!!
@@ -84,7 +88,7 @@ public class Auction implements Subject, Serializable {
         status = AuctionStatus.RUNNING;
 
         String msg = String.format(
-                "▶ Phiên #%d [%s] bắt đầu! Giá khởi điểm: %,.0f₫ | Bước giá tối thiểu: %,.0f₫",
+                "▶ Phiên #%d [%s] bắt đầu! Giá khởi điểm: $%,.0f | Bước giá tối thiểu: $%,.0f",
                 id, item.getName(), currentHighestBid, minBidStep);
         System.out.println(msg);
         notifyObservers(msg);
@@ -104,7 +108,7 @@ public class Auction implements Subject, Serializable {
         } else {
             status = AuctionStatus.FINISHED;
             msg = String.format(
-                    "■ Phiên #%d [%s] kết thúc — Người thắng: %s với giá %,.0f₫",
+                    "■ Phiên #%d [%s] kết thúc — Người thắng: %s với giá $%,.0f",
                     id, item.getName(), currentWinner.getUsername(), currentHighestBid);
         }
         System.out.println(msg);
@@ -126,7 +130,7 @@ public class Auction implements Subject, Serializable {
 
         status = AuctionStatus.PAID;
         String msg = String.format(
-                "💰 Phiên #%d [%s] — %s đã thanh toán thành công %,.0f₫",
+                "💰 Phiên #%d [%s] — %s đã thanh toán thành công $%,.0f",
                 id, item.getName(), currentWinner.getUsername(), currentHighestBid);
         System.out.println(msg);
         notifyObservers(msg);
@@ -136,11 +140,22 @@ public class Auction implements Subject, Serializable {
 
     public synchronized void placeBid(Bidder bidder, double amount)
             throws InvalidBidException, AuctionClosedException {
+        placeBid(bidder, amount, false);
+    }
 
-        // Tính xác thực
-        if (bidder == null || !bidder.isAuthenticated()) {
-            throw new AuthenticationException("Người dùng chưa được xác thực");
+    public synchronized void placeBid(Bidder bidder, double amount, boolean isAutoBid)
+            throws InvalidBidException, AuctionClosedException {
+        if (!isAutoBid) {
+            if (bidder == null || !bidder.isAuthenticated()) {
+                throw new AuthenticationException("Người dùng chưa được xác thực");
+            }
         }
+        placeBidInternal(bidder, amount, isAutoBid);
+        triggerAutoBid(bidder);
+    }
+
+    private void placeBidInternal(Bidder bidder, double amount, boolean isAutoBid)
+            throws InvalidBidException, AuctionClosedException {
 
         // Kiểm tra số tiền
         if (amount <= 0) {
@@ -165,20 +180,22 @@ public class Auction implements Subject, Serializable {
             throw new InvalidBidException("Bạn đã là người đặt giá cao nhất, không thể đặt giá tiếp.");
         }
 
-        // Kiê tra số dư
+        // Kiểm tra số dư
         if (bidder.getBalance() < amount)
             throw new InvalidBidException(String.format(
-                    "Số dư không đủ — số dư hiện tại: %,.0f₫, giá đặt: %,.0f₫",
+                    "Số dư không đủ — số dư hiện tại: $%,.0f, giá đặt: $%,.0f",
                     bidder.getBalance(), amount));
 
         double minAccepted = currentHighestBid + minBidStep;
 
         if (amount < minAccepted)
             throw new InvalidBidException(String.format(
-                    "Giá đặt phải >= %,.0f₫  (giá cao nhất %,.0f₫ + bước tối thiểu %,.0f₫)",
+                    "Giá đặt phải >= $%,.0f  (giá cao nhất $%,.0f + bước tối thiểu $%,.0f)",
                     minAccepted, currentHighestBid, minBidStep));
 
         // Hoàn tiền cho người ra giá cao nhất trước đó (nếu có)
+        Bidder previousWinner = currentWinner;
+        double previousHighestBid = currentHighestBid;
         if (currentWinner != null) {
             currentWinner.topUp(currentHighestBid);
             DataManager.getInstance().updateBidderBalance(currentWinner.getId(), currentWinner.getBalance());
@@ -189,20 +206,91 @@ public class Auction implements Subject, Serializable {
         // Đồng bộ số dư mới của bidder xuống DB ngay lập tức
         DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
 
-        // FIX: lưu vào lịch sử — phiên bản gốc bỏ sót hoàn toàn
+        // Lưu vào lịch sử
         BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount);
         bidHistory.add(tx);
 
         currentHighestBid = amount;
         currentWinner = bidder;
 
-        checkAndExtend();
-        triggerAutoBid(bidder);
+        // Thêm đấu giá này vào danh sách tham gia của bidder
+        if (bidder.getProfile() != null) {
+            bidder.getProfile().addParticipatedAuction(id);
+        }
 
-        String msg = String.format(
-                "🔔 Phiên " + id + " — " + bidder.getUsername() + " vừa đặt " + amount + "₫ | Giá cao nhất hiện tại: " + currentHighestBid);
+        // Ghi lịch sử bid vào MySQL
+        try {
+            AuctionManager.getInstance().recordBid(id, bidder.getId(), bidder.getUsername(), amount);
+        } catch (Exception e) {
+            System.err.println("Lỗi ghi lịch sử MySQL: " + e.getMessage());
+        }
+
+        checkAndExtend();
+
+        // Chuẩn bị tin nhắn thông báo room
+        String msg;
+        if (isAutoBid) {
+            msg = String.format("🔔 Phiên %d — Auto-Bid: %s vừa đặt $%,.2f | Giá cao nhất hiện tại: $%,.2f", id, bidder.getUsername(), amount, currentHighestBid);
+        } else {
+            msg = String.format("🔔 Phiên %d — %s vừa đặt $%,.2f | Giá cao nhất hiện tại: $%,.2f", id, bidder.getUsername(), amount, currentHighestBid);
+        }
         System.out.println(msg);
         notifyObservers(msg);
+
+        // Gửi thông báo đến bidder vừa thắng (nếu online)
+        if (com.auction.server.AuctionServer.getInstance() != null) {
+            for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                com.auction.model.user.User u = client.getLoggedInUser();
+                if (u != null && u.getId() == bidder.getId()) {
+                    client.sendNotification(new Notification("BALANCE_UPDATE", bidder.getBalance()));
+                    String successMsg = isAutoBid 
+                        ? String.format("Auto-Bid đặt giá thành công $%,.2f cho phiên #%d [%s].", amount, id, item.getName())
+                        : String.format("Đặt giá thành công $%,.2f cho phiên #%d [%s].", amount, id, item.getName());
+                    client.sendNotification(new Notification("BID_SUCCESS", successMsg));
+                    break;
+                }
+            }
+        }
+
+        // Gửi thông báo đến người bị vượt mặt (nếu online)
+        if (previousWinner != null && previousWinner.getId() != bidder.getId()) {
+            if (com.auction.server.AuctionServer.getInstance() != null) {
+                for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                    com.auction.model.user.User u = client.getLoggedInUser();
+                    if (u != null && u.getId() == previousWinner.getId() && u instanceof Bidder b) {
+                        b.setBalance(previousWinner.getBalance());
+                        client.sendNotification(new Notification("BALANCE_UPDATE", b.getBalance()));
+                        client.sendNotification(new Notification("OUTBID", String.format("Bạn đã bị vượt giá ở phiên #%d [%s]! Giá cao nhất hiện tại là $%,.2f.", id, item.getName(), amount)));
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Gửi thông báo diễn biến phiên đấu giá cho Seller (nếu online)
+        if (com.auction.server.AuctionServer.getInstance() != null) {
+            for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                com.auction.model.user.User u = client.getLoggedInUser();
+                if (u != null && u.getId() == item.getOwnerId()) {
+                    if (bidHistory.size() == 1) {
+                        client.sendNotification(new Notification("SELLER_FIRST_BID", String.format("Đã có người đặt giá đầu tiên cho sản phẩm [%s] của bạn: $%,.2f.", item.getName(), amount)));
+                    }
+                    if (bidHistory.size() % 5 == 0) {
+                        client.sendNotification(new Notification("SELLER_BID_SURGE", String.format("Sản phẩm [%s] của bạn đang thu hút sự quan tâm với %d lượt đặt giá!", item.getName(), bidHistory.size())));
+                    }
+                    if (amount >= item.getStartingPrice() * 2) {
+                        client.sendNotification(new Notification("SELLER_PRICE_MILESTONE", String.format("Sản phẩm [%s] của bạn đã vượt mốc giá gấp đôi giá khởi điểm: $%,.2f!", item.getName(), amount)));
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Broadcast BID_UPDATE với BidUpdateData cho tất cả clients online
+        if (com.auction.server.AuctionServer.getInstance() != null) {
+            com.auction.server.AuctionServer.getInstance().broadcast(new Notification("BID_UPDATE",
+                new com.auction.network.BidUpdateData(id, currentHighestBid, bidder.getUsername(), bidHistory.size())));
+        }
     }
 
     private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException, ClassNotFoundException {
@@ -301,9 +389,33 @@ public class Auction implements Subject, Serializable {
     // bidder đăng kí auto-bid cho phiên này
     public synchronized void registerAutoBid(AutoBidConfig config){
         autoBidConfigs.put(config.getBidderId() , config);
-        String msg = String.format("Auto-Bid: %s đặt auto-bid tối đa %,.0f₫ (bước +%,.0f₫)",
+        String msg = String.format("Auto-Bid: %s đặt auto-bid tối đa $%,.0f (bước +$%,.0f)",
                 config.getBidderUsername() , config.getMaxBid() , config.getIncrement());
         notifyObservers(msg);
+
+        // Kích hoạt Auto-Bid ngay lập tức nếu bidder vừa đăng ký không phải là winner hiện tại
+        Bidder bidder = null;
+        for (com.auction.pattern.observer.Observer obs : observers) {
+            if (obs instanceof Bidder b && b.getId() == config.getBidderId()) {
+                bidder = b;
+                break;
+            } else if (obs instanceof ClientHandler handler) {
+                com.auction.model.user.User clientUser = handler.getLoggedInUser();
+                if (clientUser != null && clientUser.getId() == config.getBidderId() && clientUser instanceof Bidder b) {
+                    bidder = b;
+                    break;
+                }
+            }
+        }
+        if (bidder == null) {
+            com.auction.model.user.User u = UserManager.getInstance().findUserById(config.getBidderId());
+            if (u instanceof Bidder b) {
+                bidder = b;
+            }
+        }
+        if (bidder != null) {
+            triggerAutoBid(bidder);
+        }
     }
 
     // hủy auto-bid
@@ -316,23 +428,54 @@ public class Auction implements Subject, Serializable {
      *  nếu có thì tự động đặt giá thêm 1 bước.
      */
 
-    private void triggerAutoBid(Bidder justBidder){
-        // tìm auto-bid config tốt nhất của người khác vừa thắng
-        AutoBidConfig best = null ;
-        for (AutoBidConfig cfg : autoBidConfigs.values()){
-            if (cfg.getBidderId() == justBidder.getId()) continue ;
-            double nextBid = currentHighestBid + cfg.getIncrement();
-            if (nextBid > cfg.getMaxBid()) continue ;
-            if (best == null || cfg.getMaxBid() > best.getMaxBid()){
-                best = cfg ;
+    private void triggerAutoBid(Bidder justBidder) {
+        // Vòng lặp đặt giá tự động ngay lập tức đối với các bên khác
+        while (true) {
+            AutoBidConfig best = null;
+            double bestNextBid = 0;
+            for (AutoBidConfig cfg : autoBidConfigs.values()) {
+                if (currentWinner != null && cfg.getBidderId() == currentWinner.getId()) continue;
+                double nextBid = currentHighestBid + cfg.getIncrement();
+                if (nextBid > cfg.getMaxBid()) continue;
+                if (best == null || cfg.getMaxBid() > best.getMaxBid()) {
+                    best = cfg;
+                    bestNextBid = nextBid;
+                }
+            }
+            if (best == null) break;
+
+            // Tìm đối tượng Bidder tương ứng
+            Bidder bidder = null;
+            for (com.auction.pattern.observer.Observer obs : observers) {
+                if (obs instanceof Bidder b && b.getId() == best.getBidderId()) {
+                    bidder = b;
+                    break;
+                } else if (obs instanceof ClientHandler handler) {
+                    com.auction.model.user.User clientUser = handler.getLoggedInUser();
+                    if (clientUser != null && clientUser.getId() == best.getBidderId() && clientUser instanceof Bidder b) {
+                        bidder = b;
+                        break;
+                    }
+                }
+            }
+
+            if (bidder == null) {
+                com.auction.model.user.User u = UserManager.getInstance().findUserById(best.getBidderId());
+                if (u instanceof Bidder b) {
+                    bidder = b;
+                }
+            }
+
+            if (bidder == null) break;
+            Bidder activeBidder = bidder;
+
+            try {
+                placeBidInternal(activeBidder, bestNextBid, true);
+            } catch (Exception e) {
+                System.err.println("[AutoBid] Lỗi khi xử lý Auto-Bid: " + e.getMessage());
+                break;
             }
         }
-        if (best == null) return ;
-        // Tìm Bidder object từ observers hoặc bỏ qua nếu không có trong RAM
-        // (server sẽ inject bidder thực qua triggerAutoBidWithBidder)
-
-        final AutoBidConfig chosen = best ;
-        notifyObservers("AUTO_BID_TRIGGER:" + chosen.getBidderId() + ":" + (currentHighestBid + chosen.getIncrement()));
     }
     public Map<Integer , AutoBidConfig> getAutoBidConfigs(){
         return autoBidConfigs ;

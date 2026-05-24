@@ -3,9 +3,13 @@ import com.auction.exception.InvalidBidException;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
 import com.auction.model.item.Electronics;
+import com.auction.model.item.Art;
+import com.auction.model.item.Vehicle;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.pattern.factory.ElectronicsFactory;
+import com.auction.pattern.factory.ArtFactory;
+import com.auction.pattern.factory.VehicleFactory;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -17,7 +21,7 @@ public class AuctionSystemTest {
     // valid bid : kiểm tra đấu giá hợp lệ
     @Test
     void validBidShouldUpdateHighestPrice(){
-        Item item = new Electronics(1 , 123,"Iphone","abc" ,1000 , "", "apple");
+        Item item = new Art(1, 123, "Mona Lisa", "Classic painting", 1000, "", "Leonardo da Vinci");
 
         // Bắt đầu từ bây giờ, kết thúc sau 1 ngày
         LocalDateTime startTime = LocalDateTime.now();
@@ -34,7 +38,7 @@ public class AuctionSystemTest {
     // invalid bid : kiểm tra đấu giá không hợp lệ
     @Test
     void invalidBidShouldThrowException(){
-        Item item = new Electronics(1 , 123,"Iphone","abc" ,2000 , "", "apple");
+        Item item = new Vehicle(1, 123, "Tesla Model Y", "Electric SUV", 2000, "", 2023);
         // Chọn thời gian kiểm thử tường minh cố định tương lai
         LocalDateTime startTime = LocalDateTime.of(2026, 5, 25, 10, 30);
         LocalDateTime endTime = LocalDateTime.of(2026, 5, 30, 10, 30);
@@ -100,6 +104,26 @@ public class AuctionSystemTest {
         assertEquals("ELECTRONICS" , item.getCategory());
     }
 
+    @Test
+    void factoryShouldCreateArtItem(){
+        ArtFactory artFactory = new ArtFactory("Leonardo da Vinci");
+        Item item = artFactory.createItem(2, 123, "Mona Lisa", "Classic painting", 1000, "");
+        assertNotNull(item);
+        assertEquals("ART", item.getCategory());
+        assertTrue(item instanceof Art);
+        assertEquals("Leonardo da Vinci", ((Art)item).getArtist());
+    }
+
+    @Test
+    void factoryShouldCreateVehicleItem(){
+        VehicleFactory vehicleFactory = new VehicleFactory(2023);
+        Item item = vehicleFactory.createItem(3, 123, "Tesla Model Y", "Electric SUV", 2000, "");
+        assertNotNull(item);
+        assertEquals("VEHICLE", item.getCategory());
+        assertTrue(item instanceof Vehicle);
+        assertEquals(2023, ((Vehicle)item).getYear());
+    }
+
     // auction init
     @Test
     void auctionShouldInitializeCorrectly(){
@@ -120,7 +144,7 @@ public class AuctionSystemTest {
         // endTime chỉ còn 10 giây — nằm trong snipe window 30s
         LocalDateTime end = LocalDateTime.now().plusSeconds(10);
         Auction auction = new Auction(1, item, start, end, 100);
-        Bidder bidder = new Bidder(1, "Tuan", "123", "123@gmail", 5000);
+        Bidder bidder = new Bidder(1, "Tuan", "123", "123@gmail", 5000, true);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
 
@@ -143,5 +167,66 @@ public class AuctionSystemTest {
 
         assertEquals(1, auction.getAutoBidConfigs().size());
         assertEquals(5000, auction.getAutoBidConfigs().get(99).getMaxBid());
+    }
+
+    @Test
+    void autoBidShouldAutomaticallyPlaceBid() {
+        Item item = new Electronics(1, 123, "Iphone", "abc", 1000, "", "apple");
+        Auction auction = new Auction(1, item,
+                LocalDateTime.now(), LocalDateTime.now().plusDays(1), 100);
+        auction.setStatus(AuctionStatus.RUNNING);
+
+        // Bidder 1 (Auto-bidder): maxBid = 2000, increment = 150
+        Bidder bidder1 = new Bidder(1, "AutoBidder", "123", "autobid@gmail.com", 5000, true);
+        bidder1.setAuthenticated(true);
+        auction.addObserver(bidder1);
+
+        com.auction.model.auction.AutoBidConfig cfg =
+                new com.auction.model.auction.AutoBidConfig(1, "AutoBidder", 2000, 150);
+        auction.registerAutoBid(cfg);
+
+        // Bidder 2 (Manual bidder): places a manual bid of 1300
+        Bidder bidder2 = new Bidder(2, "ManualBidder", "123", "manual@gmail.com", 5000, true);
+        bidder2.setAuthenticated(true);
+        auction.addObserver(bidder2);
+
+        auction.placeBid(bidder2, 1300);
+
+        assertEquals(1450.0, auction.getCurrentHighestBid());
+        assertEquals("AutoBidder", auction.getCurrentWinner().getUsername());
+        assertEquals(3550.0, bidder1.getBalance()); // 5000 - 1450
+        assertEquals(5000.0, bidder2.getBalance()); // Refunded 1300
+    }
+
+    @Test
+    void autoBidShouldPersistAfterLogout() {
+        Item item = new Electronics(1, 123, "Iphone", "abc", 1000, "", "apple");
+        Auction auction = new Auction(1, item,
+                LocalDateTime.now(), LocalDateTime.now().plusDays(1), 100);
+        auction.setStatus(AuctionStatus.RUNNING);
+
+        // Bidder 1 (Auto-bidder)
+        Bidder bidder1 = new Bidder(1, "AutoBidder", "123", "autobid@gmail.com", 5000, true);
+        bidder1.setAuthenticated(true);
+        auction.addObserver(bidder1);
+
+        com.auction.model.auction.AutoBidConfig cfg =
+                new com.auction.model.auction.AutoBidConfig(1, "AutoBidder", 2000, 150);
+        auction.registerAutoBid(cfg);
+
+        // Bidder 1 logs out (authenticated becomes false)
+        bidder1.logout();
+        assertFalse(bidder1.isAuthenticated());
+
+        // Bidder 2 (Manual bidder) places a manual bid of 1300
+        Bidder bidder2 = new Bidder(2, "ManualBidder", "123", "manual@gmail.com", 5000, true);
+        bidder2.setAuthenticated(true);
+        auction.addObserver(bidder2);
+
+        // The auto-bid should still be triggered and succeed despite bidder1 being logged out
+        auction.placeBid(bidder2, 1300);
+
+        assertEquals(1450.0, auction.getCurrentHighestBid());
+        assertEquals("AutoBidder", auction.getCurrentWinner().getUsername());
     }
 }

@@ -126,55 +126,7 @@ public class RequestProcessor {
             if (auction == null) return Response.error("Phiên không tồn tại");
             Bidder bidder = (Bidder) user;
 
-            // Lưu thông tin người thắng cuộc trước đó để gửi thông báo hoàn tiền
-            Bidder previousWinner = auction.getCurrentWinner();
-            double previousHighestBid = auction.getCurrentHighestBid();
-
             auction.placeBid(bidder, payload.amount);
-            bidder.getProfile().addParticipatedAuction(payload.auctionId);
-
-            // Ghi lịch sử bid vào MySQL
-            AuctionManager.getInstance().recordBid(
-                    payload.auctionId,
-                    bidder.getId(),
-                    bidder.getUsername(),
-                    payload.amount
-            );
-
-            // Gửi thông báo hoàn tiền cho người bị vượt mặt (nếu online)
-            if (previousWinner != null && previousWinner.getId() != bidder.getId()) {
-                double newBalance = previousWinner.getBalance();
-                for (ClientHandler client : handler.getServer().getConnectedClients()) {
-                    User u = client.getLoggedInUser();
-                    if (u != null && u.getId() == previousWinner.getId() && u instanceof Bidder b) {
-                        b.setBalance(newBalance);
-                        client.sendNotification(new Notification("BALANCE_UPDATE", newBalance));
-                        client.sendNotification(new Notification("OUTBID", String.format("Bạn đã bị vượt giá ở phiên #%d [%s]! Giá cao nhất hiện tại là $%,.2f.", auction.getId(), auction.getItem().getName(), payload.amount)));
-                        break;
-                    }
-                }
-            }
-
-            // Gửi thông báo đặt giá thành công cho chính bidder
-            handler.sendNotification(new Notification("BALANCE_UPDATE", bidder.getBalance()));
-            handler.sendNotification(new Notification("BID_SUCCESS", String.format("Đặt giá thành công $%,.2f cho phiên #%d [%s].", payload.amount, auction.getId(), auction.getItem().getName())));
-
-            // Gửi thông báo diễn biến phiên đấu giá cho Seller
-            for (ClientHandler client : handler.getServer().getConnectedClients()) {
-                User u = client.getLoggedInUser();
-                if (u != null && u.getId() == auction.getItem().getOwnerId()) {
-                    if (auction.getBidHistory().size() == 1) {
-                        client.sendNotification(new Notification("SELLER_FIRST_BID", String.format("Đã có người đặt giá đầu tiên cho sản phẩm [%s] của bạn: $%,.2f.", auction.getItem().getName(), payload.amount)));
-                    }
-                    if (auction.getBidHistory().size() % 5 == 0) {
-                        client.sendNotification(new Notification("SELLER_BID_SURGE", String.format("Sản phẩm [%s] của bạn đang thu hút sự quan tâm với %d lượt đặt giá!", auction.getItem().getName(), auction.getBidHistory().size())));
-                    }
-                    if (payload.amount >= auction.getItem().getStartingPrice() * 2) {
-                        client.sendNotification(new Notification("SELLER_PRICE_MILESTONE", String.format("Sản phẩm [%s] của bạn đã vượt mốc giá gấp đôi giá khởi điểm: $%,.2f!", auction.getItem().getName(), payload.amount)));
-                    }
-                    break;
-                }
-            }
 
             return Response.ok(bidder.getBalance()); // Trả về số dư mới để client cập nhật
         } catch (Exception e) {
@@ -492,12 +444,12 @@ public class RequestProcessor {
 
         Bidder bidder = (Bidder) user;
         if (p.maxBid <= auction.getCurrentHighestBid())
-            return Response.error("maxBid phải lớn hơn giá hiện tại (" + auction.getCurrentHighestBid() + "₫)");
+            return Response.error("maxBid phải lớn hơn giá hiện tại ($" + auction.getCurrentHighestBid() + ")");
         if (p.increment < auction.getMinBidStep())
-            return Response.error("Bước tăng phải >= minBidStep (" + auction.getMinBidStep() + "₫)");
+            return Response.error("Bước tăng phải >= minBidStep ($" + auction.getMinBidStep() + ")");
         AutoBidConfig cfg = new AutoBidConfig(bidder.getId(), bidder.getUsername(), p.maxBid, p.increment);
         auction.registerAutoBid(cfg);
-        return Response.ok("Đăng ký Auto-Bid thành công (tối đa " + p.maxBid + "₫)");
+        return Response.ok("Đăng ký Auto-Bid thành công (tối đa $" + p.maxBid + ")");
     }
 
     private static Response handleCancelAutoBid(Request request , ClientHandler handler){

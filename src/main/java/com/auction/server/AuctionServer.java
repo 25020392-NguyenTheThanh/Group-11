@@ -20,6 +20,16 @@ import java.sql.Statement;
 
 public class AuctionServer {
     private static final int PORT = 9999 ;
+    private static volatile AuctionServer instance;
+
+    public AuctionServer() {
+        instance = this;
+    }
+
+    public static AuctionServer getInstance() {
+        return instance;
+    }
+
     // Danh sách tất cả client đang kết nối — dùng CopyOnWriteArrayList
     // vì nhiều thread đọc/ghi đồng thời
     private final List<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();

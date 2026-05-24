@@ -384,46 +384,6 @@
                     <content>
                         <VBox fx:id="notificationListContainer" spacing="8.0" style="-fx-background-color: transparent;">
                             <children>
-
-                                <VBox spacing="4.0" style="-fx-background-color: #1E2D45; -fx-padding: 10; -fx-background-radius: 8; -fx-cursor: hand;">
-                                    <children>
-                                        <HBox alignment="CENTER_LEFT">
-                                            <children>
-                                                <Label text="🔥 Đấu giá có biến động!" textFill="WHITE"><font><Font name="System Bold" size="12.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <Label text="Vừa xong" textFill="#94a3b8"><font><Font size="10.0" /></font></Label>
-                                            </children>
-                                        </HBox>
-                                        <Label text="Một người dùng khác vừa đặt mức giá cao hơn bạn tại phiên đấu giá Mac Studio." textFill="#94A3B8" wrapText="true"><font><Font size="11.0" /></font></Label>
-                                    </children>
-                                </VBox>
-
-                                <VBox spacing="4.0" style="-fx-background-color: #1E2D45; -fx-padding: 10; -fx-background-radius: 8; -fx-cursor: hand;">
-                                    <children>
-                                        <HBox alignment="CENTER_LEFT">
-                                            <children>
-                                                <Label text="🎉 Đăng ký sản phẩm thành công" textFill="WHITE"><font><Font name="System Bold" size="12.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <Label text="2 giờ trước" textFill="#94a3b8"><font><Font size="10.0" /></font></Label>
-                                            </children>
-                                        </HBox>
-                                        <Label text="Sản phẩm 'Bàn phím cơ Custom' của bạn đã được hệ thống phê duyệt thành công." textFill="#94A3B8" wrapText="true"><font><Font size="11.0" /></font></Label>
-                                    </children>
-                                </VBox>
-
-                                <VBox spacing="4.0" style="-fx-background-color: #0A192F; -fx-padding: 10; -fx-background-radius: 8; -fx-cursor: hand;">
-                                    <children>
-                                        <HBox alignment="CENTER_LEFT">
-                                            <children>
-                                                <Label text="💰 Ví điện tử đã được cộng tiền" textFill="WHITE"><font><Font name="System Bold" size="12.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <Label text="Hôm qua" textFill="#94a3b8"><font><Font size="10.0" /></font></Label>
-                                            </children>
-                                        </HBox>
-                                        <Label text="Giao dịch hoàn trả tiền đặt cọc đấu giá $50.00 đã được xử lý xong." textFill="#94A3B8" wrapText="true"><font><Font size="11.0" /></font></Label>
-                                    </children>
-                                </VBox>
-
                             </children>
                         </VBox>
                     </content>
