@@ -123,7 +123,7 @@
                                                 <TextField fx:id="filterSearchId" prefWidth="250.0" promptText="Tìm kiếm ID sản phẩm..." style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
                                                 <MenuButton fx:id="filterStatus" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 5;" text="TRẠNG THÁI" textFill="WHITE">
                                                     <items>
-                                                        <MenuItem text="Tất cả " /><MenuItem text="AVAILABLE" /><MenuItem text="OPEN" /><MenuItem text="RUNNING" /><MenuItem text="FINISHED" /><MenuItem text="PAID" /><MenuItem text="CANCELED" />
+                                                        <MenuItem text="Tất cả" /><MenuItem text="AVAILABLE" /><MenuItem text="IN_AUCTION" /><MenuItem text="SOLD" /><MenuItem text="UNSOLD" />
                                                     </items>
                                                 </MenuButton>
                                                 <MenuButton fx:id="filterSort" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 5;" text="SẮP XẾP" textFill="WHITE">

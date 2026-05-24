@@ -531,13 +531,8 @@ public class SellerAuctionListController implements Initializable {
 
             boolean matchesStatus = true;
             if (!selectedStatus.equals("TẤT CẢ") && !selectedStatus.equals("TRẠNG THÁI")) {
-                if (selectedStatus.equals("AVAILABLE")) {
-                    matchesStatus = (item.getStatus() == ItemStatus.AVAILABLE);
-                } else {
-                    Auction auction = itemAuctionMap.get(item.getId());
-                    matchesStatus = (auction != null && auction.getStatus() != null &&
-                            auction.getStatus().name().equalsIgnoreCase(selectedStatus));
-                }
+                matchesStatus = (item.getStatus() != null &&
+                        item.getStatus().name().equalsIgnoreCase(selectedStatus));
             }
 
             if (matchesStatus) {

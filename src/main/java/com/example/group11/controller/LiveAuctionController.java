@@ -845,11 +845,11 @@ public class LiveAuctionController implements Initializable {
         dialog.setHeaderText("🤖 Cài đặt Auto-Bid");
 
         TextField maxBidField = new TextField();
-        maxBidField.setPromptText("Ví dụ: 5000000");
+        maxBidField.setPromptText("Ví dụ: 50000");
         maxBidField.setPrefWidth(320);
 
         TextField incrementField = new TextField(String.format("%.0f", auction.getMinBidStep()));
-        incrementField.setPromptText("Ví dụ: 100000");
+        incrementField.setPromptText("Ví dụ: 10000");
         incrementField.setPrefWidth(320);
 
         Label descLabel = new Label("Hệ thống sẽ tự động đặt giá thầu thay bạn với bước tăng đã chọn khi có người trả giá cao hơn, đảm bảo không vượt quá mức giá tối đa.");

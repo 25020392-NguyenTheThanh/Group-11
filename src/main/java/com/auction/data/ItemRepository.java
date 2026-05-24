@@ -68,13 +68,24 @@ public class ItemRepository {
         return list;
     }
 
-    // Xóa item theo id.
+    // Xóa item theo id (đồng thời xóa phiên đấu giá liên kết để bảo toàn khóa ngoại).
     public boolean delete(int id) {
-        String sql = "DELETE FROM items WHERE id = ?";
-        try (Connection con = db.getConnection();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            return ps.executeUpdate() > 0;
+        String deleteAuctionSql = "DELETE FROM auctions WHERE item_id = ?";
+        String deleteItemSql = "DELETE FROM items WHERE id = ?";
+        try (Connection con = db.getConnection()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement ps1 = con.prepareStatement(deleteAuctionSql);
+                 PreparedStatement ps2 = con.prepareStatement(deleteItemSql)) {
+                ps1.setInt(1, id);
+                ps2.setInt(1, id);
+                ps1.executeUpdate();
+                int rows = ps2.executeUpdate();
+                con.commit();
+                return rows > 0;
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

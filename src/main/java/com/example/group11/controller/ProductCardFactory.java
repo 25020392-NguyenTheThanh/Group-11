@@ -229,7 +229,7 @@ public class ProductCardFactory {
         Button btnDelete = new Button("XÓA");
         btnDelete.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnDelete, javafx.scene.layout.Priority.ALWAYS);
-        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+        if (item.getStatus() == com.auction.model.item.ItemStatus.IN_AUCTION) {
             btnDelete.setDisable(true);
             btnDelete.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
         } else {

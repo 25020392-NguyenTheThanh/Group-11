@@ -86,6 +86,9 @@ public class Auction implements Subject, Serializable {
             throw new IllegalStateException("Chỉ có thể bắt đầu phiên ở trạng thái OPEN");
 
         status = AuctionStatus.RUNNING;
+        if (item != null) {
+            item.setStatus(com.auction.model.item.ItemStatus.IN_AUCTION);
+        }
 
         String msg = String.format(
                 "▶ Phiên #%d [%s] bắt đầu! Giá khởi điểm: $%,.0f | Bước giá tối thiểu: $%,.0f",

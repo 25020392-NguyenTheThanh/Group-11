@@ -84,6 +84,10 @@ public class AuctionManager {
         return auctions.values().stream().collect(Collectors.toList());
     }
 
+    public void removeAuctionFromCache(int auctionId) {
+        auctions.remove(auctionId);
+    }
+
     public List<Auction> getByStatus(AuctionStatus status) {
         return auctions.values().stream()
                 .filter(a -> a.getStatus() == status)

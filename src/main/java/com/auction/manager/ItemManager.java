@@ -90,6 +90,11 @@ public class ItemManager {
         boolean success = DataManager.getInstance().deleteItem(id);
         if (success) {
             items.remove(id);
+            // Đồng bộ xóa cả phiên đấu giá liên kết khỏi cache RAM
+            AuctionManager.getInstance().getAuctions().stream()
+                    .filter(a -> a.getItem() != null && a.getItem().getId() == id)
+                    .findFirst()
+                    .ifPresent(a -> AuctionManager.getInstance().removeAuctionFromCache(a.getId()));
         }
         return success;
     }

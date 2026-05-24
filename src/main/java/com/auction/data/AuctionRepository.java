@@ -57,7 +57,7 @@ public class AuctionRepository {
     }
 
     /**
-     * Tạo phiên đấu giá mới và đổi trạng thái item sang IN_AUCTION.
+     * Tạo phiên đấu giá mới (trạng thái OPEN).
      * return auctionId được sinh ra, hoặc {-1} nếu lỗi.
      */
     public int create(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
@@ -71,8 +71,6 @@ public class AuctionRepository {
             ps.setDouble   (3, minBidStep);
             ps.setInt      (4, itemId);
             ps.executeUpdate();
-
-            markItemInAuction(con, itemId);
 
             ResultSet keys = ps.getGeneratedKeys();
             if (keys.next()) return keys.getInt(1);
@@ -104,9 +102,28 @@ public class AuctionRepository {
         return false;
     }
 
-    // Bắt đầu phiên đấu giá (OPEN → RUNNING).
+    // Bắt đầu phiên đấu giá (OPEN → RUNNING), đồng thời chuyển trạng thái vật phẩm tương ứng sang IN_AUCTION.
     public boolean start(int auctionId) {
-        return setStatus(auctionId, "RUNNING");
+        String updateAuctionSql = "UPDATE auctions SET status = 'RUNNING' WHERE id = ?";
+        String updateItemSql = "UPDATE items SET status = 'IN_AUCTION' WHERE id = (SELECT item_id FROM auctions WHERE id = ?)";
+        try (Connection con = db.getConnection()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement ps1 = con.prepareStatement(updateAuctionSql);
+                 PreparedStatement ps2 = con.prepareStatement(updateItemSql)) {
+                ps1.setInt(1, auctionId);
+                ps2.setInt(1, auctionId);
+                int r1 = ps1.executeUpdate();
+                int r2 = ps2.executeUpdate();
+                con.commit();
+                return r1 > 0 && r2 > 0;
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     // Kết thúc phiên đấu giá — ghi đúng trạng thái (FINISHED hoặc CANCELED) xuống DB.

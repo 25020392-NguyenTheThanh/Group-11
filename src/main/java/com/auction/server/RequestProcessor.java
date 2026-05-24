@@ -301,8 +301,8 @@ public class RequestProcessor {
             return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
         }
 
-        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
-            return Response.error("Chỉ có thể xóa sản phẩm ở trạng thái AVAILABLE");
+        if (item.getStatus() == com.auction.model.item.ItemStatus.IN_AUCTION) {
+            return Response.error("Không thể xóa sản phẩm đang ở trạng thái IN_AUCTION");
         }
 
         boolean success = ItemManager.getInstance().deleteItem(itemId);
