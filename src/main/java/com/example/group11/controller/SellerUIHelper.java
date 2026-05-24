@@ -63,6 +63,9 @@ public class SellerUIHelper {
             case "btnOrderHistory":
                 controller.loadOrderHistory();
                 break;
+            case "btnSettings":
+                controller.loadProfileData();
+                break;
         }
     }
 

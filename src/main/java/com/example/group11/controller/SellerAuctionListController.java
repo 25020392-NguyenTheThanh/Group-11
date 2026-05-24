@@ -6,6 +6,7 @@ import com.auction.model.item.Art;
 import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
+import com.auction.model.user.Seller;
 import com.auction.model.user.User;
 import com.auction.network.*;
 import com.auction.model.auction.Auction;
@@ -93,6 +94,36 @@ public class SellerAuctionListController implements Initializable {
 
     @FXML
     private Button btnSettings;
+
+    @FXML
+    private VBox profileView;
+
+    @FXML
+    private Label profileIdLabel;
+
+    @FXML
+    private Label profileUsernameLabel;
+
+    @FXML
+    private Label profileEmailLabel;
+
+    @FXML
+    private Label profileRoleLabel;
+
+    @FXML
+    private Label profileRevenueLabel;
+
+    @FXML
+    private Label profileItemsCountLabel;
+
+    @FXML
+    private PasswordField currentPasswordField;
+
+    @FXML
+    private PasswordField newPasswordField;
+
+    @FXML
+    private PasswordField confirmNewPasswordField;
 
     @FXML
     private MenuButton categoryMenuButton;
@@ -292,12 +323,12 @@ public class SellerAuctionListController implements Initializable {
         lastButton = btnMyListings;
         // Khởi tạo các tập hợp dữ liệu (List/Map) để Helper làm việc
         allButtons = List.of(btnMyListings, btnAnalytics, btnOrderHistory, btnSettings);
-        allViews = List.of(myListingsView, analyticsPane, orderHistoryView, registerProductView);
+        allViews = List.of(myListingsView, analyticsPane, orderHistoryView, registerProductView, profileView);
         viewMapping = Map.of(
                 "btnMyListings", myListingsView,
                 "btnAnalytics", analyticsPane,
                 "btnOrderHistory", orderHistoryView,
-                "btnSettings", new VBox() // Hoặc view tương ứng
+                "btnSettings", profileView
         );
 
         // THIẾT LẬP GIAO DIỆN MẶC ĐỊNH (My Listings)
@@ -1441,7 +1472,7 @@ public class SellerAuctionListController implements Initializable {
                     if (endDatePicker.getValue() != null) {
                         createAuctionPayload.endTime = endDatePicker.getValue().atTime(23, 59, 59);
                     } else {
-                        createAuctionPayload.endTime = LocalDateTime.now().plusDays(7);
+                        createAuctionPayload.endTime = LocalDateTime.now().plusDays(2);
                     }
 
                     try {
@@ -1525,9 +1556,82 @@ public class SellerAuctionListController implements Initializable {
     @FXML
     private void handleViewProfile(ActionEvent event) {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
-        // Thêm logic chuyển Tab hoặc mở Window mới tại đây
         profileDropdown.setVisible(false); // Ẩn menu đi sau khi chọn
         profileDropdown.setManaged(false);
+        handleSwitchTab(new ActionEvent(btnSettings, null));
+    }
+
+    public void loadProfileData() {
+        if (user == null) return;
+        profileIdLabel.setText(String.valueOf(user.getId()));
+        profileUsernameLabel.setText(user.getUsername());
+        profileEmailLabel.setText(user.getEmail());
+        profileRoleLabel.setText(user.getRole());
+
+        if (user instanceof Seller seller) {
+            profileRevenueLabel.setText(String.format("%,.2f $", seller.getRevenue()));
+            profileItemsCountLabel.setText((seller.getListedItems() != null ? seller.getListedItems().size() : 0) + " sản phẩm");
+        }
+
+        currentPasswordField.clear();
+        newPasswordField.clear();
+        confirmNewPasswordField.clear();
+    }
+
+    @FXML
+    private void handleChangePassword(ActionEvent event) {
+        String currentPassword = currentPasswordField.getText();
+        String newPassword = newPasswordField.getText();
+        String confirmNewPassword = confirmNewPasswordField.getText();
+
+        if (currentPassword.isEmpty() || newPassword.isEmpty() || confirmNewPassword.isEmpty()) {
+            NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập đầy đủ tất cả các trường mật khẩu!");
+            return;
+        }
+
+        if (!newPassword.equals(confirmNewPassword)) {
+            NotificationController.showError("Lỗi xác nhận", "Mật khẩu mới và xác nhận mật khẩu không trùng khớp!");
+            return;
+        }
+
+        if (newPassword.length() < 4) {
+            NotificationController.showError("Lỗi mật khẩu", "Mật khẩu mới phải có ít nhất 4 ký tự!");
+            return;
+        }
+
+        Task<Response> task = new Task<>() {
+            @Override
+            protected Response call() throws Exception {
+                ChangePasswordPayload payload = new ChangePasswordPayload(currentPassword, newPassword);
+                return ServerConnection.getInstance().send(RequestType.CHANGE_PASSWORD, payload);
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response response = task.getValue();
+            if (response != null && response.isSuccess()) {
+                NotificationController.showNotification("Thành công", "Đổi mật khẩu thành công!");
+                currentPasswordField.clear();
+                newPasswordField.clear();
+                confirmNewPasswordField.clear();
+                
+                // Cập nhật lại mật khẩu trong bộ nhớ RAM của client để so khớp đúng các lần sau
+                if (user != null) {
+                    user.setPassWord(com.auction.security.PasswordUtil.hash(newPassword));
+                }
+            } else {
+                String errMsg = (response != null) ? response.getMessage() : "Lỗi kết nối hoặc cập nhật";
+                NotificationController.showError("Lỗi đổi mật khẩu", errMsg);
+            }
+        });
+
+        task.setOnFailed(evt -> {
+            NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu đổi mật khẩu.");
+        });
+
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /**

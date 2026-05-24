@@ -17,5 +17,6 @@ public enum RequestType {
     TOP_UP, // nạp tiền tài khoản
     CONFIRM_PAYMENT, // xác nhận thanh toán
     SET_AUTO_BID, // đăng kí auto bid
-    CANCEL_AUTO_BID // hủy auto bid
+    CANCEL_AUTO_BID, // hủy auto bid
+    CHANGE_PASSWORD // đổi mật khẩu
 }

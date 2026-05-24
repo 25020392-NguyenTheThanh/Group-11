@@ -41,6 +41,7 @@ public class RequestProcessor {
                 case CONFIRM_PAYMENT -> handleConfirmPayment(request, handler);
                 case SET_AUTO_BID   -> handleSetAutoBid(request , handler);
                 case CANCEL_AUTO_BID -> handleCancelAutoBid(request , handler);
+                case CHANGE_PASSWORD -> handleChangePassword(request, handler);
             };
         } catch (Exception e) {
             // Safety net: bắt mọi exception chưa được xử lý trong handler
@@ -459,5 +460,29 @@ public class RequestProcessor {
         Auction auction = AuctionManager.getInstance().findAuctionById(auctionId);
         if (auction != null) auction.cancelAutoBid(user.getId());
         return Response.ok("Đã hủy Auto_Bid");
+    }
+
+    private static Response handleChangePassword(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) {
+            return Response.error("Bạn cần đăng nhập để đổi mật khẩu!");
+        }
+        if (request.getPayload() == null || !(request.getPayload() instanceof ChangePasswordPayload)) {
+            return Response.error("Dữ liệu đổi mật khẩu không hợp lệ!");
+        }
+        ChangePasswordPayload p = (ChangePasswordPayload) request.getPayload();
+
+        // So khớp mật khẩu cũ
+        if (!com.auction.security.PasswordUtil.verify(p.oldPassword, user.getPassword())) {
+            return Response.error("Mật khẩu cũ không chính xác!");
+        }
+
+        // Thực hiện đổi mật khẩu
+        boolean ok = UserManager.getInstance().updatePassword(user, p.newPassword);
+        if (ok) {
+            return Response.ok("Đổi mật khẩu thành công!");
+        } else {
+            return Response.error("Không thể cập nhật mật khẩu mới!");
+        }
     }
 }

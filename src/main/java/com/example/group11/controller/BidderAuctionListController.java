@@ -77,6 +77,42 @@ public class BidderAuctionListController implements Initializable {
     private Button btnWatchlist;
 
     @FXML
+    private VBox mainDashboardView;
+
+    @FXML
+    private VBox profileView;
+
+    @FXML
+    private Label profileIdLabel;
+
+    @FXML
+    private Label profileUsernameLabel;
+
+    @FXML
+    private Label profileEmailLabel;
+
+    @FXML
+    private Label profileRoleLabel;
+
+    @FXML
+    private Label profileBalanceLabel;
+
+    @FXML
+    private Label profileWonCountLabel;
+
+    @FXML
+    private Label profileBidCountLabel;
+
+    @FXML
+    private PasswordField currentPasswordField;
+
+    @FXML
+    private PasswordField newPasswordField;
+
+    @FXML
+    private PasswordField confirmNewPasswordField;
+
+    @FXML
     private GridPane contentGrid;
 
     @FXML
@@ -302,15 +338,34 @@ public class BidderAuctionListController implements Initializable {
 
             contentGrid.setVisible(false);
             contentGrid.setManaged(false);
+
+            if (mainDashboardView != null) {
+                mainDashboardView.setVisible(false);
+                mainDashboardView.setManaged(false);
+            }
+            if (profileView != null) {
+                profileView.setVisible(true);
+                profileView.setManaged(true);
+                loadProfileData();
+            }
         } else {
             headerSection.setVisible(true);
             headerSection.setManaged(true);
 
             contentGrid.setVisible(true);
             contentGrid.setManaged(true);
-        }
 
-        applyFilters();
+            if (profileView != null) {
+                profileView.setVisible(false);
+                profileView.setManaged(false);
+            }
+            if (mainDashboardView != null) {
+                mainDashboardView.setVisible(true);
+                mainDashboardView.setManaged(true);
+            }
+
+            applyFilters();
+        }
         System.out.println("Bidder đang xem tab: " + tabName);
     }
 
@@ -326,6 +381,16 @@ public class BidderAuctionListController implements Initializable {
         headerSection.setManaged(true);
         contentGrid.setVisible(true);
         contentGrid.setManaged(true);
+
+        if (profileView != null) {
+            profileView.setVisible(false);
+            profileView.setManaged(false);
+        }
+        if (mainDashboardView != null) {
+            mainDashboardView.setVisible(true);
+            mainDashboardView.setManaged(true);
+        }
+
         loadAuctions();
         System.out.println("Hammer Portal clicked: reset to Dashboard and reloaded auctions.");
     }
@@ -1032,6 +1097,7 @@ public class BidderAuctionListController implements Initializable {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
         profileDropdown.setVisible(false);
         profileDropdown.setManaged(false);
+        handleSwitchTab(new ActionEvent(btnSettings, null));
     }
 
     /**
@@ -1101,5 +1167,87 @@ public class BidderAuctionListController implements Initializable {
                 "-fx-border-color: transparent #FFD700 transparent transparent; " +
                 "-fx-border-width: 0 4 0 0;";
         button.setStyle(activeStyle);
+    }
+
+    public void loadProfileData() {
+        if (user == null) return;
+        profileIdLabel.setText(String.valueOf(user.getId()));
+        profileUsernameLabel.setText(user.getUsername());
+        profileEmailLabel.setText(user.getEmail());
+        profileRoleLabel.setText(user.getRole());
+
+        if (user instanceof Bidder bidder) {
+            profileBalanceLabel.setText(String.format("%,.2f $", bidder.getBalance()));
+            
+            // Won auctions
+            int wonCount = bidder.getProfile() != null && bidder.getProfile().getWonAuctions() != null 
+                    ? bidder.getProfile().getWonAuctions().size() : 0;
+            profileWonCountLabel.setText(wonCount + " phiên");
+
+            // Participated auctions
+            int bidCount = bidder.getProfile() != null && bidder.getProfile().getParticipatedAuctions() != null 
+                    ? bidder.getProfile().getParticipatedAuctions().size() : 0;
+            profileBidCountLabel.setText(bidCount + " phiên");
+        }
+
+        currentPasswordField.clear();
+        newPasswordField.clear();
+        confirmNewPasswordField.clear();
+    }
+
+    @FXML
+    private void handleChangePassword(ActionEvent event) {
+        String currentPassword = currentPasswordField.getText();
+        String newPassword = newPasswordField.getText();
+        String confirmNewPassword = confirmNewPasswordField.getText();
+
+        if (currentPassword.isEmpty() || newPassword.isEmpty() || confirmNewPassword.isEmpty()) {
+            NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập đầy đủ tất cả các trường mật khẩu!");
+            return;
+        }
+
+        if (!newPassword.equals(confirmNewPassword)) {
+            NotificationController.showError("Lỗi xác nhận", "Mật khẩu mới và xác nhận mật khẩu không trùng khớp!");
+            return;
+        }
+
+        if (newPassword.length() < 4) {
+            NotificationController.showError("Lỗi mật khẩu", "Mật khẩu mới phải có ít nhất 4 ký tự!");
+            return;
+        }
+
+        Task<Response> task = new Task<>() {
+            @Override
+            protected Response call() throws Exception {
+                ChangePasswordPayload payload = new ChangePasswordPayload(currentPassword, newPassword);
+                return ServerConnection.getInstance().send(RequestType.CHANGE_PASSWORD, payload);
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response response = task.getValue();
+            if (response != null && response.isSuccess()) {
+                NotificationController.showNotification("Thành công", "Đổi mật khẩu thành công!");
+                currentPasswordField.clear();
+                newPasswordField.clear();
+                confirmNewPasswordField.clear();
+                
+                // Cập nhật lại mật khẩu trong bộ nhớ RAM của client để so khớp đúng các lần sau
+                if (user != null) {
+                    user.setPassWord(com.auction.security.PasswordUtil.hash(newPassword));
+                }
+            } else {
+                String errMsg = (response != null) ? response.getMessage() : "Lỗi kết nối hoặc cập nhật";
+                NotificationController.showError("Lỗi đổi mật khẩu", errMsg);
+            }
+        });
+
+        task.setOnFailed(evt -> {
+            NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu đổi mật khẩu.");
+        });
+
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        thread.start();
     }
 }
