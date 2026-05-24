@@ -6,6 +6,8 @@ import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
+import com.auction.network.BidUpdateData;
+import com.auction.network.Notification;
 import com.auction.pattern.observer.Observer;
 import com.auction.pattern.observer.Subject;
 
@@ -40,6 +42,7 @@ public class Auction implements Subject, Serializable {
     private int viewCount; // số lượt xem
     private Map<Integer , AutoBidConfig> autoBidConfigs = new ConcurrentHashMap<>();
 
+    private transient boolean isProcessingAutoBid = false;
     // Anti-sniping: ngưỡng giây cuối mà nếu có bid sẽ gia hạn
     private static final long SNIPE_WINDOW_SECONDS = 30;   // bid trong 30s cuối → gia hạn
     private static final long EXTENSION_SECONDS    = 60;   // gia hạn thêm 60s
@@ -238,6 +241,15 @@ public class Auction implements Subject, Serializable {
             msg = String.format("🔔 Phiên %d — %s vừa đặt $%,.2f | Giá cao nhất hiện tại: $%,.2f", id, bidder.getUsername(), amount, currentHighestBid);
         }
         System.out.println(msg);
+        BidUpdateData upd = new BidUpdateData(id, currentHighestBid,
+                bidder.getUsername(), bidHistory.size());
+        for (Observer o : observers) {
+            if (o instanceof com.auction.server.ClientHandler ch) {
+                ch.sendNotification(new Notification("BID_UPDATE", upd));
+            } else {
+                o.send(msg);
+            }
+        }
         notifyObservers(msg);
 
         // Gửi thông báo đến bidder vừa thắng (nếu online)
@@ -246,7 +258,7 @@ public class Auction implements Subject, Serializable {
                 com.auction.model.user.User u = client.getLoggedInUser();
                 if (u != null && u.getId() == bidder.getId()) {
                     client.sendNotification(new Notification("BALANCE_UPDATE", bidder.getBalance()));
-                    String successMsg = isAutoBid 
+                    String successMsg = isAutoBid
                         ? String.format("Auto-Bid đặt giá thành công $%,.2f cho phiên #%d [%s].", amount, id, item.getName())
                         : String.format("Đặt giá thành công $%,.2f cho phiên #%d [%s].", amount, id, item.getName());
                     client.sendNotification(new Notification("BID_SUCCESS", successMsg));

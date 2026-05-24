@@ -127,4 +127,11 @@ public class DataManager {
         return userRepo.updatePassword(userId, newPassword);
     }
 
+    /**
+     * Thanh toán phiên đấu giá: cập nhật auction → PAID, item → SOLD trong DB.
+     */
+    public boolean payAuction(int auctionId) {
+        return auctionRepo.payAuction(auctionId);
+    }
+
 }

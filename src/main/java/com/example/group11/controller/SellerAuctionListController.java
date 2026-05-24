@@ -272,6 +272,13 @@ public class SellerAuctionListController implements Initializable {
         if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
             System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
             loadMyListingView();
+        } else if ("PAYMENT_RECEIVED".equals(type)) {
+            // Seller nhận thông báo thanh toán thành công → reload danh sách
+            Platform.runLater(() -> {
+                loadMyListingView();
+                String text = notification.getData() != null ? notification.getData().toString() : "";
+                NotificationController.showNotification("💰 Đã nhận thanh toán!", text);
+            });
         }
 
         if (notificationDropdown != null && !notificationDropdown.isVisible()) {
@@ -367,7 +374,17 @@ public class SellerAuctionListController implements Initializable {
      * hoặc trạng thái sản phẩm thay đổi.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
+        ServerConnection.getInstance().addNotificationHandler(notification -> {
+            addNotificationToUI(notification);
+
+            String type = notification.getType();
+            if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
+                System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
+                loadMyListingView();
+            } else if ("PAYMENT_RECEIVED".equals(type)) {
+                Platform.runLater(() -> loadMyListingView());
+            }
+        });
     }
 
 
@@ -409,6 +426,9 @@ public class SellerAuctionListController implements Initializable {
                 break;
             case "SELLER_PAYMENT_RECEIVED":
                 title = "💰 Đã nhận thanh toán";
+                break;
+            case "PAYMENT_RECEIVED":
+                title = "💰 Đã nhận thanh toán từ người mua";
                 break;
             case "SELLER_AUCTION_SUCCESS":
                 title = "🏆 Đấu giá thành công";
@@ -1556,6 +1576,7 @@ public class SellerAuctionListController implements Initializable {
     @FXML
     private void handleViewProfile(ActionEvent event) {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
+        // Thêm logic chuyển Tab hoặc mở Window mới tại đây
         profileDropdown.setVisible(false); // Ẩn menu đi sau khi chọn
         profileDropdown.setManaged(false);
         handleSwitchTab(new ActionEvent(btnSettings, null));
@@ -1614,7 +1635,7 @@ public class SellerAuctionListController implements Initializable {
                 currentPasswordField.clear();
                 newPasswordField.clear();
                 confirmNewPasswordField.clear();
-                
+
                 // Cập nhật lại mật khẩu trong bộ nhớ RAM của client để so khớp đúng các lần sau
                 if (user != null) {
                     user.setPassWord(com.auction.security.PasswordUtil.hash(newPassword));

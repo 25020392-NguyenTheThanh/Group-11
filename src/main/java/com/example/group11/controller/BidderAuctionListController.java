@@ -15,6 +15,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -203,6 +204,15 @@ public class BidderAuctionListController implements Initializable {
                     bidder.setBalance(newBalance);
                     walletBalance.setText(String.format("%,.2f", newBalance));
                 }
+            } else if ("PAYMENT_SUCCESS".equals(type)) {
+                // Bidder vừa thanh toán thành công — reload card để chuyển FINISHED → PAID
+                loadAuctions();
+                String text = notification.getData() != null ? notification.getData().toString() : "";
+                NotificationController.showNotification("💰 Thanh toán thành công!", text);
+            } else if ("PAYMENT_RECEIVED".equals(type)) {
+                // Seller nhận được thông báo đã được thanh toán
+                String text = notification.getData() != null ? notification.getData().toString() : "";
+                NotificationController.showNotification("💰 Đã nhận thanh toán!", text);
             }
 
             if (notificationDropdown != null && !notificationDropdown.isVisible()) {
@@ -783,6 +793,31 @@ public class BidderAuctionListController implements Initializable {
      */
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().addNotificationHandler(realtimeListener);
+        ServerConnection.getInstance().addNotificationHandler(notification -> {
+            Platform.runLater(() -> {
+                System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
+                addNotificationToDropdown(notification);
+
+                String type = notification.getType();
+
+                if ("BID_UPDATE".equals(type)) {
+                    Object data = notification.getData();
+
+                    if (data instanceof BidUpdateData upd) {
+                        // Cập nhật đúng card mà không reload toàn bộ
+                        updateAuctionCardPrice(upd.auctionId, upd.newHighestBid,
+                                upd.winnerUsername, upd.totalBids);
+                    } else {
+                        // fallback nếu server cũ
+                        loadAuctions();
+                    }
+
+                } else if ("AUCTION_ENDED".equals(type)
+                        || "ITEM_STATUS_CHANGED".equals(type)) {
+                    loadAuctions(); // reload để cập nhật trạng thái card
+                }
+            });
+        });
     }
     /**
      * Cập nhật giá realtime trên card đấu giá đang hiển thị,
@@ -1178,14 +1213,14 @@ public class BidderAuctionListController implements Initializable {
 
         if (user instanceof Bidder bidder) {
             profileBalanceLabel.setText(String.format("%,.2f $", bidder.getBalance()));
-            
+
             // Won auctions
-            int wonCount = bidder.getProfile() != null && bidder.getProfile().getWonAuctions() != null 
+            int wonCount = bidder.getProfile() != null && bidder.getProfile().getWonAuctions() != null
                     ? bidder.getProfile().getWonAuctions().size() : 0;
             profileWonCountLabel.setText(wonCount + " phiên");
 
             // Participated auctions
-            int bidCount = bidder.getProfile() != null && bidder.getProfile().getParticipatedAuctions() != null 
+            int bidCount = bidder.getProfile() != null && bidder.getProfile().getParticipatedAuctions() != null
                     ? bidder.getProfile().getParticipatedAuctions().size() : 0;
             profileBidCountLabel.setText(bidCount + " phiên");
         }
@@ -1231,7 +1266,7 @@ public class BidderAuctionListController implements Initializable {
                 currentPasswordField.clear();
                 newPasswordField.clear();
                 confirmNewPasswordField.clear();
-                
+
                 // Cập nhật lại mật khẩu trong bộ nhớ RAM của client để so khớp đúng các lần sau
                 if (user != null) {
                     user.setPassWord(com.auction.security.PasswordUtil.hash(newPassword));
@@ -1249,5 +1284,9 @@ public class BidderAuctionListController implements Initializable {
         Thread thread = new Thread(task);
         thread.setDaemon(true);
         thread.start();
+    }
+
+    public void setupRealtimeNotificationsPublic() {
+        setupRealtimeNotifications(); // gọi lại method private hiện có
     }
 }

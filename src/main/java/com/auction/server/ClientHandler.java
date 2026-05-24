@@ -1,7 +1,11 @@
 package com.auction.server;
 
 import com.auction.manager.AuctionManager;
+import com.auction.manager.UserManager;
+import com.auction.model.auction.Auction;
+import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
+import com.auction.network.BidUpdateData;
 import com.auction.network.Notification;
 import com.auction.network.Request;
 import com.auction.network.Response;
@@ -76,12 +80,39 @@ public class ClientHandler implements Runnable , Observer {
 
     @Override
     public void send(String message) {
-        if (message.startsWith("TIME_EXTENDED:")) {
-            String timeStr = message.substring("TIME_EXTENDED:".length());
-            sendNotification(new Notification("TIME_EXTENDED", timeStr));
-        } else {
-            sendNotification(new Notification("BID_UPDATE", message));
+        if (message != null && message.startsWith("AUTO_BID_TRIGGER")){
+            // Xử lý auto-bid trực tiếp ở server, không gửi xuống client
+            // Format: AUTO_BID_TRIGGER:bidderId:nextBid
+            try {
+                String[] parts = message.split(":");
+                int bidderId = Integer.parseInt(parts[1]);
+                double nextBid = Double.parseDouble(parts[2]);
+                // tìm auction mà handler đang observer
+                for (Auction a : AuctionManager.getInstance().getAuctions()){
+                    if (a.hasObserver(this)){
+                        User u = UserManager.getInstance().findUserById(bidderId);
+                        if (u instanceof Bidder bidder){
+                            try {
+                                a.placeBid(bidder, nextBid);
+                                AuctionManager.getInstance().recordBid(a.getId(), bidderId, bidder.getUsername(), nextBid);
+                                server.broadcast(new Notification("BID_UPDATE",
+                                        new BidUpdateData(
+                                                a.getId(), nextBid,
+                                                bidder.getUsername(),
+                                                a.getBidHistory().size())));
+                            } catch (Exception ex) {
+                                System.err.println("[AutoBid handler] " + ex.getMessage());
+                            }
+                        }
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("[AUTO_BID_TRIGGER parse error] " + e.getMessage());
+            }
+            return;
         }
+        sendNotification(new Notification("BID_UPDATE", message));
     }
 
     public synchronized void sendNotification(Notification notification) {

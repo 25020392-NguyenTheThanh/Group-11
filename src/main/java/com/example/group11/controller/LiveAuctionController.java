@@ -22,6 +22,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Parent;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -83,6 +84,9 @@ public class LiveAuctionController implements Initializable {
     private Timeline countdownTimeline;
     private Button watchlistButton;
     private boolean autoBidEnabled = false ;
+    private Stage ownerStage;
+    private Parent previousRoot;
+    private BidderAuctionListController listController;
 
     private final Consumer<com.auction.network.Notification> realtimeListener = notification -> {
         Platform.runLater(() -> {
@@ -345,7 +349,23 @@ public class LiveAuctionController implements Initializable {
      * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
+        ServerConnection.getInstance().addNotificationHandler(notification -> {
+            Platform.runLater(() -> {
+                String type = notification.getType();
+                // Chỉ xử lý notification liên quan đến phiên này
+                if ("BID_UPDATE".equals(type) || "AUCTION_ENDED".equals(type)
+                        || "ITEM_STATUS_CHANGED".equals(type)
+                        || "TIME_EXTENDED".equals(type)) {
+                    refreshAuctionDetails(false);
+                    if ("TIME_EXTENDED".equals(type)) {
+                        NotificationController.showAlert("Gia hạn phiên!",
+                                "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
+                    }
+                } else if ("WATCHLIST_ENDING_SOON".equals(type)) {
+                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
+                }
+            });
+        });
     }
 
     /**
@@ -720,6 +740,20 @@ public class LiveAuctionController implements Initializable {
     }
 
     /**
+     * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
+     *
+     * @param event Sự kiện hành động của JavaFX
+     */
+    @FXML
+    private void handleBack(ActionEvent event) {
+        cleanupAndClose(false);
+        Stage stage = (Stage) backButton.getScene().getWindow();
+        if (stage != null) {
+            stage.close();
+        }
+    }
+
+    /**
      * Dọn dẹp tài nguyên và các bộ lắng nghe khi đóng phòng đấu giá trực tiếp.
      *
      * @param decrementView true nếu muốn giảm lượt xem trên server
@@ -749,29 +783,33 @@ public class LiveAuctionController implements Initializable {
     }
 
     /**
-     * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
-    @FXML
-    private void handleBack(ActionEvent event) {
-        cleanupAndClose(false);
-        Stage stage = (Stage) backButton.getScene().getWindow();
-        if (stage != null) {
-            stage.close();
-        }
-    }
-
-    /**
      * Thoát chính thức khỏi phòng đấu giá (bấm nút X). Giảm lượt xem và huỷ đăng ký observer trên server, sau đó đóng cửa sổ.
      *
      * @param event Sự kiện hành động của JavaFX
      */
     @FXML
     private void handleClose(ActionEvent event) {
-        cleanupAndClose(true);
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
+        if (auction != null) {
+            enteredAuctionIds.remove(auction.getId());
+            Task<Response> closeTask = new Task<>() {
+                @Override
+                protected Response call() throws Exception {
+                    GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auction.getId(), false);
+                    payload.decrementView = true;
+                    return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
+                }
+            };
+
+            Thread t = new Thread(closeTask);
+            t.setDaemon(true);
+            t.start();
+        }
         Stage stage = (Stage) closeButton.getScene().getWindow();
         if (stage != null) {
+            openStages.remove(auction.getId());
             stage.close();
         }
     }
@@ -947,4 +985,11 @@ public class LiveAuctionController implements Initializable {
         }));
         new Thread(task).start();
     }
+
+    public void setPreviousRoot(Parent previousRoot, Stage stage, BidderAuctionListController listController) {
+        this.previousRoot = previousRoot;
+        this.ownerStage = stage;
+        this.listController = listController;
+    }
+
 }

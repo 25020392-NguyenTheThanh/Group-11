@@ -169,6 +169,33 @@ public class AuctionRepository {
         return false;
     }
 
+    /**
+     * Thanh toán phiên đấu giá: chuyển auction sang PAID và item sang SOLD trong một transaction.
+     * Chỉ áp dụng được khi auction đang ở trạng thái FINISHED.
+     */
+    public boolean payAuction(int auctionId) {
+        String updateAuctionSql = "UPDATE auctions SET status = 'PAID' WHERE id = ? AND status = 'FINISHED'";
+        String updateItemSql    = "UPDATE items SET status = 'SOLD' WHERE id = (SELECT item_id FROM auctions WHERE id = ?)";
+        try (Connection con = db.getConnection()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement ps1 = con.prepareStatement(updateAuctionSql);
+                 PreparedStatement ps2 = con.prepareStatement(updateItemSql)) {
+                ps1.setInt(1, auctionId);
+                ps2.setInt(1, auctionId);
+                int r1 = ps1.executeUpdate();
+                int r2 = ps2.executeUpdate();
+                con.commit();
+                return r1 > 0 && r2 > 0;
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private void markItemInAuction(Connection con, int itemId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
                 "UPDATE items SET status = 'IN_AUCTION' WHERE id = ?")) {

@@ -1,5 +1,6 @@
 package com.auction.server;
 
+import com.auction.client.ServerConnection;
 import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
@@ -17,9 +18,14 @@ import com.auction.pattern.factory.ArtFactory;
 import com.auction.pattern.factory.ElectronicsFactory;
 import com.auction.pattern.factory.ItemFactory;
 import com.auction.pattern.factory.VehicleFactory;
+import com.example.group11.controller.NotificationController;
+import javafx.concurrent.Task;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 // điều phối request từ client gửi lên server
 public class RequestProcessor {
+    private static final ConcurrentHashMap<Integer, Long> lastBidTime = new ConcurrentHashMap<>();
     // hàm trung tâm
     public static Response process(Request request, ClientHandler handler) {
         try {
@@ -128,68 +134,25 @@ public class RequestProcessor {
             Bidder bidder = (Bidder) user;
 
             auction.placeBid(bidder, payload.amount);
+            bidder.getProfile().addParticipatedAuction(payload.auctionId);
 
-            return Response.ok(bidder.getBalance()); // Trả về số dư mới để client cập nhật
-        } catch (Exception e) {
-            return Response.error(e.getMessage());
-        }
-    }
-
-    private static Response handleConfirmPayment(Request request, ClientHandler handler) {
-        User user = handler.getLoggedInUser();
-        if (user == null) {
-            return Response.error("Bạn cần đăng nhập để thanh toán");
-        }
-        if (!(user instanceof Bidder)) {
-            return Response.error("Chỉ người mua (Bidder) mới có quyền thanh toán!");
-        }
-
-        if (request.getPayload() == null || !(request.getPayload() instanceof Integer)) {
-            return Response.error("Mã phiên thanh toán không hợp lệ!");
-        }
-
-        int auctionId = (Integer) request.getPayload();
-        try {
-            Auction auction = AuctionManager.getInstance().findAuctionById(auctionId);
-            if (auction == null) return Response.error("Phiên không tồn tại");
-
-            if (auction.getStatus() != com.auction.model.auction.AuctionStatus.FINISHED) {
-                return Response.error("Phiên đấu giá chưa kết thúc hoặc đã được thanh toán!");
-            }
-
-            if (auction.getCurrentWinner() == null || auction.getCurrentWinner().getId() != user.getId()) {
-                return Response.error("Bạn không phải người thắng phiên đấu giá này!");
-            }
-
-            // Đổi trạng thái trong RAM
-            auction.markPaid();
-
-            // Lưu trạng thái vào database
-            DataManager.getInstance().finishAuction(auctionId, "PAID");
-
-            // Cập nhật doanh thu cho người bán trong database
-            DataManager.getInstance().updateSellerRevenue(
-                    auction.getItem().getOwnerId(),
-                    auction.getCurrentHighestBid()
+            AuctionManager.getInstance().recordBid(
+                    payload.auctionId,
+                    bidder.getId(),
+                    bidder.getUsername(),
+                    payload.amount
             );
 
-            // Phát sóng thông báo cho tất cả client
-            handler.getServer().broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
-            handler.getServer().broadcast(new Notification("AUCTION_ENDED", "Phiên " + auction.getId() + " đã được thanh toán thành công!"));
+            // Broadcast BID_UPDATE tới TẤT CẢ client (kể cả đang ở màn hình danh sách)
+            BidUpdateData upd = new BidUpdateData(
+                    payload.auctionId,
+                    auction.getCurrentHighestBid(),
+                    bidder.getUsername(),
+                    auction.getBidHistory().size()
+            );
+            handler.getServer().broadcast(new Notification("BID_UPDATE", upd));
 
-            // Gửi thông báo trực tiếp cho Bidder thanh toán thành công
-            handler.sendNotification(new Notification("PAYMENT_SUCCESS", String.format("Xác nhận thanh toán thành công cho phiên #%d [%s]. Số tiền: $%,.2f.", auction.getId(), auction.getItem().getName(), auction.getCurrentHighestBid())));
-
-            // Gửi thông báo trực tiếp cho Seller đã nhận được thanh toán
-            for (ClientHandler client : handler.getServer().getConnectedClients()) {
-                User u = client.getLoggedInUser();
-                if (u != null && u.getId() == auction.getItem().getOwnerId()) {
-                    client.sendNotification(new Notification("SELLER_PAYMENT_RECEIVED", String.format("Người mua @%s đã thanh toán $%,.2f cho sản phẩm [%s] của bạn. Giao dịch đã hoàn tất!", auction.getCurrentWinner().getUsername(), auction.getCurrentHighestBid(), auction.getItem().getName())));
-                    break;
-                }
-            }
-
-            return Response.ok("Thanh toán thành công");
+            return Response.ok("Đặt giá thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());
         }
@@ -483,6 +446,102 @@ public class RequestProcessor {
             return Response.ok("Đổi mật khẩu thành công!");
         } else {
             return Response.error("Không thể cập nhật mật khẩu mới!");
+        }
+    }
+
+    /**
+     * Xác nhận thanh toán sau khi Bidder thắng phiên đấu giá.
+     * Luồng:
+     *   1. Kiểm tra quyền (Bidder, đã đăng nhập, là người thắng).
+     *   2. Gọi auction.markPaid() → chuyển trạng thái RAM sang PAID.
+     *   3. Cập nhật DB: auction → PAID, item → SOLD (transaction).
+     *   4. Ghi nhận bidder_won + cộng doanh thu Seller.
+     *   5. Gửi notification thành công cho Bidder.
+     *   6. Gửi notification cho Seller (nếu online).
+     *   7. Broadcast AUCTION_ENDED để tất cả client reload card.
+     */
+    private static Response handleConfirmPayment(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) {
+            return Response.error("Bạn cần đăng nhập để thanh toán!");
+        }
+        if (!(user instanceof Bidder)) {
+            return Response.error("Chỉ người mua (Bidder) mới có thể thực hiện thanh toán!");
+        }
+        if (!(request.getPayload() instanceof Integer auctionId)) {
+            return Response.error("Dữ liệu thanh toán không hợp lệ!");
+        }
+
+        Auction auction = AuctionManager.getInstance().findAuctionById(auctionId);
+        if (auction == null) {
+            return Response.error("Phiên đấu giá không tồn tại!");
+        }
+        if (auction.getStatus() != com.auction.model.auction.AuctionStatus.FINISHED) {
+            return Response.error("Phiên đấu giá chưa kết thúc hoặc đã được thanh toán!");
+        }
+        if (auction.getCurrentWinner() == null || auction.getCurrentWinner().getId() != user.getId()) {
+            return Response.error("Bạn không phải người thắng cuộc của phiên này!");
+        }
+
+        try {
+            Bidder bidder = (Bidder) user;
+
+            // 1. Cập nhật trạng thái trong RAM
+            auction.markPaid();
+
+            // 2. Cập nhật DB: auction → PAID, item → SOLD
+            boolean dbOk = AuctionManager.getInstance().payAuction(auctionId);
+            if (!dbOk) {
+                // Rollback RAM
+                auction.restoreStatus(com.auction.model.auction.AuctionStatus.FINISHED);
+                return Response.error("Không thể cập nhật trạng thái thanh toán vào cơ sở dữ liệu!");
+            }
+
+            // 3. Ghi nhận bidder thắng
+            DataManager.getInstance().saveBidderWon(bidder.getId(), auctionId);
+            if (bidder.getProfile() != null) {
+                bidder.getProfile().addWonAuction(auctionId);
+            }
+
+            // 4. Cộng doanh thu cho Seller
+            int sellerId = auction.getItem().getOwnerId();
+            DataManager.getInstance().updateSellerRevenue(sellerId, auction.getCurrentHighestBid());
+
+            // 5. Thông báo thành công cho Bidder
+            String successMsg = String.format(
+                "Bạn đã thanh toán thành công $%,.2f cho sản phẩm [%s] — Phiên #%d.",
+                auction.getCurrentHighestBid(), auction.getItem().getName(), auctionId);
+            handler.sendNotification(new Notification("PAYMENT_SUCCESS", successMsg));
+
+            // 6. Thông báo cho Seller (nếu đang online)
+            if (com.auction.server.AuctionServer.getInstance() != null) {
+                String sellerMsg = String.format(
+                    "💰 [%s] đã thanh toán $%,.2f cho sản phẩm [%s] — Phiên #%d.",
+                    bidder.getUsername(), auction.getCurrentHighestBid(),
+                    auction.getItem().getName(), auctionId);
+                for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                    User u = client.getLoggedInUser();
+                    if (u != null && u.getId() == sellerId) {
+                        client.sendNotification(new Notification("PAYMENT_RECEIVED", sellerMsg));
+                        break;
+                    }
+                }
+            }
+
+            // 7. Broadcast AUCTION_ENDED để tất cả client reload card
+            if (com.auction.server.AuctionServer.getInstance() != null) {
+                com.auction.server.AuctionServer.getInstance().broadcast(
+                    new Notification("AUCTION_ENDED",
+                        String.format("Phiên #%d [%s] đã được thanh toán.", auctionId, auction.getItem().getName())));
+            }
+
+            return Response.ok("Thanh toán thành công!");
+
+        } catch (IllegalStateException e) {
+            return Response.error("Lỗi trạng thái: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("[handleConfirmPayment] Lỗi: " + e.getMessage());
+            return Response.error("Lỗi xử lý thanh toán: " + e.getMessage());
         }
     }
 }

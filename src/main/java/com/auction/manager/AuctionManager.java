@@ -80,6 +80,14 @@ public class AuctionManager {
         DataManager.getInstance().finishAuction(auctionId, finalStatus);
     }
 
+    /**
+     * Xác nhận thanh toán phiên đấu giá (FINISHED → PAID).
+     * Cập nhật DB và ghi nhận bidder thắng.
+     */
+    public boolean payAuction(int auctionId) {
+        return DataManager.getInstance().payAuction(auctionId);
+    }
+
     public List<Auction> getAuctions() {
         return auctions.values().stream().collect(Collectors.toList());
     }
