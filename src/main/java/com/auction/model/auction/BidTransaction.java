@@ -33,6 +33,7 @@ public class BidTransaction implements Serializable {
         return amount;
     }
 
+    public String getBidderUsername() { return bidderName ; }
     public LocalDateTime getTimestamp() {
         return timestamp;
     }

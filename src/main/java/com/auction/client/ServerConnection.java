@@ -280,4 +280,12 @@ public class ServerConnection {
         if (socket != null)
             socket.close();
     }
+
+    public Response setAutoBid(int auctionId, double maxBid, double increment) {
+        return send(RequestType.SET_AUTO_BID, new AutoBidPayload(auctionId, maxBid, increment));
+    }
+
+    public Response cancelAutoBid(int auctionId) {
+        return send(RequestType.CANCEL_AUTO_BID, auctionId);
+    }
 }

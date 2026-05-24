@@ -29,6 +29,10 @@ public class DataManager {
         return instance;
     }
 
+    public boolean updateAuctionEndTime(int auctionId, java.time.LocalDateTime newEndTime) {
+        return auctionRepo.updateEndTime(auctionId, newEndTime);
+    }
+
     // User
     public User authenticate(String username, String password) {
         return userRepo.authenticate(username, password);

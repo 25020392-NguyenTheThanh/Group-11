@@ -16,4 +16,4 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - run: mvn test
+      - run: mvn -B test --no-transfer-progress

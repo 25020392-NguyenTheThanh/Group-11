@@ -15,5 +15,7 @@ public enum RequestType {
     ADD_TO_WATCHLIST, // thêm vào danh sách theo dõi
     REMOVE_FROM_WATCHLIST, // xóa khỏi danh sách theo dõi
     TOP_UP, // nạp tiền tài khoản
-    CONFIRM_PAYMENT // xác nhận thanh toán
+    CONFIRM_PAYMENT, // xác nhận thanh toán
+    SET_AUTO_BID, // đăng kí auto bid
+    CANCEL_AUTO_BID // hủy auto bid
 }

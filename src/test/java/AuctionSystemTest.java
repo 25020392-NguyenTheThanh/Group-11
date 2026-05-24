@@ -113,4 +113,35 @@ public class AuctionSystemTest {
         assertEquals(1000 , auction.getCurrentHighestBid());
         assertEquals(AuctionStatus.OPEN , auction.getStatus());
     }
+    @Test
+    void antiSnipingShouldExtendEndTime() {
+        Item item = new Electronics(1, 123, "Iphone", "abc", 1000, "", "apple");
+        LocalDateTime start = LocalDateTime.now();
+        // endTime chỉ còn 10 giây — nằm trong snipe window 30s
+        LocalDateTime end = LocalDateTime.now().plusSeconds(10);
+        Auction auction = new Auction(1, item, start, end, 100);
+        Bidder bidder = new Bidder(1, "Tuan", "123", "123@gmail", 5000);
+        bidder.setAuthenticated(true);
+        auction.setStatus(AuctionStatus.RUNNING);
+
+        LocalDateTime endBefore = auction.getEndTime();
+        auction.placeBid(bidder, 2000);
+        // endTime phải được gia hạn
+        assertTrue(auction.getEndTime().isAfter(endBefore));
+    }
+
+    @Test
+    void autoBidShouldRegisterConfig() {
+        Item item = new Electronics(1, 123, "Iphone", "abc", 1000, "", "apple");
+        Auction auction = new Auction(1, item,
+                LocalDateTime.now(), LocalDateTime.now().plusDays(1), 100);
+        auction.setStatus(AuctionStatus.RUNNING);
+
+        com.auction.model.auction.AutoBidConfig cfg =
+                new com.auction.model.auction.AutoBidConfig(99, "testUser", 5000, 200);
+        auction.registerAutoBid(cfg);
+
+        assertEquals(1, auction.getAutoBidConfigs().size());
+        assertEquals(5000, auction.getAutoBidConfigs().get(99).getMaxBid());
+    }
 }

@@ -26,6 +26,7 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
@@ -68,6 +69,10 @@ public class LiveAuctionController implements Initializable {
     @FXML private VBox bidHistoryContainer;
     @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
     @FXML private Button closeButton; // Nút X thoát hẳn phòng
+    @FXML private Button autoBidButton ;
+    @FXML private Button cancelAutoBidButton;  // nút hủy riêng
+    @FXML private Label autoBidStatusLabel;    // hiện trạng thái
+
 
     @FXML private LineChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
@@ -77,6 +82,7 @@ public class LiveAuctionController implements Initializable {
     private User user;
     private Timeline countdownTimeline;
     private Button watchlistButton;
+    private boolean autoBidEnabled = false ;
 
     private final Consumer<com.auction.network.Notification> realtimeListener = notification -> {
         Platform.runLater(() -> {
@@ -281,7 +287,23 @@ public class LiveAuctionController implements Initializable {
      * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
+        ServerConnection.getInstance().setNotificationHandler(notification -> {
+            Platform.runLater(() -> {
+                System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
+                if ("BID_UPDATE".equals(notification.getType())
+                        || "AUCTION_ENDED".equals(notification.getType())
+                        || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
+                    refreshAuctionDetails(false);
+                } else if ("TIME_EXTENDED".equals(notification.getType())) {
+                    // Anti-sniping: server gia hạn endTime, cập nhật lại auction rồi thông báo
+                    refreshAuctionDetails(false);
+                    NotificationController.showAlert("Gia hạn phiên!",
+                            "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
+                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
+                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
+                }
+            });
+        });
     }
 
     /**
@@ -423,6 +445,8 @@ public class LiveAuctionController implements Initializable {
     private void renderPriceChart() {
         if (priceChart == null) return;
         priceChart.getData().clear();
+        priceChart.setAnimated(false);
+        priceChart.setLegendVisible(false);
 
         if (yAxis != null) {
             yAxis.setAutoRanging(false);
@@ -441,18 +465,60 @@ public class LiveAuctionController implements Initializable {
         }
 
         XYChart.Series<Number, Number> series = new XYChart.Series<>();
+        series.setName("Giá");
         List<BidTransaction> history = auction.getBidHistory();
 
-        if (history != null && !history.isEmpty()) {
+        // Điểm 0 luôn là giá khởi điểm
+        series.getData().add(new XYChart.Data<>(0, auction.getItem().getStartingPrice()));
+
+        if (history != null) {
             for (int i = 0; i < history.size(); i++) {
                 series.getData().add(new XYChart.Data<>(i + 1, history.get(i).getAmount()));
             }
-        } else {
-            series.getData().add(new XYChart.Data<>(0, auction.getItem().getStartingPrice()));
         }
-        priceChart.getData().add(series);
-    }
 
+        priceChart.getData().add(series);
+
+        // Gắn tooltip cho từng điểm sau khi add vào chart
+        for (int i = 0; i < series.getData().size(); i++) {
+            XYChart.Data<Number, Number> point = series.getData().get(i);
+            final int idx = i;
+            // node có thể null nếu chart chưa render xong — dùng listener
+            if (point.getNode() != null) {
+                attachTooltip(point, idx, history);
+            } else {
+                point.nodeProperty().addListener((obs, oldNode, newNode) -> {
+                    if (newNode != null) attachTooltip(point, idx, history);
+                });
+            }
+        }
+
+        // Trục X và Y
+        xAxis.setLabel("Lượt đặt");
+        xAxis.setTickUnit(1);
+        yAxis.setLabel("Giá (₫)");
+        yAxis.setForceZeroInRange(false);
+    }
+    private void attachTooltip(XYChart.Data<Number, Number> point, int idx,
+                               List<BidTransaction> history) {
+        String text;
+        if (idx == 0) {
+            text = "Giá khởi điểm\n"
+                    + String.format("%,.0f₫", point.getYValue().doubleValue());
+        } else {
+            BidTransaction tx = history.get(idx - 1);
+            text = String.format("Bid #%d\n%s\n%,.0f₫",
+                    idx, tx.getBidderUsername(), tx.getAmount());
+        }
+        javafx.scene.control.Tooltip tp = new javafx.scene.control.Tooltip(text);
+        javafx.scene.control.Tooltip.install(point.getNode(), tp);
+
+        // Highlight điểm cuối (bid cao nhất hiện tại) bằng màu vàng
+        boolean isLast = (history != null) && (idx == history.size());
+        if (isLast) {
+            point.getNode().setStyle("-fx-background-color: #ffb95f, white;");
+        }
+    }
     /**
      * Điều chỉnh (tăng) số tiền đặt giá thầu hiển thị trong ô nhập liệu thêm một lượng xác định.
      *
@@ -707,5 +773,83 @@ public class LiveAuctionController implements Initializable {
         Thread t = new Thread(task);
         t.setDaemon(true);
         t.start();
+    }
+
+    private void showAutoBidDialog() {
+        javafx.scene.control.Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle("Cài đặt Auto-Bid");
+        dialog.setHeaderText("Hệ thống sẽ tự động đặt giá thay bạn");
+
+        TextField maxBidField = new TextField();
+        maxBidField.setPromptText("Giá tối đa (₫)");
+        TextField incrementField = new TextField(String.valueOf(auction.getMinBidStep()));
+        incrementField.setPromptText("Bước tăng (₫)");
+
+        VBox content = new VBox(8,
+                new Label("Giá tối đa:"), maxBidField,
+                new Label("Bước tăng mỗi lần:"), incrementField);
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(btn -> {
+            if (btn == ButtonType.OK) {
+                try {
+                    double maxBid = Double.parseDouble(maxBidField.getText().trim());
+                    double increment = Double.parseDouble(incrementField.getText().trim());
+
+                    Task<Response> task = new Task<>() {
+                        @Override protected Response call() {
+                            return ServerConnection.getInstance().setAutoBid(auction.getId(), maxBid, increment);
+                        }
+                    };
+                    task.setOnSucceeded(e -> Platform.runLater(() -> {
+                        Response resp = task.getValue();
+                        if (resp.isSuccess()) {
+                            autoBidEnabled = true;
+                            autoBidButton.setVisible(false);
+                            autoBidStatusLabel.setText("Auto-Bid đang chạy (tối đa "
+                                    + String.format("%,.0f₫", maxBid) + ")");
+                            autoBidStatusLabel.setVisible(true);
+                            cancelAutoBidButton.setVisible(true);
+                            autoBidButton.setManaged(false);
+                            autoBidStatusLabel.setManaged(true);
+                            cancelAutoBidButton.setManaged(true);
+                            NotificationController.showAlert("Auto-Bid",
+                                    "Auto-Bid đã bật: tối đa " + String.format("%,.0f₫", maxBid));
+                        } else {
+                            NotificationController.showError("Auto-Bid thất bại", resp.getMessage());
+                        }
+                    }));
+                    new Thread(task).start();
+
+                } catch (NumberFormatException ex) {
+                    NotificationController.showError("Lỗi định dạng", "Vui lòng nhập một số hợp lệ.");
+                }
+            }
+        });
+    }
+
+    @FXML
+    private void onAutoBidClicked(){
+        showAutoBidDialog();
+    }
+    @FXML
+    private void onCancelAutoBidClicked() {
+        Task<Response> task = new Task<>() {
+            @Override protected Response call() {
+                return ServerConnection.getInstance().cancelAutoBid(auction.getId());
+            }
+        };
+        task.setOnSucceeded(e -> Platform.runLater(() -> {
+            autoBidEnabled = false;
+            autoBidButton.setDisable(false);
+            autoBidButton.setVisible(true);
+            cancelAutoBidButton.setVisible(false);
+            autoBidStatusLabel.setVisible(false);
+            autoBidButton.setManaged(true);
+            cancelAutoBidButton.setManaged(false);
+            autoBidStatusLabel.setManaged(false);
+        }));
+        new Thread(task).start();
     }
 }

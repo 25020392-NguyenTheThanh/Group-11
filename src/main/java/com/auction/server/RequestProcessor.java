@@ -5,6 +5,7 @@ import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
+import com.auction.model.auction.AutoBidConfig;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
@@ -38,6 +39,8 @@ public class RequestProcessor {
                 case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
                 case TOP_UP         -> handleTopUp(request, handler);
                 case CONFIRM_PAYMENT -> handleConfirmPayment(request, handler);
+                case SET_AUTO_BID   -> handleSetAutoBid(request , handler);
+                case CANCEL_AUTO_BID -> handleCancelAutoBid(request , handler);
             };
         } catch (Exception e) {
             // Safety net: bắt mọi exception chưa được xử lý trong handler
@@ -474,5 +477,35 @@ public class RequestProcessor {
         } catch (Exception e) {
             return Response.error("Lỗi nạp tiền: " + e.getMessage());
         }
+    }
+
+    private static Response handleSetAutoBid(Request request , ClientHandler handler){
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Chưa đăng nhập");
+        if (!(user instanceof Bidder)) return Response.error("Chỉ Bidder mới có thể dùng Auto-Bid ");
+
+        AutoBidPayload p = (AutoBidPayload) request.getPayload();
+        Auction auction = AuctionManager.getInstance().findAuctionById(p.auctionId);
+        if (auction == null) return Response.error("Phiên không tồn tại");
+        if (auction.getStatus() != com.auction.model.auction.AuctionStatus.RUNNING)
+            return Response.error("Phiên chưa chạy hoặc đã kết thúc");
+
+        Bidder bidder = (Bidder) user;
+        if (p.maxBid <= auction.getCurrentHighestBid())
+            return Response.error("maxBid phải lớn hơn giá hiện tại (" + auction.getCurrentHighestBid() + "₫)");
+        if (p.increment < auction.getMinBidStep())
+            return Response.error("Bước tăng phải >= minBidStep (" + auction.getMinBidStep() + "₫)");
+        AutoBidConfig cfg = new AutoBidConfig(bidder.getId(), bidder.getUsername(), p.maxBid, p.increment);
+        auction.registerAutoBid(cfg);
+        return Response.ok("Đăng ký Auto-Bid thành công (tối đa " + p.maxBid + "₫)");
+    }
+
+    private static Response handleCancelAutoBid(Request request , ClientHandler handler){
+        User user = handler.getLoggedInUser();
+        if (user == null) return Response.error("Chưa đăng nhập");
+        int auctionId = (Integer) request.getPayload();
+        Auction auction = AuctionManager.getInstance().findAuctionById(auctionId);
+        if (auction != null) auction.cancelAutoBid(user.getId());
+        return Response.ok("Đã hủy Auto_Bid");
     }
 }

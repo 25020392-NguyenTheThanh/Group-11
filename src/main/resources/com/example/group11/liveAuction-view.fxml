@@ -113,6 +113,30 @@
                     </HBox>
 
                     <Button fx:id="confirmBidButton" onAction="#handleConfirmBid" maxWidth="Infinity" style="-fx-background-color: #ffb95f; -fx-text-fill: #2a1700; -fx-font-size: 16px; -fx-font-weight: bold; -fx-padding: 15; -fx-background-radius: 12; -fx-cursor: hand;" text="XÁC NHẬN THẦU" />
+
+                    <!-- Auto-Bid section -->
+                    <Button fx:id="autoBidButton"
+                            onAction="#onAutoBidClicked"
+                            maxWidth="Infinity"
+                            text="Bật Auto-Bid"
+                            style="-fx-background-color: #6c5ce7; -fx-text-fill: white;
+               -fx-font-size: 13px; -fx-font-weight: bold;
+               -fx-padding: 10; -fx-background-radius: 12; -fx-cursor: hand;" />
+
+                    <!-- Hiện khi auto-bid đang chạy -->
+                    <Label fx:id="autoBidStatusLabel"
+                           visible="false" managed="false"
+                           text="Auto-Bid đang chạy"
+                           style="-fx-text-fill: #00e475; -fx-font-size: 12px; -fx-font-weight: bold;" />
+
+                    <Button fx:id="cancelAutoBidButton"
+                            onAction="#onCancelAutoBidClicked"
+                            visible="false" managed="false"
+                            maxWidth="Infinity"
+                            text="Hủy Auto-Bid"
+                            style="-fx-background-color: #d63031; -fx-text-fill: white;
+               -fx-font-size: 13px; -fx-font-weight: bold;
+               -fx-padding: 10; -fx-background-radius: 12; -fx-cursor: hand;" />
                 </VBox>
             </VBox>
         </HBox>
