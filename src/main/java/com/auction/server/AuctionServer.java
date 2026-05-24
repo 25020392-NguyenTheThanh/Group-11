@@ -54,9 +54,13 @@ public class AuctionServer {
         }
     }
     // gọi khi có bid mới , thông báo cho tất cả các client
-    public void broadcast(Notification notification){
-        for (ClientHandler handler : connectedClients){
-            handler.sendNotification(notification);
+    public void broadcast(Notification notification) {
+        for (ClientHandler handler : connectedClients) {
+            try {
+                handler.sendNotification(notification);
+            } catch (Exception e) {
+                System.err.println("[Broadcast] Lỗi gửi tới client: " + e.getMessage());
+            }
         }
     }
     // xóa các handler đã chết

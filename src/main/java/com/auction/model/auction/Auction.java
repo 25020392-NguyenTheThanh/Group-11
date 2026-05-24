@@ -6,6 +6,8 @@ import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
+import com.auction.network.BidUpdateData;
+import com.auction.network.Notification;
 import com.auction.pattern.observer.Observer;
 import com.auction.pattern.observer.Subject;
 
@@ -36,6 +38,7 @@ public class Auction implements Subject, Serializable {
     private int viewCount; // số lượt xem
     private Map<Integer , AutoBidConfig> autoBidConfigs = new ConcurrentHashMap<>();
 
+    private transient boolean isProcessingAutoBid = false;
     // Anti-sniping: ngưỡng giây cuối mà nếu có bid sẽ gia hạn
     private static final long SNIPE_WINDOW_SECONDS = 30;   // bid trong 30s cuối → gia hạn
     private static final long EXTENSION_SECONDS    = 60;   // gia hạn thêm 60s
@@ -190,7 +193,15 @@ public class Auction implements Subject, Serializable {
         String msg = String.format(
                 "🔔 Phiên " + id + " — " + bidder.getUsername() + " vừa đặt " + amount + "₫ | Giá cao nhất hiện tại: " + currentHighestBid);
         System.out.println(msg);
-        notifyObservers(msg);
+        BidUpdateData upd = new BidUpdateData(id, currentHighestBid,
+                bidder.getUsername(), bidHistory.size());
+        for (Observer o : observers) {
+            if (o instanceof com.auction.server.ClientHandler ch) {
+                ch.sendNotification(new Notification("BID_UPDATE", upd));
+            } else {
+                o.send(msg);
+            }
+        }
     }
 
     private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException, ClassNotFoundException {
@@ -300,23 +311,44 @@ public class Auction implements Subject, Serializable {
      *  nếu có thì tự động đặt giá thêm 1 bước.
      */
 
-    private void triggerAutoBid(Bidder justBidder){
-        // tìm auto-bid config tốt nhất của người khác vừa thắng
-        AutoBidConfig best = null ;
-        for (AutoBidConfig cfg : autoBidConfigs.values()){
-            if (cfg.getBidderId() == justBidder.getId()) continue ;
+    // Auction.java — thay triggerAutoBid()
+    private void triggerAutoBid(Bidder justBidder) {
+        AutoBidConfig best = null;
+        for (AutoBidConfig cfg : autoBidConfigs.values()) {
+            if (cfg.getBidderId() == justBidder.getId()) continue; // không tự bid lại chính mình
             double nextBid = currentHighestBid + cfg.getIncrement();
-            if (nextBid > cfg.getMaxBid()) continue ;
-            if (best == null || cfg.getMaxBid() > best.getMaxBid()){
-                best = cfg ;
+            if (nextBid > cfg.getMaxBid()) continue; // vượt ngưỡng tối đa → bỏ qua
+            if (best == null || cfg.getMaxBid() > best.getMaxBid()) {
+                best = cfg;
             }
         }
-        if (best == null) return ;
-        // Tìm Bidder object từ observers hoặc bỏ qua nếu không có trong RAM
-        // (server sẽ inject bidder thực qua triggerAutoBidWithBidder)
+        if (best == null) return;
 
-        final AutoBidConfig chosen = best ;
-        notifyObservers("AUTO_BID_TRIGGER:" + chosen.getBidderId() + ":" + (currentHighestBid + chosen.getIncrement()));
+        // Tìm Bidder object từ UserManager
+        com.auction.model.user.User u =
+                com.auction.manager.UserManager.getInstance().findUserById(best.getBidderId());
+        if (!(u instanceof Bidder autoBidder)) return;
+
+        final AutoBidConfig chosen = best;
+        double nextBid = currentHighestBid + chosen.getIncrement();
+
+        try {
+            // Đặt giá thay cho autoBidder — gọi placeBid() nhưng tránh đệ quy vô hạn
+            // (placeBid() gọi triggerAutoBid() gọi placeBid()... → cần flag)
+            if (isProcessingAutoBid) return; // chống đệ quy
+            isProcessingAutoBid = true;
+            placeBid(autoBidder, nextBid);
+            isProcessingAutoBid = false;
+
+            // Ghi lịch sử vào DB
+            com.auction.data.DataManager.getInstance().updateAuctionBid(id, autoBidder.getId(), nextBid);
+            com.auction.data.DataManager.getInstance().saveBidTransaction(
+                    id, autoBidder.getId(), autoBidder.getUsername(), nextBid);
+
+        } catch (Exception e) {
+            isProcessingAutoBid = false;
+            System.err.println("[AutoBid] Lỗi tự động đặt giá: " + e.getMessage());
+        }
     }
     public Map<Integer , AutoBidConfig> getAutoBidConfigs(){
         return autoBidConfigs ;

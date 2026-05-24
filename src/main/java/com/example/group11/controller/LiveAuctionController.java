@@ -22,6 +22,8 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
@@ -84,6 +86,9 @@ public class LiveAuctionController implements Initializable {
     private Timeline countdownTimeline;
     private Button watchlistButton;
     private boolean autoBidEnabled = false ;
+    private Stage ownerStage;
+    private Parent previousRoot;
+    private BidderAuctionListController listController;
 
     // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
     private static final Set<Integer> enteredAuctionIds = new HashSet<>();
@@ -273,17 +278,17 @@ public class LiveAuctionController implements Initializable {
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().setNotificationHandler(notification -> {
             Platform.runLater(() -> {
-                System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-                if ("BID_UPDATE".equals(notification.getType())
-                        || "AUCTION_ENDED".equals(notification.getType())
-                        || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
+                String type = notification.getType();
+                // Chỉ xử lý notification liên quan đến phiên này
+                if ("BID_UPDATE".equals(type) || "AUCTION_ENDED".equals(type)
+                        || "ITEM_STATUS_CHANGED".equals(type)
+                        || "TIME_EXTENDED".equals(type)) {
                     refreshAuctionDetails(false);
-                } else if ("TIME_EXTENDED".equals(notification.getType())) {
-                    // Anti-sniping: server gia hạn endTime, cập nhật lại auction rồi thông báo
-                    refreshAuctionDetails(false);
-                    NotificationController.showAlert("Gia hạn phiên!",
-                            "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
-                } else if ("WATCHLIST_ENDING_SOON".equals(notification.getType())) {
+                    if ("TIME_EXTENDED".equals(type)) {
+                        NotificationController.showAlert("Gia hạn phiên!",
+                                "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
+                    }
+                } else if ("WATCHLIST_ENDING_SOON".equals(type)) {
                     NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
                 }
             });
@@ -569,7 +574,6 @@ public class LiveAuctionController implements Initializable {
                 if (res != null && res.isSuccess()) {
                     NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
                     if (user instanceof Bidder bidder) {
-                        bidder.deduct(bidAmount);
                         bidder.getProfile().addParticipatedAuction(auction.getId());
                     }
                     refreshAuctionDetails(false);
@@ -629,13 +633,32 @@ public class LiveAuctionController implements Initializable {
      */
     @FXML
     private void handleBack(ActionEvent event) {
-        if (countdownTimeline != null) {
-            countdownTimeline.stop();
+        if (countdownTimeline != null) countdownTimeline.stop();
+
+        // Gửi decrementView lên server (background, không chờ)
+        if (auction != null) {
+            enteredAuctionIds.remove(auction.getId());
+            Task<Response> t = new Task<>() {
+                @Override protected Response call() {
+                    GetAuctionDetailPayload payload =
+                            new GetAuctionDetailPayload(auction.getId(), false);
+                    payload.decrementView = true;
+                    return ServerConnection.getInstance()
+                            .send(RequestType.GET_AUCTION_DETAIL, payload);
+                }
+            };
+            new Thread(t).start();
         }
-        Stage stage = (Stage) backButton.getScene().getWindow();
-        if (stage != null) {
-            openStages.remove(auction.getId());
-            stage.close();
+
+        // Swap root về màn hình danh sách — KHÔNG đóng Stage
+        if (previousRoot != null && ownerStage != null) {
+            ownerStage.getScene().setRoot(previousRoot);
+            ownerStage.setTitle("Danh sách đấu giá");
+
+            // Khôi phục notification handler về list controller
+            if (listController != null) {
+                listController.setupRealtimeNotificationsPublic();
+            }
         }
     }
 
@@ -811,4 +834,11 @@ public class LiveAuctionController implements Initializable {
         }));
         new Thread(task).start();
     }
+
+    public void setPreviousRoot(Parent previousRoot, Stage stage, BidderAuctionListController listController) {
+        this.previousRoot = previousRoot;
+        this.ownerStage = stage;
+        this.listController = listController;
+    }
+
 }

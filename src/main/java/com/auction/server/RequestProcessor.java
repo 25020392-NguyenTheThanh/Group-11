@@ -18,8 +18,11 @@ import com.auction.pattern.factory.ElectronicsFactory;
 import com.auction.pattern.factory.ItemFactory;
 import com.auction.pattern.factory.VehicleFactory;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 // điều phối request từ client gửi lên server
 public class RequestProcessor {
+    private static final ConcurrentHashMap<Integer, Long> lastBidTime = new ConcurrentHashMap<>();
     // hàm trung tâm
     public static Response process(Request request, ClientHandler handler) {
         try {
@@ -111,15 +114,12 @@ public class RequestProcessor {
     }
 
     // xử lý việc trả giá
-    private static Response handlePlaceBid(Request request , ClientHandler handler) {
+    private static Response handlePlaceBid(Request request, ClientHandler handler) {
         PlaceBidPayload payload = (PlaceBidPayload) request.getPayload();
         User user = handler.getLoggedInUser();
-        if (user == null) {
-            return Response.error("Bạn cần đăng nhập để đấu giá");
-        }
-        if (!(user instanceof Bidder)) {
-            return Response.error("Chỉ người mua (Bidder) mới có quyền đặt giá!");
-        }
+        if (user == null) return Response.error("Bạn cần đăng nhập để đấu giá");
+        if (!(user instanceof Bidder)) return Response.error("Chỉ người mua (Bidder) mới có quyền đặt giá!");
+
         try {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
             if (auction == null) return Response.error("Phiên không tồn tại");
@@ -127,13 +127,22 @@ public class RequestProcessor {
             auction.placeBid(bidder, payload.amount);
             bidder.getProfile().addParticipatedAuction(payload.auctionId);
 
-            // Ghi lịch sử bid vào MySQL
             AuctionManager.getInstance().recordBid(
                     payload.auctionId,
                     bidder.getId(),
                     bidder.getUsername(),
                     payload.amount
             );
+
+            // Broadcast BID_UPDATE tới TẤT CẢ client (kể cả đang ở màn hình danh sách)
+            BidUpdateData upd = new BidUpdateData(
+                    payload.auctionId,
+                    auction.getCurrentHighestBid(),
+                    bidder.getUsername(),
+                    auction.getBidHistory().size()
+            );
+            handler.getServer().broadcast(new Notification("BID_UPDATE", upd));
+
             return Response.ok("Đặt giá thành công");
         } catch (Exception e) {
             return Response.error(e.getMessage());

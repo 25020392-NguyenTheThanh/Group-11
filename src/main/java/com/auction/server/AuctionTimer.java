@@ -80,34 +80,6 @@ public class AuctionTimer {
                 }
             }
         }
-        for (Auction auction : AuctionManager.getInstance().getAuctions()) {
-            if (auction.getStatus() != AuctionStatus.RUNNING) continue;
-
-            auction.getAutoBidConfigs().forEach((bidderId, cfg) -> {
-                double nextBid = auction.getCurrentHighestBid() + cfg.getIncrement();
-
-                // Không trigger nếu vượt ngưỡng tối đa
-                if (nextBid > cfg.getMaxBid()) return;
-
-                // Không trigger nếu người có config đang là winner rồi
-                if (auction.getCurrentWinner() != null &&
-                        auction.getCurrentWinner().getId() == bidderId) return;
-
-                com.auction.model.user.User u =
-                        com.auction.manager.UserManager.getInstance().findUserById(bidderId);
-                if (!(u instanceof com.auction.model.user.Bidder bidder)) return;
-
-                try {
-                    auction.placeBid(bidder, nextBid);
-                    AuctionManager.getInstance().recordBid(
-                            auction.getId(), bidderId, bidder.getUsername(), nextBid);
-                    server.broadcast(new Notification("BID_UPDATE",
-                            "Auto-bid: " + bidder.getUsername() + " đặt " + nextBid + "₫"));
-                } catch (Exception e) {
-                    System.err.println("[AutoBid] lỗi phiên " + auction.getId() + ": " + e.getMessage());
-                }
-            });
-        }
     }
 
     private void sendEndingSoonNotification(Auction auction) {

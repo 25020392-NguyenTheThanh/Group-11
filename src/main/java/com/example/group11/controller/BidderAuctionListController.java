@@ -15,6 +15,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -482,19 +483,35 @@ public class BidderAuctionListController implements Initializable {
      *
      * @param auction Phiên đấu giá cần xem chi tiết
      */
+    // BidderAuctionListController.java — thay handleViewDetails()
+    // BidderAuctionListController.java — thay handleViewDetails()
+    // BidderAuctionListController.java — thay handleViewDetails()
+    // BidderAuctionListController.java — thay handleViewDetails()
     private void handleViewDetails(Auction auction) {
         try {
-            FXMLLoader loader = GenerationSupport.changeScene(contentGrid, "liveAuction-view.fxml", "Live Auction");
-            if (loader != null) {
-                LiveAuctionController controller = loader.getController();
-                controller.setAuctionAndUser(auction, user);
-            }
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
+            Parent liveRoot = loader.load();
+
+            LiveAuctionController controller = loader.getController();
+            controller.setAuctionAndUser(auction, user);
+
+            // Lấy stage và lưu lại root HIỆN TẠI trước khi swap
+            Stage stage = (Stage) mainPane.getScene().getWindow();
+            Parent previousRoot = mainPane.getScene().getRoot(); // ← StackPane gốc
+
+            // Truyền vào LiveAuctionController để nó biết cách quay về
+            controller.setPreviousRoot(previousRoot, stage, this);
+
+            // Swap root trong scene hiện tại — không tạo Stage/Scene mới
+            stage.getScene().setRoot(liveRoot);
+            stage.setTitle("Đấu giá — " + auction.getItem().getName());
+
         } catch (Exception e) {
             e.printStackTrace();
-            NotificationController.showError("Lỗi chuyển trang", "Không thể mở trang đấu giá trực tiếp.");
+            NotificationController.showError("Lỗi", "Không thể mở trang đấu giá.");
         }
     }
-
     /**
      * Xử lý sự kiện khi người dùng nhấn đặt giá nhanh từ màn hình danh sách.
      * Hiển thị hộp thoại nhập số tiền, kiểm tra số dư ví và gửi yêu cầu đặt giá lên máy chủ.
@@ -936,5 +953,9 @@ public class BidderAuctionListController implements Initializable {
                 "-fx-border-color: transparent #FFD700 transparent transparent; " +
                 "-fx-border-width: 0 4 0 0;";
         button.setStyle(activeStyle);
+    }
+
+    public void setupRealtimeNotificationsPublic() {
+        setupRealtimeNotifications(); // gọi lại method private hiện có
     }
 }
