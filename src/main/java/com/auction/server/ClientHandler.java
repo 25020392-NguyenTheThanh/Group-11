@@ -114,7 +114,6 @@ public class ClientHandler implements Runnable , Observer {
         }
         sendNotification(new Notification("BID_UPDATE", message));
     }
-
     public synchronized void sendNotification(Notification notification) {
         try {
             if (out != null) {

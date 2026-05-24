@@ -23,6 +23,8 @@ import javafx.concurrent.Task;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 // điều phối request từ client gửi lên server
 public class RequestProcessor {
     private static final ConcurrentHashMap<Integer, Long> lastBidTime = new ConcurrentHashMap<>();
@@ -119,15 +121,12 @@ public class RequestProcessor {
     }
 
     // xử lý việc trả giá
-    private static Response handlePlaceBid(Request request , ClientHandler handler) {
+    private static Response handlePlaceBid(Request request, ClientHandler handler) {
         PlaceBidPayload payload = (PlaceBidPayload) request.getPayload();
         User user = handler.getLoggedInUser();
-        if (user == null) {
-            return Response.error("Bạn cần đăng nhập để đấu giá");
-        }
-        if (!(user instanceof Bidder)) {
-            return Response.error("Chỉ người mua (Bidder) mới có quyền đặt giá!");
-        }
+        if (user == null) return Response.error("Bạn cần đăng nhập để đấu giá");
+        if (!(user instanceof Bidder)) return Response.error("Chỉ người mua (Bidder) mới có quyền đặt giá!");
+
         try {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
             if (auction == null) return Response.error("Phiên không tồn tại");
