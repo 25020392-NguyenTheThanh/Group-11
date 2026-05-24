@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.AreaChart?>
 <?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -78,14 +78,14 @@
 
                 <VBox spacing="10" style="-fx-background-color: #1b1b1d; -fx-border-color: #45464d; -fx-border-radius: 12; -fx-background-radius: 12; -fx-padding: 15;" VBox.vgrow="ALWAYS">
                     <Label style="-fx-text-fill: #909097; -fx-font-size: 12px; -fx-font-weight: bold;" text="BIỂU ĐỒ XU HƯỚNG GIÁ (Live)" />
-                    <LineChart fx:id="priceChart" createSymbols="true" legendVisible="false" style="-fx-background-color: transparent;">
+                    <AreaChart fx:id="priceChart" createSymbols="true" legendVisible="false" style="-fx-background-color: transparent;">
                         <xAxis>
                             <NumberAxis fx:id="xAxis" autoRanging="true" />
                         </xAxis>
                         <yAxis>
                             <NumberAxis fx:id="yAxis" autoRanging="true" />
                         </yAxis>
-                    </LineChart>
+                    </AreaChart>
                 </VBox>
             </VBox>
 

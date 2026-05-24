@@ -22,7 +22,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.chart.LineChart;
+import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
@@ -74,7 +74,7 @@ public class LiveAuctionController implements Initializable {
     @FXML private Label autoBidStatusLabel;    // hiện trạng thái
 
 
-    @FXML private LineChart<Number, Number> priceChart;
+    @FXML private AreaChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
     @FXML private NumberAxis yAxis;
 
@@ -109,9 +109,50 @@ public class LiveAuctionController implements Initializable {
     // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
     private static final Map<Integer, Stage> openStages = new HashMap<>();
 
+    // CSS đồng bộ kiểu dáng biểu đồ AreaChart theo chuẩn hiện đại, mã hóa % và khoảng trắng để tránh lỗi URLDecoder
+    private static final String CHART_THEME_CSS = "data:text/css," + (
+            ".chart-series-line {" +
+            "    -fx-stroke: #00ff66;" +
+            "    -fx-stroke-width: 3px;" +
+            "}" +
+            ".chart-series-area-fill {" +
+            "    -fx-fill: linear-gradient(to bottom, #00ff6633 0%, #00ff6600 100%);" +
+            "}" +
+            ".chart-line-symbol {" +
+            "    -fx-background-color: #ffaa00, #131315;" +
+            "    -fx-background-insets: 0, 2;" +
+            "    -fx-background-radius: 4px;" +
+            "    -fx-padding: 4px;" +
+            "}" +
+            ".chart-plot-background {" +
+            "    -fx-background-color: transparent;" +
+            "}" +
+            ".chart-alternative-column-row-line {" +
+            "    -fx-stroke: transparent;" +
+            "}" +
+            ".chart-alternative-row-fill {" +
+            "    -fx-fill: transparent;" +
+            "}" +
+            ".chart-horizontal-grid-lines {" +
+            "    -fx-stroke: #2d2d34;" +
+            "    -fx-stroke-dash-array: 2 2;" +
+            "}" +
+            ".chart-vertical-grid-lines {" +
+            "    -fx-stroke: #2d2d34;" +
+            "    -fx-stroke-dash-array: 2 2;" +
+            "}" +
+            ".axis {" +
+            "    -fx-tick-label-fill: #909097;" +
+            "    -fx-tick-mark-stroke: #45464d;" +
+            "    -fx-axis-label-fill: #ffd700;" +
+            "}"
+    ).replace("%", "%25").replace(" ", "%20");
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Chuẩn bị ban đầu
+        if (priceChart != null) {
+            priceChart.getStylesheets().add(CHART_THEME_CSS);
+        }
     }
 
     /**
@@ -513,10 +554,10 @@ public class LiveAuctionController implements Initializable {
         javafx.scene.control.Tooltip tp = new javafx.scene.control.Tooltip(text);
         javafx.scene.control.Tooltip.install(point.getNode(), tp);
 
-        // Highlight điểm cuối (bid cao nhất hiện tại) bằng màu vàng
+        // Highlight điểm cuối (bid cao nhất hiện tại) bằng màu vàng cam nổi bật
         boolean isLast = (history != null) && (idx == history.size());
         if (isLast) {
-            point.getNode().setStyle("-fx-background-color: #ffb95f, white;");
+            point.getNode().setStyle("-fx-background-color: #ffaa00, white; -fx-background-insets: 0, 2; -fx-background-radius: 6px; -fx-padding: 6px;");
         }
     }
     /**
@@ -777,19 +818,50 @@ public class LiveAuctionController implements Initializable {
 
     private void showAutoBidDialog() {
         javafx.scene.control.Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
-        dialog.setTitle("Cài đặt Auto-Bid");
-        dialog.setHeaderText("Hệ thống sẽ tự động đặt giá thay bạn");
+        dialog.setTitle("HANK AUCTIONS");
+        dialog.setHeaderText("🤖 Cài đặt Auto-Bid");
 
         TextField maxBidField = new TextField();
-        maxBidField.setPromptText("Giá tối đa (₫)");
-        TextField incrementField = new TextField(String.valueOf(auction.getMinBidStep()));
-        incrementField.setPromptText("Bước tăng (₫)");
+        maxBidField.setPromptText("Ví dụ: 5000000");
+        maxBidField.setPrefWidth(320);
 
-        VBox content = new VBox(8,
-                new Label("Giá tối đa:"), maxBidField,
-                new Label("Bước tăng mỗi lần:"), incrementField);
+        TextField incrementField = new TextField(String.format("%.0f", auction.getMinBidStep()));
+        incrementField.setPromptText("Ví dụ: 100000");
+        incrementField.setPrefWidth(320);
+
+        Label descLabel = new Label("Hệ thống sẽ tự động đặt giá thầu thay bạn với bước tăng đã chọn khi có người trả giá cao hơn, đảm bảo không vượt quá mức giá tối đa.");
+        descLabel.setWrapText(true);
+        descLabel.setStyle("-fx-text-fill: #909097; -fx-font-size: 12px; -fx-padding: 0 0 10 0;");
+        descLabel.setPrefWidth(320);
+
+        Label maxBidLabel = new Label("Giá tối đa ($):");
+        maxBidLabel.setStyle("-fx-text-fill: #d0c6ab; -fx-font-weight: bold; -fx-font-size: 13px;");
+
+        Label incrementLabel = new Label("Bước tăng mỗi lần (₫):");
+        incrementLabel.setStyle("-fx-text-fill: #d0c6ab; -fx-font-weight: bold; -fx-font-size: 13px;");
+
+        VBox maxBidBox = new VBox(6, maxBidLabel, maxBidField);
+        VBox incrementBox = new VBox(6, incrementLabel, incrementField);
+
+        VBox content = new VBox(12, descLabel, maxBidBox, incrementBox);
+        content.setPadding(new Insets(15, 20, 15, 20));
+
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        NotificationController.applyDarkTheme(dialog);
+
+        // Tùy chỉnh kiểu dáng các nút để đồng bộ với theme hệ thống
+        Button okBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        if (okBtn != null) {
+            okBtn.setText("Xác nhận");
+            okBtn.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-border-radius: 4px; -fx-background-radius: 4px; -fx-font-weight: bold; -fx-cursor: hand;");
+        }
+        Button cancelBtn = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+        if (cancelBtn != null) {
+            cancelBtn.setText("Hủy");
+            cancelBtn.setStyle("-fx-background-color: #262626; -fx-text-fill: white; -fx-border-radius: 4px; -fx-background-radius: 4px; -fx-font-weight: bold; -fx-cursor: hand;");
+        }
 
         dialog.showAndWait().ifPresent(btn -> {
             if (btn == ButtonType.OK) {

@@ -1,9 +1,6 @@
 package com.auction.client;
 
-import com.auction.network.Notification;
-import com.auction.network.Request;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
+import com.auction.network.*;
 import javafx.application.Platform;
 
 import java.io.IOException;
