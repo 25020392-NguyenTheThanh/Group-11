@@ -580,6 +580,16 @@ public class BidderAuctionListController implements Initializable {
 
     // Thay handleViewDetails bằng openLiveAuction
     private void openLiveAuction(Auction auction) {
+        // Kiểm tra xem phòng này đã được mở ở cửa sổ nào chưa
+        Stage existingStage = LiveAuctionController.getOpenStage(auction.getId());
+        if (existingStage != null) {
+            Platform.runLater(() -> {
+                existingStage.toFront();
+                existingStage.requestFocus();
+            });
+            return;
+        }
+
         // Gọi GET_AUCTION_DETAIL để server đăng ký handler này là Observer
         Task<Response> task = new Task<>() {
             @Override
@@ -601,17 +611,21 @@ public class BidderAuctionListController implements Initializable {
             Auction detailed = (Auction) res.getData();
 
             try {
+                Stage newStage = new Stage();
                 FXMLLoader loader = new FXMLLoader(
                         getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
                 Parent root = loader.load();
+                LiveAuctionController liveController = loader.getController();
+                
+                // Thiết lập previousRoot là null vì đây là cửa sổ mới riêng biệt, khi nhấn Back sẽ đóng cửa sổ này
+                liveController.setPreviousRoot(null, newStage, this);
 
-                LiveAuctionController liveCtrl = loader.getController();
-                liveCtrl.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
+                liveController.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
 
-                Stage stage = new Stage();
-                stage.setTitle("Đấu giá trực tiếp — " + detailed.getItem().getName());
-                stage.setScene(new javafx.scene.Scene(root));
-                stage.show();
+                javafx.scene.Scene scene = new javafx.scene.Scene(root);
+                newStage.setScene(scene);
+                newStage.setTitle("HANK AUCTION - Phòng Đấu Giá: " + detailed.getItem().getName());
+                newStage.show();
 
             } catch (java.io.IOException e) {
                 NotificationController.showError("Lỗi UI",

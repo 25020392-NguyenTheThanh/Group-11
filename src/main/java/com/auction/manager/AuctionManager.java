@@ -137,8 +137,25 @@ public class AuctionManager {
     public void removeObserverFromAllAuctions(com.auction.pattern.observer.Observer observer) {
         for (Auction a : auctions.values()) {
             if (a.hasObserver(observer)) {
+                boolean hasOtherConnection = false;
+                if (observer instanceof com.auction.server.ClientHandler ch) {
+                    com.auction.model.user.User u = ch.getLoggedInUser();
+                    if (u != null) {
+                        for (com.auction.pattern.observer.Observer obs : a.getObservers()) {
+                            if (obs != observer && obs instanceof com.auction.server.ClientHandler otherCh) {
+                                com.auction.model.user.User otherUser = otherCh.getLoggedInUser();
+                                if (otherUser != null && otherUser.getId() == u.getId()) {
+                                    hasOtherConnection = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
                 a.removeObserver(observer);
-                a.decrementViewCount();
+                if (!hasOtherConnection) {
+                    a.decrementViewCount();
+                }
                 a.notifyObservers("VIEW_UPDATE");
             }
         }

@@ -330,6 +330,10 @@ public class Auction implements Subject, Serializable {
     public boolean hasObserver(Observer observer) {
         return observers.contains(observer);
     }
+
+    public List<Observer> getObservers() {
+        return observers;
+    }
     //  Getters
 
     public int getId() {

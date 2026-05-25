@@ -69,7 +69,6 @@ public class LiveAuctionController implements Initializable {
     @FXML private Button confirmBidButton;
     @FXML private VBox bidHistoryContainer;
     @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
-    @FXML private Button closeButton; // Nút X thoát hẳn phòng
     @FXML private Button autoBidButton ;
     @FXML private Button cancelAutoBidButton;  // nút hủy riêng
     @FXML private Label autoBidStatusLabel;    // hiện trạng thái
@@ -124,8 +123,9 @@ public class LiveAuctionController implements Initializable {
         });
     };
 
-    // Bộ sưu tập lưu trữ các ID phòng đấu giá đã được truy cập ở phiên làm việc này (tránh tăng view trùng lặp khi quay lại)
-    private static final Set<Integer> enteredAuctionIds = new HashSet<>();
+    // Bộ sưu tập lưu trữ các cặp "userId:auctionId" đã được truy cập ở phiên làm việc này
+    // (tránh tăng view trùng lặp khi cùng 1 user quay lại cùng 1 phòng)
+    private static final Set<String> enteredAuctionIds = new HashSet<>();
 
     // Bộ sưu tập lưu giữ các Stage của các phòng đấu giá đang mở song song
     private static final Map<Integer, Stage> openStages = new HashMap<>();
@@ -193,12 +193,7 @@ public class LiveAuctionController implements Initializable {
                 if (backButton != null && backButton.getParent() instanceof HBox topBar) {
                     if (watchlistButton == null) {
                         watchlistButton = new Button();
-                        int closeBtnIndex = topBar.getChildren().indexOf(closeButton);
-                        if (closeBtnIndex >= 0) {
-                            topBar.getChildren().add(closeBtnIndex, watchlistButton);
-                        } else {
-                            topBar.getChildren().add(watchlistButton);
-                        }
+                        topBar.getChildren().add(watchlistButton);
                         watchlistButton.setOnAction(event -> handleToggleWatchlistInDetail());
                     }
                     boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
@@ -214,17 +209,18 @@ public class LiveAuctionController implements Initializable {
                 if (stage != null) {
                     openStages.put(auction.getId(), stage);
                     stage.setOnCloseRequest(event -> {
-                        cleanupAndClose(true);
+                        cleanupAndClose(false);
                     });
                 }
             }
         });
 
         // 1. Lấy thông tin đấu giá mới nhất từ Server để đồng bộ và đăng ký Observer
-        // Chỉ tăng lượt xem nếu chưa ở trong phòng đấu giá này trước đó
-        boolean isFirstEntry = !enteredAuctionIds.contains(auction.getId());
+        // Chỉ tăng lượt xem nếu user này chưa vào phòng đấu giá này trong phiên hiện tại
+        String viewKey = user.getId() + ":" + auction.getId();
+        boolean isFirstEntry = !enteredAuctionIds.contains(viewKey);
         if (isFirstEntry) {
-            enteredAuctionIds.add(auction.getId());
+            enteredAuctionIds.add(viewKey);
         }
         refreshAuctionDetails(isFirstEntry);
 
@@ -740,16 +736,44 @@ public class LiveAuctionController implements Initializable {
     }
 
     /**
-     * Quay lại danh sách phiên đấu giá (đóng cửa sổ, giữ nguyên lượt xem và observer).
+     * Quay lại / thoát khỏi phòng đấu giá. Giảm lượt xem, dọn dẹp tài nguyên và đóng cửa sổ.
      *
      * @param event Sự kiện hành động của JavaFX
      */
     @FXML
     private void handleBack(ActionEvent event) {
-        cleanupAndClose(false);
-        Stage stage = (Stage) backButton.getScene().getWindow();
-        if (stage != null) {
-            stage.close();
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
+
+        ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
+
+        if (auction != null) {
+            //enteredAuctionIds.remove(user.getId() + ":" + auction.getId());
+            openStages.remove(auction.getId());
+            Task<Response> closeTask = new Task<>() {
+                @Override
+                protected Response call() throws Exception {
+                    GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auction.getId(), false);
+                    payload.decrementView = false;
+                    return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
+                }
+            };
+            Thread t = new Thread(closeTask);
+            t.setDaemon(true);
+            t.start();
+        }
+        // Swap root về màn hình danh sách — KHÔNG đóng Stage
+        if (previousRoot != null && ownerStage != null) {
+            ownerStage.getScene().setRoot(previousRoot);
+            ownerStage.setTitle("Danh sách đấu giá");
+
+            // Khôi phục notification handler về list controller
+            if (listController != null) {
+                listController.setupRealtimeNotificationsPublic();
+            }
+        } else if (ownerStage != null) {
+            ownerStage.close();
         }
     }
 
@@ -763,7 +787,9 @@ public class LiveAuctionController implements Initializable {
             countdownTimeline.stop();
         }
         openStages.remove(auction.getId());
-        enteredAuctionIds.remove(auction.getId());
+//        if (user != null && auction != null) {
+//            enteredAuctionIds.remove(user.getId() + ":" + auction.getId());
+//        }
         ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
 
         if (decrementView && auction != null) {
@@ -782,37 +808,6 @@ public class LiveAuctionController implements Initializable {
         }
     }
 
-    /**
-     * Thoát chính thức khỏi phòng đấu giá (bấm nút X). Giảm lượt xem và huỷ đăng ký observer trên server, sau đó đóng cửa sổ.
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
-    @FXML
-    private void handleClose(ActionEvent event) {
-        if (countdownTimeline != null) {
-            countdownTimeline.stop();
-        }
-        if (auction != null) {
-            enteredAuctionIds.remove(auction.getId());
-            Task<Response> closeTask = new Task<>() {
-                @Override
-                protected Response call() throws Exception {
-                    GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auction.getId(), false);
-                    payload.decrementView = true;
-                    return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
-                }
-            };
-
-            Thread t = new Thread(closeTask);
-            t.setDaemon(true);
-            t.start();
-        }
-        Stage stage = (Stage) closeButton.getScene().getWindow();
-        if (stage != null) {
-            openStages.remove(auction.getId());
-            stage.close();
-        }
-    }
 
     /**
      * Cập nhật kiểu dáng và trạng thái hiển thị của nút Theo dõi (Watchlist) trong phòng chi tiết.
@@ -991,5 +986,5 @@ public class LiveAuctionController implements Initializable {
         this.ownerStage = stage;
         this.listController = listController;
     }
-
+    
 }
