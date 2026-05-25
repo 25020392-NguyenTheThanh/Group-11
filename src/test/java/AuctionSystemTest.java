@@ -28,7 +28,7 @@ public class AuctionSystemTest {
         LocalDateTime endTime = startTime.plusDays(1);
 
         Auction auction = new Auction(1, item , startTime , endTime , 20);
-        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000,true);
+        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000, null);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
         auction.placeBid(bidder ,1500);
@@ -44,7 +44,7 @@ public class AuctionSystemTest {
         LocalDateTime endTime = LocalDateTime.of(2026, 5, 30, 10, 30);
 
         Auction auction = new Auction(1, item , startTime , endTime , 20);
-        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000,true);
+        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000, null);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
         assertThrows(InvalidBidException.class , () -> auction.placeBid(bidder , 1000));
@@ -60,7 +60,7 @@ public class AuctionSystemTest {
         LocalDateTime endTime = LocalDateTime.now().plusDays(1);
 
         Auction auction = new Auction(1, item , startTime, endTime, 100);
-        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000,true);
+        Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000, null);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.FINISHED);
         assertThrows(AuctionClosedException.class,() -> auction.placeBid(bidder, 3000));
@@ -76,8 +76,8 @@ public class AuctionSystemTest {
         LocalDateTime endTime = startTime.plusDays(1);
 
         Auction auction = new Auction(1, item , startTime , endTime ,100);
-        Bidder bidder_1 = new Bidder(1,"Tuan","123","123@gmail",3000,true);
-        Bidder bidder_2 = new Bidder(2,"Tuan_2","1234","1234@gmail",4000,true);
+        Bidder bidder_1 = new Bidder(1,"Tuan","123","123@gmail",3000, null);
+        Bidder bidder_2 = new Bidder(2,"Tuan_2","1234","1234@gmail",4000, null);
         bidder_1.setAuthenticated(true);
         bidder_2.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
@@ -144,7 +144,7 @@ public class AuctionSystemTest {
         // endTime chỉ còn 10 giây — nằm trong snipe window 30s
         LocalDateTime end = LocalDateTime.now().plusSeconds(10);
         Auction auction = new Auction(1, item, start, end, 100);
-        Bidder bidder = new Bidder(1, "Tuan", "123", "123@gmail", 5000, true);
+        Bidder bidder = new Bidder(1, "Tuan", "123", "123@gmail", 5000, null);
         bidder.setAuthenticated(true);
         auction.setStatus(AuctionStatus.RUNNING);
 
@@ -177,7 +177,7 @@ public class AuctionSystemTest {
         auction.setStatus(AuctionStatus.RUNNING);
 
         // Bidder 1 (Auto-bidder): maxBid = 2000, increment = 150
-        Bidder bidder1 = new Bidder(1, "AutoBidder", "123", "autobid@gmail.com", 5000, true);
+        Bidder bidder1 = new Bidder(1, "AutoBidder", "123", "autobid@gmail.com", 5000, null);
         bidder1.setAuthenticated(true);
         auction.addObserver(bidder1);
 
@@ -186,7 +186,7 @@ public class AuctionSystemTest {
         auction.registerAutoBid(cfg);
 
         // Bidder 2 (Manual bidder): places a manual bid of 1300
-        Bidder bidder2 = new Bidder(2, "ManualBidder", "123", "manual@gmail.com", 5000, true);
+        Bidder bidder2 = new Bidder(2, "ManualBidder", "123", "manual@gmail.com", 5000, null);
         bidder2.setAuthenticated(true);
         auction.addObserver(bidder2);
 
@@ -206,7 +206,7 @@ public class AuctionSystemTest {
         auction.setStatus(AuctionStatus.RUNNING);
 
         // Bidder 1 (Auto-bidder)
-        Bidder bidder1 = new Bidder(1, "AutoBidder", "123", "autobid@gmail.com", 5000, true);
+        Bidder bidder1 = new Bidder(1, "AutoBidder", "123", "autobid@gmail.com", 5000, null);
         bidder1.setAuthenticated(true);
         auction.addObserver(bidder1);
 
@@ -219,7 +219,7 @@ public class AuctionSystemTest {
         assertFalse(bidder1.isAuthenticated());
 
         // Bidder 2 (Manual bidder) places a manual bid of 1300
-        Bidder bidder2 = new Bidder(2, "ManualBidder", "123", "manual@gmail.com", 5000, true);
+        Bidder bidder2 = new Bidder(2, "ManualBidder", "123", "manual@gmail.com", 5000, null);
         bidder2.setAuthenticated(true);
         auction.addObserver(bidder2);
 
