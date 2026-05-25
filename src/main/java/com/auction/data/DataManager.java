@@ -111,6 +111,18 @@ public class DataManager {
         return userRepo.updateBidderBalance(bidderId, newBalance);
     }
 
+    public boolean addBidderBalance(int bidderId, double amount) {
+        return userRepo.addBidderBalance(bidderId, amount);
+    }
+
+    public boolean deductBidderBalance(int bidderId, double amount) {
+        return userRepo.deductBidderBalance(bidderId, amount);
+    }
+
+    public double getBidderBalance(int bidderId) {
+        return userRepo.getBidderBalance(bidderId);
+    }
+
     public boolean addToWatchlist(int bidderId, int auctionId) {
         return userRepo.addToWatchlist(bidderId, auctionId);
     }

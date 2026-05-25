@@ -212,18 +212,21 @@ public class Auction implements Subject, Serializable {
                     "Giá đặt phải >= $%,.0f  (giá cao nhất $%,.0f + bước tối thiểu $%,.0f)",
                     minAccepted, currentHighestBid, minBidStep));
 
+        // Khấu trừ tiền của new bidder bằng giao dịch DB an toàn
+        boolean success = DataManager.getInstance().deductBidderBalance(bidder.getId(), amount);
+        if (!success) {
+            throw new InvalidBidException(String.format("Số dư không đủ hoặc lỗi hệ thống (Cần $%,.0f)", amount));
+        }
+        // Cập nhật RAM cho new bidder
+        bidder.setBalance(DataManager.getInstance().getBidderBalance(bidder.getId()));
+
         // Hoàn tiền cho người ra giá cao nhất trước đó (nếu có)
         Bidder previousWinner = currentWinner;
         double previousHighestBid = currentHighestBid;
         if (currentWinner != null) {
-            currentWinner.topUp(currentHighestBid);
-            DataManager.getInstance().updateBidderBalance(currentWinner.getId(), currentWinner.getBalance());
+            DataManager.getInstance().addBidderBalance(currentWinner.getId(), previousHighestBid);
+            currentWinner.setBalance(DataManager.getInstance().getBidderBalance(currentWinner.getId()));
         }
-
-        // Khấu trừ tiền của new bidder
-        bidder.deduct(amount);
-        // Đồng bộ số dư mới của bidder xuống DB ngay lập tức
-        DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
 
         // Lưu vào lịch sử
         String bidType = isAutoBid ? "AUTO" : "MANUAL";

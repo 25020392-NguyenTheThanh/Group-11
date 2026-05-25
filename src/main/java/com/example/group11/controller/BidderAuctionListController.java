@@ -237,9 +237,6 @@ public class BidderAuctionListController implements Initializable {
         this.user = user;
         if (user instanceof Bidder bidder) {
             walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
-            if (bidder.hasToppedUp()) {
-                addFundsBtn.setDisable(true);
-            }
         }
         loadAuctions();
         setupRealtimeNotifications();
@@ -972,8 +969,15 @@ public class BidderAuctionListController implements Initializable {
     @FXML
     private void handleAddFunds(ActionEvent event) {
         if (user instanceof Bidder bidder) {
-            if (bidder.hasToppedUp()) {
-                NotificationController.showAlert("Thông báo", "Bạn đã nạp tiền trước đó rồi, không thể nạp thêm!");
+            if (!bidder.canTopUp()) {
+                if (bidder.getLastTopUpTime() != null) {
+                    java.time.Duration diff = java.time.Duration.between(java.time.LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
+                    long hours = diff.toHours();
+                    long mins = diff.toMinutesPart();
+                    NotificationController.showAlert("Thông báo", String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
+                } else {
+                    NotificationController.showAlert("Thông báo", "Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ.");
+                }
                 return;
             }
         }
@@ -1037,7 +1041,7 @@ public class BidderAuctionListController implements Initializable {
                     double newBalance = (Double) res.getData();
                     // Cập nhật lại đối tượng bidder ở phía client
                     bidder.topUp(amount);
-                    bidder.setHasToppedUp(true);
+                    bidder.setLastTopUpTime(java.time.LocalDateTime.now());
                     walletBalance.setText(String.format("%,.2f", newBalance));
 
                     // Lưu trạng thái đã nạp tiền

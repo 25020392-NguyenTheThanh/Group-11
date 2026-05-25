@@ -3,6 +3,7 @@ package com.auction.model.user;
 import com.auction.exception.InvalidBidException;
 import com.auction.pattern.observer.Observer;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,12 +14,12 @@ import java.util.List;
 public class Bidder extends User implements Observer {
     private double balance; // số dư của ví
     private final BidderProfile profile ; // id phiên đấu giá đã từng thắng
-    private boolean hasToppedUp; // trạng thái đã nạp tiền (chỉ được nạp 1 lần)
+    private LocalDateTime lastTopUpTime; // lưu vết thời gian nạp tiền lần cuối
 
-    public Bidder(int id, String username, String password, String email, double balance, boolean hasToppedUp) {
+    public Bidder(int id, String username, String password, String email, double balance, LocalDateTime lastTopUpTime) {
         super(id, username, password, email);
         this.balance = balance;
-        this.hasToppedUp = hasToppedUp;
+        this.lastTopUpTime = lastTopUpTime;
         this.profile = new BidderProfile(id);
     }
     public double getBalance() {
@@ -42,12 +43,22 @@ public class Bidder extends User implements Observer {
         this.balance = balance;
     }
 
-    public boolean hasToppedUp() {
-        return hasToppedUp;
+    public LocalDateTime getLastTopUpTime() {
+        return lastTopUpTime;
     }
 
-    public void setHasToppedUp(boolean hasToppedUp) {
-        this.hasToppedUp = hasToppedUp;
+    public void setLastTopUpTime(LocalDateTime lastTopUpTime) {
+        this.lastTopUpTime = lastTopUpTime;
+    }
+
+    /**
+     * Kiểm tra xem Bidder đã đủ điều kiện nạp tiền (cách 24h) chưa.
+     */
+    public boolean canTopUp() {
+        if (lastTopUpTime == null) {
+            return true;
+        }
+        return java.time.LocalDateTime.now().isAfter(lastTopUpTime.plusHours(24));
     }
 
     public BidderProfile getProfile() { return profile; }

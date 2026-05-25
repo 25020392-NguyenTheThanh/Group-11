@@ -403,18 +403,24 @@ public class RequestProcessor {
 
         try {
             Bidder bidder = (Bidder) user;
-            if (bidder.hasToppedUp()) {
-                return Response.error("Bạn đã nạp tiền trước đó rồi, không thể nạp thêm!");
+            if (!bidder.canTopUp()) {
+                if (bidder.getLastTopUpTime() != null) {
+                    java.time.Duration diff = java.time.Duration.between(java.time.LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
+                    long hours = diff.toHours();
+                    long mins = diff.toMinutesPart();
+                    return Response.error(String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
+                }
+                return Response.error("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ.");
             }
 
-            double newBalance = bidder.getBalance() + amount;
-
-            // Đồng bộ trực tiếp vào cơ sở dữ liệu
-            boolean success = DataManager.getInstance().updateBidderBalance(bidder.getId(), newBalance);
+            // Cộng dồn trực tiếp vào cơ sở dữ liệu để tránh race condition
+            boolean success = DataManager.getInstance().addBidderBalance(bidder.getId(), amount);
             if (success) {
                 DataManager.getInstance().markBidderToppedUp(bidder.getId());
-                bidder.topUp(amount);
-                bidder.setHasToppedUp(true);
+                // Đồng bộ số dư thực tế mới nhất từ DB vào RAM
+                double newBalance = DataManager.getInstance().getBidderBalance(bidder.getId());
+                bidder.setBalance(newBalance);
+                bidder.setLastTopUpTime(java.time.LocalDateTime.now());
                 return Response.ok(bidder.getBalance());
             } else {
                 return Response.error("Không thể cập nhật số dư vào cơ sở dữ liệu");

@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,8 +40,8 @@ public class UserMapper {
 
             default -> { // BIDDER
                 double balance = fetchBidderBalance(con, id);
-                boolean hasToppedUp = fetchBidderHasToppedUp(con, id);
-                Bidder b = new Bidder(id, username, password, email, balance, hasToppedUp);
+                LocalDateTime lastTopUpTime = fetchBidderLastTopUpTime(con, id);
+                Bidder b = new Bidder(id, username, password, email, balance, lastTopUpTime);
                 List<Integer> participated = fetchBidderParticipated(con, id);
                 for (int auctionId : participated) {
                     b.getProfile().addParticipatedAuction(auctionId);
@@ -59,12 +61,18 @@ public class UserMapper {
 
     // private helpers
 
-    private boolean fetchBidderHasToppedUp(Connection con, int userId) throws SQLException {
+    private LocalDateTime fetchBidderLastTopUpTime(Connection con, int userId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement(
-                "SELECT has_topped_up FROM bidders WHERE user_id = ?")) {
+                "SELECT last_top_up_time FROM bidders WHERE user_id = ?")) {
             ps.setInt(1, userId);
             try (ResultSet r = ps.executeQuery()) {
-                return r.next() && r.getBoolean("has_topped_up");
+                if (r.next()) {
+                    Timestamp ts = r.getTimestamp("last_top_up_time");
+                    if (ts != null) {
+                        return ts.toLocalDateTime();
+                    }
+                }
+                return null;
             }
         }
     }

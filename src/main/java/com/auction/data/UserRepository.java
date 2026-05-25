@@ -20,8 +20,16 @@ public class UserRepository {
                     }
                 }
             }
+            try (ResultSet rs2 = meta.getColumns(null, null, "bidders", "last_top_up_time")) {
+                if (!rs2.next()) {
+                    try (Statement st = con.createStatement()) {
+                        st.execute("ALTER TABLE bidders ADD COLUMN last_top_up_time DATETIME DEFAULT NULL");
+                        System.out.println("[Database Migration] Added last_top_up_time column to bidders table.");
+                    }
+                }
+            }
         } catch (SQLException e) {
-            System.err.println("[Database Migration] Error check/add has_topped_up: " + e.getMessage());
+            System.err.println("[Database Migration] Error check/add column: " + e.getMessage());
         }
     }
 
@@ -153,6 +161,49 @@ public class UserRepository {
         }
     }
 
+    public boolean addBidderBalance(int bidderId, double amount) {
+        String sql = "UPDATE bidders SET balance = balance + ? WHERE user_id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setInt(2, bidderId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] addBidderBalance lỗi: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean deductBidderBalance(int bidderId, double amount) {
+        String sql = "UPDATE bidders SET balance = balance - ? WHERE user_id = ? AND balance >= ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setDouble(1, amount);
+            ps.setInt(2, bidderId);
+            ps.setDouble(3, amount);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] deductBidderBalance lỗi: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public double getBidderBalance(int bidderId) {
+        String sql = "SELECT balance FROM bidders WHERE user_id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, bidderId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble("balance");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] getBidderBalance lỗi: " + e.getMessage());
+        }
+        return -1; // -1 if error or not found
+    }
+
     public boolean addToWatchlist(int bidderId, int auctionId) {
         String sql = "INSERT IGNORE INTO bid_watchlist (bidder_id, auction_id) VALUES (?, ?)";
         try (Connection con = db.getConnection();
@@ -211,7 +262,7 @@ public class UserRepository {
     }
 
     public boolean markBidderToppedUp(int bidderId) {
-        String sql = "UPDATE bidders SET has_topped_up = 1 WHERE user_id = ?";
+        String sql = "UPDATE bidders SET has_topped_up = 1, last_top_up_time = CURRENT_TIMESTAMP WHERE user_id = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, bidderId);

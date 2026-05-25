@@ -43,6 +43,7 @@ CREATE TABLE users (
 CREATE TABLE bidders (
     user_id INT NOT NULL PRIMARY KEY, 
     balance DECIMAL(18,2) NOT NULL DEFAULT 0.00,
+    last_top_up_time DATETIME DEFAULT NULL,
     CONSTRAINT fk_bidder_user FOREIGN KEY (user_id) REFERENCES users(id) -- Ràng buộc bidders.user_id phải tồn tại trong users.id
 	ON DELETE CASCADE -- Néu user.id bị xoá thì bidders.user_id xoá theo
     ON UPDATE CASCADE  -- Néu user.id thay đổi thì bidders.user_id thay đổi theo
