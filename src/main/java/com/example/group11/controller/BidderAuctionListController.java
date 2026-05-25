@@ -191,9 +191,25 @@ public class BidderAuctionListController implements Initializable {
                     loadAuctions();
                 }
 
-            } else if ("AUCTION_ENDED".equals(type)
-                    || "ITEM_STATUS_CHANGED".equals(type)) {
-                loadAuctions(); // reload để cập nhật trạng thái card
+            } else if ("AUCTION_ENDED".equals(type)) {
+                int aId = parseAuctionId(notification.getData());
+                if (aId != -1) {
+                    updateSingleCard(aId);
+                } else {
+                    loadAuctions();
+                }
+            } else if ("ITEM_STATUS_CHANGED".equals(type)) {
+                try {
+                    int itemId = Integer.parseInt(notification.getData().toString());
+                    int aId = findAuctionIdByItemId(itemId);
+                    if (aId != -1) {
+                        updateSingleCard(aId);
+                    } else {
+                        loadAuctions();
+                    }
+                } catch (Exception e) {
+                    loadAuctions();
+                }
             } else if ("NEW_AUCTION".equals(type)) {
                 loadAuctions();
                 String text = notification.getData() != null ? notification.getData().toString() : "";
@@ -205,12 +221,15 @@ public class BidderAuctionListController implements Initializable {
                     walletBalance.setText(String.format("%,.2f", newBalance));
                 }
             } else if ("PAYMENT_SUCCESS".equals(type)) {
-                // Bidder vừa thanh toán thành công — reload card để chuyển FINISHED → PAID
-                loadAuctions();
                 String text = notification.getData() != null ? notification.getData().toString() : "";
+                int aId = parseAuctionId(text);
+                if (aId != -1) {
+                    updateSingleCard(aId);
+                } else {
+                    loadAuctions();
+                }
                 NotificationController.showNotification("💰 Thanh toán thành công!", text);
             } else if ("PAYMENT_RECEIVED".equals(type)) {
-                // Seller nhận được thông báo đã được thanh toán
                 String text = notification.getData() != null ? notification.getData().toString() : "";
                 NotificationController.showNotification("💰 Đã nhận thanh toán!", text);
             }
@@ -568,6 +587,7 @@ public class BidderAuctionListController implements Initializable {
                     this.user
 
             );
+            productCard.setId("auction-card-" + auction.getId());
 
             int column = i % 3;
             int row = i / 3;
@@ -605,9 +625,8 @@ public class BidderAuctionListController implements Initializable {
                 return;
             }
 
-            Auction detailed = (Auction) res.getData();
-
-            try {
+            if (res.getData() instanceof Auction detailed) {
+                try {
                 Stage newStage = new Stage();
                 FXMLLoader loader = new FXMLLoader(
                         getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
@@ -627,6 +646,7 @@ public class BidderAuctionListController implements Initializable {
             } catch (java.io.IOException e) {
                 NotificationController.showError("Lỗi UI",
                         "Không thể mở màn hình đấu giá.\n" + e.getMessage());
+            }
             }
         });
 
@@ -809,31 +829,6 @@ public class BidderAuctionListController implements Initializable {
      */
     private void setupRealtimeNotifications() {
         ServerConnection.getInstance().addNotificationHandler(realtimeListener);
-        ServerConnection.getInstance().addNotificationHandler(notification -> {
-            Platform.runLater(() -> {
-                System.out.println("Nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-                addNotificationToDropdown(notification);
-
-                String type = notification.getType();
-
-                if ("BID_UPDATE".equals(type)) {
-                    Object data = notification.getData();
-
-                    if (data instanceof BidUpdateData upd) {
-                        // Cập nhật đúng card mà không reload toàn bộ
-                        updateAuctionCardPrice(upd.auctionId, upd.newHighestBid,
-                                upd.winnerUsername, upd.totalBids);
-                    } else {
-                        // fallback nếu server cũ
-                        loadAuctions();
-                    }
-
-                } else if ("AUCTION_ENDED".equals(type)
-                        || "ITEM_STATUS_CHANGED".equals(type)) {
-                    loadAuctions(); // reload để cập nhật trạng thái card
-                }
-            });
-        });
     }
     /**
      * Cập nhật giá realtime trên card đấu giá đang hiển thị,
@@ -854,10 +849,100 @@ public class BidderAuctionListController implements Initializable {
             }
         }
         if (found) {
-            applyFilters(); // re-render cards với giá mới
+            updateSingleCard(auctionId);
         } else {
             loadAuctions();
         }
+    }
+
+    private void updateSingleCard(int auctionId) {
+        Task<Response> task = new Task<>() {
+            @Override
+            protected Response call() {
+                return ServerConnection.getInstance()
+                        .send(RequestType.GET_AUCTION_DETAIL, new GetAuctionDetailPayload(auctionId, false));
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response res = task.getValue();
+            if (res != null && res.isSuccess() && res.getData() instanceof Auction detailed) {
+                Platform.runLater(() -> {
+                    // Cập nhật đối tượng trong allAuctions để khi lọc không bị mất dữ liệu
+                    for (int i = 0; i < allAuctions.size(); i++) {
+                        if (allAuctions.get(i).getId() == auctionId) {
+                            allAuctions.set(i, detailed);
+                            break;
+                        }
+                    }
+
+                    // Tìm card trên giao diện để thay thế trực tiếp
+                    Node oldCard = null;
+                    for (Node node : contentGrid.getChildren()) {
+                        if (("auction-card-" + auctionId).equals(node.getId())) {
+                            oldCard = node;
+                            break;
+                        }
+                    }
+                    
+                    if (oldCard != null) {
+                        Integer col = javafx.scene.layout.GridPane.getColumnIndex(oldCard);
+                        Integer row = javafx.scene.layout.GridPane.getRowIndex(oldCard);
+                        
+                        boolean isWatched = false;
+                        if (user instanceof Bidder bidder) {
+                            isWatched = bidder.getProfile().getWatchlist().contains(auctionId);
+                        }
+
+                        VBox newCard = AuctionCardFactory.createAuctionCard(
+                                detailed,
+                                this::handleBid,
+                                this::openLiveAuction,
+                                isWatched,
+                                this::handleToggleWatchlist,
+                                this.user
+                        );
+                        newCard.setId("auction-card-" + auctionId);
+
+                        contentGrid.getChildren().remove(oldCard);
+                        contentGrid.add(newCard, col != null ? col : 0, row != null ? row : 0);
+                        System.out.println("Đã cập nhật riêng biệt card của phiên #" + auctionId);
+                    } else {
+                        // Card is not currently displayed (e.g. filtered out), no need to reload the whole screen
+                        System.out.println("Card #" + auctionId + " không hiển thị, bỏ qua cập nhật UI.");
+                    }
+                });
+            }
+        });
+
+        Thread th = new Thread(task);
+        th.setDaemon(true);
+        th.start();
+    }
+
+    private int parseAuctionId(Object data) {
+        if (data == null) return -1;
+        String text = data.toString();
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("Phiên #(\\d+)");
+        java.util.regex.Matcher m = p.matcher(text);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    private int findAuctionIdByItemId(int itemId) {
+        if (allAuctions == null) return -1;
+        for (Auction a : allAuctions) {
+            if (a.getItem() != null && a.getItem().getId() == itemId) {
+                return a.getId();
+            }
+        }
+        return -1;
     }
 
     /**

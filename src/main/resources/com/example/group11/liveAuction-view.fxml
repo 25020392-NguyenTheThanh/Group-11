@@ -23,7 +23,7 @@
                 <Insets left="40" right="40" />
             </padding>
             <Button fx:id="backButton" onAction="#handleBack" style="-fx-background-color: #1b1b1d; -fx-text-fill: #e4e2e4; -fx-border-color: #45464d; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 8 16; -fx-cursor: hand;" text="&lt;- Quay lại" />
-            <VBox spacing="2">
+            <VBox spacing="2" style="-fx-translate-y: 8px;">
                 <Label style="-fx-text-fill: #FFC107; -fx-font-size: 24px; -fx-font-weight: bold;" text="ĐẤU GIÁ TRỰC TIẾP" />
                 <Label style="-fx-text-fill: #909097; -fx-font-size: 13px;" text="Theo dõi giá và tham gia đấu giá theo thời gian thực." />
             </VBox>

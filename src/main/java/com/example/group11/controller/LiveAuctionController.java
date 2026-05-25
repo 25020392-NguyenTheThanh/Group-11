@@ -336,12 +336,10 @@ public class LiveAuctionController implements Initializable {
 
         detailTask.setOnSucceeded(evt -> {
             Response res = detailTask.getValue();
-            if (res != null && res.isSuccess()) {
+            if (res != null && res.isSuccess() && res.getData() instanceof Auction) {
                 Auction updated = (Auction) res.getData();
-                if (updated != null) {
-                    this.auction = updated;
-                    updateUI();
-                }
+                this.auction = updated;
+                updateUI();
             }
             hideLoading();
         });

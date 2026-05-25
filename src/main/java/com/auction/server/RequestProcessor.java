@@ -135,14 +135,6 @@ public class RequestProcessor {
             auction.placeBid(bidder, payload.amount);
             bidder.getProfile().addParticipatedAuction(payload.auctionId);
 
-            AuctionManager.getInstance().recordBid(
-                    payload.auctionId,
-                    bidder.getId(),
-                    bidder.getUsername(),
-                    payload.amount,
-                    "MANUAL"
-            );
-
             // Broadcast BID_UPDATE tới TẤT CẢ client (kể cả đang ở màn hình danh sách)
             BidUpdateData upd = new BidUpdateData(
                     payload.auctionId,
