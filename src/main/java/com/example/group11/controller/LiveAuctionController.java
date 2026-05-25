@@ -77,6 +77,8 @@ public class LiveAuctionController implements Initializable {
     @FXML private AreaChart<Number, Number> priceChart;
     @FXML private NumberAxis xAxis;
     @FXML private NumberAxis yAxis;
+    @FXML private HBox mainContentContainer;
+    @FXML private VBox loadingOverlay;
 
     private Auction auction;
     private User user;
@@ -173,6 +175,14 @@ public class LiveAuctionController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         if (priceChart != null) {
             priceChart.getStylesheets().add(CHART_THEME_CSS);
+        }
+        if (loadingOverlay != null) {
+            loadingOverlay.setVisible(true);
+            loadingOverlay.setManaged(true);
+        }
+        if (mainContentContainer != null) {
+            mainContentContainer.setVisible(false);
+            mainContentContainer.setManaged(false);
         }
     }
 
@@ -333,11 +343,29 @@ public class LiveAuctionController implements Initializable {
                     updateUI();
                 }
             }
+            hideLoading();
+        });
+
+        detailTask.setOnFailed(evt -> {
+            hideLoading();
         });
 
         Thread t = new Thread(detailTask);
         t.setDaemon(true);
         t.start();
+    }
+
+    private void hideLoading() {
+        Platform.runLater(() -> {
+            if (loadingOverlay != null) {
+                loadingOverlay.setVisible(false);
+                loadingOverlay.setManaged(false);
+            }
+            if (mainContentContainer != null) {
+                mainContentContainer.setVisible(true);
+                mainContentContainer.setManaged(true);
+            }
+        });
     }
 
     /**

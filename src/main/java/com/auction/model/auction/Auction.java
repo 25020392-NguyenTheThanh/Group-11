@@ -45,6 +45,7 @@ public class Auction implements Subject, Serializable {
     private transient CopyOnWriteArrayList<Observer> observers; // không lưu vào file
     private final double minBidStep; // bước giá tối thiểu
     private int viewCount; // số lượt xem
+    private List<Integer> uniqueViewerIds; // danh sách mã người dùng đã xem
     private Map<Integer , AutoBidConfig> autoBidConfigs = new ConcurrentHashMap<>();
     private static final transient java.util.concurrent.ScheduledExecutorService autoBidExecutor = 
         java.util.concurrent.Executors.newScheduledThreadPool(4);
@@ -67,6 +68,7 @@ public class Auction implements Subject, Serializable {
         this.bidHistory = new ArrayList<>();
         this.observers = new CopyOnWriteArrayList<>();
         this.viewCount = 0;
+        this.uniqueViewerIds = new ArrayList<>();
     }
 
 
@@ -329,6 +331,19 @@ public class Auction implements Subject, Serializable {
         ois.defaultReadObject();
         if (observers == null) {
             observers = new CopyOnWriteArrayList<>();
+        }
+        if (uniqueViewerIds == null) {
+            uniqueViewerIds = new ArrayList<>();
+        }
+    }
+
+    public synchronized void recordViewer(int userId) {
+        if (uniqueViewerIds == null) {
+            uniqueViewerIds = new ArrayList<>();
+        }
+        if (!uniqueViewerIds.contains(userId)) {
+            uniqueViewerIds.add(userId);
+            this.viewCount = uniqueViewerIds.size();
         }
     }
 

@@ -167,46 +167,21 @@ public class RequestProcessor {
         }
 
         if (payload.decrementView) {
-            User u = handler.getLoggedInUser();
-            boolean hasOtherConnection = false;
-            if (u != null) {
-                for (com.auction.pattern.observer.Observer obs : a.getObservers()) {
-                    if (obs != handler && obs instanceof ClientHandler ch) {
-                        User otherUser = ch.getLoggedInUser();
-                        if (otherUser != null && otherUser.getId() == u.getId()) {
-                            hasOtherConnection = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!hasOtherConnection) {
-                a.decrementViewCount();
-            }
             a.removeObserver(handler);
             a.notifyObservers("VIEW_UPDATE");
         } else {
             User u = handler.getLoggedInUser();
-            boolean userAlreadyObserving = false;
-            if (u != null) {
-                for (com.auction.pattern.observer.Observer obs : a.getObservers()) {
-                    if (obs instanceof ClientHandler ch) {
-                        User otherUser = ch.getLoggedInUser();
-                        if (otherUser != null && otherUser.getId() == u.getId()) {
-                            userAlreadyObserving = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
             // Đăng ký client handler làm observer của phiên đấu giá để nhận thông báo realtime
             if (!a.hasObserver(handler)) {
                 a.addObserver(handler);
             }
             // Tăng lượt xem và thông báo realtime cho các client khác nếu click CHI TIẾT
-            if (payload.incrementView && !userAlreadyObserving) {
-                a.incrementViewCount();
+            if (payload.incrementView) {
+                if (u != null) {
+                    a.recordViewer(u.getId());
+                } else {
+                    a.incrementViewCount();
+                }
                 a.notifyObservers("VIEW_UPDATE");
             }
         }

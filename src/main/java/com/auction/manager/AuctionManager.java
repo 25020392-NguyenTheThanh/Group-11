@@ -165,9 +165,6 @@ public class AuctionManager {
                     }
                 }
                 a.removeObserver(observer);
-                if (!hasOtherConnection) {
-                    a.decrementViewCount();
-                }
                 a.notifyObservers("VIEW_UPDATE");
             }
         }
