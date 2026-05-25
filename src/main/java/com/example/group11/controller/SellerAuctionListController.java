@@ -632,7 +632,7 @@ public class SellerAuctionListController implements Initializable {
 
         for (int i = 0; i < items.size(); i++) {
             Item item = items.get(i);
-            VBox productCard = ProductCardFactory.createProductCard(item,
+            VBox productCard = ProductCardFactory.createProductCard(item, itemAuctionMap.get(item.getId()),
                     (itemData, cardNode) -> {
                         Auction auction = itemAuctionMap.get(itemData.getId());
                         if (auction != null) {
@@ -1398,8 +1398,12 @@ public class SellerAuctionListController implements Initializable {
             // Lấy thuộc tính động
             if (dynamicAttributesContainer != null) {
                 TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
-                if (customField != null && !customField.getText().trim().isEmpty()) {
+                if (customField != null) {
                     String attributeValue = customField.getText().trim();
+                    if (attributeValue.isEmpty()) {
+                        NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập thuộc tính đặc trưng của danh mục (Nghệ sĩ, Thương hiệu, Năm)!");
+                        return;
+                    }
                     switch (updateItemPayload.type) {
                         case "Electronics":
                             updateItemPayload.brand = attributeValue;
@@ -1411,7 +1415,7 @@ public class SellerAuctionListController implements Initializable {
                             try {
                                 updateItemPayload.year = Integer.parseInt(attributeValue);
                             } catch (NumberFormatException e) {
-                                NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
+                                NotificationController.showError("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
                                 return;
                             }
                             break;
@@ -1451,8 +1455,12 @@ public class SellerAuctionListController implements Initializable {
             // Lấy thuộc tính động
             if (dynamicAttributesContainer != null) {
                 TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
-                if (customField != null && !customField.getText().trim().isEmpty()) {
+                if (customField != null) {
                     String attributeValue = customField.getText().trim();
+                    if (attributeValue.isEmpty()) {
+                        NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập thuộc tính đặc trưng của danh mục (Nghệ sĩ, Thương hiệu, Năm)!");
+                        return;
+                    }
                     switch (createItemPayload.type) {
                         case "Electronics":
                             createItemPayload.brand = attributeValue;
@@ -1464,7 +1472,7 @@ public class SellerAuctionListController implements Initializable {
                             try {
                                 createItemPayload.year = Integer.parseInt(attributeValue);
                             } catch (NumberFormatException e) {
-                                NotificationController.showNotification("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
+                                NotificationController.showError("Lỗi nhập liệu", "Năm sản xuất của phương tiện phải là một số nguyên hợp lệ!");
                                 return;
                             }
                             break;

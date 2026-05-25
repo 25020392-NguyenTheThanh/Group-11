@@ -4,6 +4,7 @@ import com.auction.model.item.Art;
 import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
+import com.auction.model.auction.Auction;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -37,7 +38,7 @@ public class ProductCardFactory {
      * @param onActionClick Hành động (BiConsumer) được thực thi khi xác nhận xóa sản phẩm
      * @return VBox đối tượng giao diện JavaFX chứa thẻ sản phẩm hoàn chỉnh
      */
-    public static VBox createProductCard(Item item, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onEditClick, BiConsumer<Item, VBox> onActionClick) {
+    public static VBox createProductCard(Item item, Auction auction, BiConsumer<Item, VBox> onDetailsClick, BiConsumer<Item, VBox> onEditClick, BiConsumer<Item, VBox> onActionClick) {
         // 1. Lấy thông tin chung từ DB
         String id = String.valueOf(item.getId());
         String name = item.getName();
@@ -214,7 +215,17 @@ public class ProductCardFactory {
         Button btnEdit = new Button("SỬA");
         btnEdit.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnEdit, javafx.scene.layout.Priority.ALWAYS);
-        if (item.getStatus() != com.auction.model.item.ItemStatus.AVAILABLE) {
+        
+        boolean canEdit = false;
+        if (item.getStatus() == com.auction.model.item.ItemStatus.AVAILABLE) {
+            canEdit = true;
+        } else if (item.getStatus() == com.auction.model.item.ItemStatus.IN_AUCTION) {
+            if (auction != null && auction.getStatus() == com.auction.model.auction.AuctionStatus.OPEN) {
+                canEdit = true;
+            }
+        }
+        
+        if (!canEdit) {
             btnEdit.setDisable(true);
             btnEdit.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
         } else {

@@ -376,6 +376,10 @@ public class Auction implements Subject, Serializable {
         return item;
     }
 
+    public void setItem(Item item) {
+        this.item = item;
+    }
+
     public AuctionStatus getStatus() {
         return status;
     }

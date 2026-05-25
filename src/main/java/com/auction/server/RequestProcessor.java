@@ -296,8 +296,15 @@ public class RequestProcessor {
             return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
         }
 
-        if (existingItem.getStatus() != ItemStatus.AVAILABLE) {
-            return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE");
+        if (existingItem.getStatus() == ItemStatus.IN_AUCTION) {
+            com.auction.model.auction.Auction auction = com.auction.manager.AuctionManager.getInstance().getAuctions().stream()
+                    .filter(a -> a.getItem().getId() == existingItem.getId())
+                    .findFirst().orElse(null);
+            if (auction != null && auction.getStatus() != com.auction.model.auction.AuctionStatus.OPEN) {
+                return Response.error("Chỉ có thể sửa sản phẩm khi phiên đấu giá chưa bắt đầu (OPEN).");
+            }
+        } else if (existingItem.getStatus() != ItemStatus.AVAILABLE) {
+            return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE hoặc phiên chưa bắt đầu.");
         }
 
         ItemFactory factory = switch (p.type.toUpperCase()) {
@@ -308,9 +315,16 @@ public class RequestProcessor {
 
         // Tạo item mới dựa trên factory để thay thế
         Item updatedItem = factory.createItem(p.id, user.getId(), p.name, p.description, p.startingPrice, p.imageUrl);
+        updatedItem.setStatus(existingItem.getStatus());
 
         boolean success = ItemManager.getInstance().updateItem(updatedItem);
         if (success) {
+            com.auction.model.auction.Auction auction = com.auction.manager.AuctionManager.getInstance().getAuctions().stream()
+                    .filter(a -> a.getItem().getId() == existingItem.getId())
+                    .findFirst().orElse(null);
+            if (auction != null) {
+                auction.setItem(updatedItem);
+            }
             return Response.ok("Cập nhật sản phẩm thành công");
         } else {
             return Response.error("Không thể cập nhật sản phẩm trong cơ sở dữ liệu");
