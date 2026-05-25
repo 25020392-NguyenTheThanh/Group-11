@@ -1,5 +1,9 @@
 package com.example.group11.controller;
 
+import com.auction.client.ServerConnection;
+import com.auction.network.RequestType;
+import com.auction.network.Response;
+import com.auction.network.ResetPasswordPayload;
 import com.auction.manager.UserManager;
 import com.auction.model.user.User;
 import javafx.event.ActionEvent;
@@ -68,10 +72,25 @@ public class ForgotPasswordController implements Initializable {
     @FXML
     private void handleVerifyUsername(ActionEvent event) {
         String usernameInput = usernameField.getText().trim();
+        if (usernameInput.isEmpty()) {
+            NotificationController.showAlert("Lỗi", "Vui lòng nhập tên đăng nhập!");
+            return;
+        }
 
-        currentUser = userManager.findUser(usernameInput);
+        ServerConnection connection = ServerConnection.getInstance();
+        if (!connection.isConnected()) {
+            try {
+                System.out.println("Đang kết nối lại tới Server...");
+                connection.connect();
+            } catch (Exception ex) {
+                NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ: " + ex.getMessage());
+                return;
+            }
+        }
 
-        if (currentUser != null) {
+        Response response = connection.send(RequestType.VERIFY_USERNAME, usernameInput);
+        if (response != null && response.isSuccess()) {
+            currentUser = (User) response.getData();
             // Hiệu ứng chuyển đổi: Ẩn Box1, Hiện Box2
             usernameBox.setVisible(false);
             usernameBox.setManaged(false);
@@ -81,7 +100,8 @@ public class ForgotPasswordController implements Initializable {
 
             welcomeText.setText("Chào " + currentUser.getUsername() + ", hãy nhập mật khẩu mới.");
         } else {
-            NotificationController.showAlert("Lỗi", "Tên đăng nhập không tồn tại!");
+            String errorMsg = (response != null) ? response.getMessage() : "Tên đăng nhập không tồn tại!";
+            NotificationController.showAlert("Lỗi", errorMsg);
         }
     }
 
@@ -98,18 +118,23 @@ public class ForgotPasswordController implements Initializable {
 
         if (pass.isEmpty() || !pass.equals(confirm)) {
             NotificationController.showAlert("Lỗi", "Mật khẩu không khớp hoặc đang để trống!");
-            return;   // BUG CŨ: thiếu return -> vẫn tiếp tục dù mật khẩu sai
-        }
-
-        // Lưu mật khẩu mới (đã hash) xuống DB qua UserManager
-        boolean ok = userManager.updatePassword(currentUser, pass);
-        if (!ok) {
-            NotificationController.showAlert("Lỗi", "Không thể cập nhật mật khẩu, vui lòng thử lại!");
             return;
         }
 
-        NotificationController.showNotification("Thành công", "Mật khẩu của bạn đã được thay đổi.");
-        FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
+        if (pass.length() < 4) {
+            NotificationController.showAlert("Lỗi", "Mật khẩu mới phải có ít nhất 4 ký tự!");
+            return;
+        }
+
+        ResetPasswordPayload payload = new ResetPasswordPayload(currentUser.getUsername(), pass);
+        Response response = ServerConnection.getInstance().send(RequestType.RESET_PASSWORD, payload);
+        if (response != null && response.isSuccess()) {
+            NotificationController.showNotification("Thành công", "Mật khẩu của bạn đã được thay đổi.");
+            FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Welcome to auction floor!");
+        } else {
+            String errorMsg = (response != null) ? response.getMessage() : "Không thể cập nhật mật khẩu mới!";
+            NotificationController.showAlert("Lỗi", errorMsg);
+        }
     }
 
     /**

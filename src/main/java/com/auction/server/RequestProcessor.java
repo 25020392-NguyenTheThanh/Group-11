@@ -50,6 +50,8 @@ public class RequestProcessor {
                 case SET_AUTO_BID   -> handleSetAutoBid(request , handler);
                 case CANCEL_AUTO_BID -> handleCancelAutoBid(request , handler);
                 case CHANGE_PASSWORD -> handleChangePassword(request, handler);
+                case VERIFY_USERNAME -> handleVerifyUsername(request);
+                case RESET_PASSWORD   -> handleResetPassword(request);
             };
         } catch (Exception e) {
             // Safety net: bắt mọi exception chưa được xử lý trong handler
@@ -558,6 +560,37 @@ public class RequestProcessor {
         } catch (Exception e) {
             System.err.println("[handleConfirmPayment] Lỗi: " + e.getMessage());
             return Response.error("Lỗi xử lý thanh toán: " + e.getMessage());
+        }
+    }
+
+    private static Response handleVerifyUsername(Request request) {
+        if (request.getPayload() == null || !(request.getPayload() instanceof String)) {
+            return Response.error("Tên đăng nhập không hợp lệ!");
+        }
+        String username = (String) request.getPayload();
+        User user = UserManager.getInstance().findUser(username);
+        if (user != null) {
+            return Response.ok(user);
+        } else {
+            return Response.error("Tên đăng nhập không tồn tại!");
+        }
+    }
+
+    private static Response handleResetPassword(Request request) {
+        if (request.getPayload() == null || !(request.getPayload() instanceof ResetPasswordPayload)) {
+            return Response.error("Dữ liệu khôi phục mật khẩu không hợp lệ!");
+        }
+        ResetPasswordPayload p = (ResetPasswordPayload) request.getPayload();
+        User user = UserManager.getInstance().findUser(p.username);
+        if (user == null) {
+            return Response.error("Tên đăng nhập không tồn tại!");
+        }
+
+        boolean ok = UserManager.getInstance().updatePassword(user, p.newPassword);
+        if (ok) {
+            return Response.ok("Đổi mật khẩu thành công!");
+        } else {
+            return Response.error("Không thể cập nhật mật khẩu mới!");
         }
     }
 }

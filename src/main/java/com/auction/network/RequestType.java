@@ -18,5 +18,8 @@ public enum RequestType {
     CONFIRM_PAYMENT, // xác nhận thanh toán
     SET_AUTO_BID, // đăng kí auto bid
     CANCEL_AUTO_BID, // hủy auto bid
-    CHANGE_PASSWORD // đổi mật khẩu
+    CHANGE_PASSWORD, // đổi mật khẩu
+    VERIFY_USERNAME, // xác thực username quên mật khẩu
+    RESET_PASSWORD // khôi phục mật khẩu mới
 }
+
