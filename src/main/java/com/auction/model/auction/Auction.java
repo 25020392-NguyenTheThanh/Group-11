@@ -6,12 +6,16 @@ import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
 import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
+import com.auction.model.user.User;
 import com.auction.network.BidUpdateData;
 import com.auction.network.Notification;
 import com.auction.pattern.observer.Observer;
 import com.auction.pattern.observer.Subject;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +23,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import com.auction.model.auction.AutoBidConfig;
+import com.auction.server.AuctionServer;
 import com.auction.server.ClientHandler;
 import com.auction.manager.UserManager;
 import com.auction.manager.AuctionManager;
@@ -41,6 +46,8 @@ public class Auction implements Subject, Serializable {
     private final double minBidStep; // bước giá tối thiểu
     private int viewCount; // số lượt xem
     private Map<Integer , AutoBidConfig> autoBidConfigs = new ConcurrentHashMap<>();
+    private static final transient java.util.concurrent.ScheduledExecutorService autoBidExecutor = 
+        java.util.concurrent.Executors.newScheduledThreadPool(4);
 
     private transient boolean isProcessingAutoBid = false;
     // Anti-sniping: ngưỡng giây cuối mà nếu có bid sẽ gia hạn
@@ -157,7 +164,13 @@ public class Auction implements Subject, Serializable {
             }
         }
         placeBidInternal(bidder, amount, isAutoBid);
-        triggerAutoBid(bidder);
+        
+        // Chạy auto-bid bất đồng bộ sau 3 giây delay để tạo cảm giác thực tế và tránh trùng timestamp
+        if (!isAutoBid) {
+            autoBidExecutor.schedule(() -> {
+                triggerAutoBid(bidder);
+            }, 3, java.util.concurrent.TimeUnit.SECONDS);
+        }
     }
 
     private void placeBidInternal(Bidder bidder, double amount, boolean isAutoBid)
@@ -213,7 +226,8 @@ public class Auction implements Subject, Serializable {
         DataManager.getInstance().updateBidderBalance(bidder.getId(), bidder.getBalance());
 
         // Lưu vào lịch sử
-        BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount);
+        String bidType = isAutoBid ? "AUTO" : "MANUAL";
+        BidTransaction tx = new BidTransaction(bidder.getId(), bidder.getUsername(), amount, bidType);
         bidHistory.add(tx);
 
         currentHighestBid = amount;
@@ -226,7 +240,7 @@ public class Auction implements Subject, Serializable {
 
         // Ghi lịch sử bid vào MySQL
         try {
-            AuctionManager.getInstance().recordBid(id, bidder.getId(), bidder.getUsername(), amount);
+            AuctionManager.getInstance().recordBid(id, bidder.getId(), bidder.getUsername(), amount, bidType);
         } catch (Exception e) {
             System.err.println("Lỗi ghi lịch sử MySQL: " + e.getMessage());
         }
@@ -253,9 +267,9 @@ public class Auction implements Subject, Serializable {
         notifyObservers(msg);
 
         // Gửi thông báo đến bidder vừa thắng (nếu online)
-        if (com.auction.server.AuctionServer.getInstance() != null) {
-            for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
-                com.auction.model.user.User u = client.getLoggedInUser();
+        if (AuctionServer.getInstance() != null) {
+            for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
+                User u = client.getLoggedInUser();
                 if (u != null && u.getId() == bidder.getId()) {
                     client.sendNotification(new Notification("BALANCE_UPDATE", bidder.getBalance()));
                     String successMsg = isAutoBid
@@ -269,9 +283,9 @@ public class Auction implements Subject, Serializable {
 
         // Gửi thông báo đến người bị vượt mặt (nếu online)
         if (previousWinner != null && previousWinner.getId() != bidder.getId()) {
-            if (com.auction.server.AuctionServer.getInstance() != null) {
-                for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
-                    com.auction.model.user.User u = client.getLoggedInUser();
+            if (AuctionServer.getInstance() != null) {
+                for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
+                    User u = client.getLoggedInUser();
                     if (u != null && u.getId() == previousWinner.getId() && u instanceof Bidder b) {
                         b.setBalance(previousWinner.getBalance());
                         client.sendNotification(new Notification("BALANCE_UPDATE", b.getBalance()));
@@ -283,9 +297,9 @@ public class Auction implements Subject, Serializable {
         }
 
         // Gửi thông báo diễn biến phiên đấu giá cho Seller (nếu online)
-        if (com.auction.server.AuctionServer.getInstance() != null) {
-            for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
-                com.auction.model.user.User u = client.getLoggedInUser();
+        if (AuctionServer.getInstance() != null) {
+            for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
+                User u = client.getLoggedInUser();
                 if (u != null && u.getId() == item.getOwnerId()) {
                     if (bidHistory.size() == 1) {
                         client.sendNotification(new Notification("SELLER_FIRST_BID", String.format("Đã có người đặt giá đầu tiên cho sản phẩm [%s] của bạn: $%,.2f.", item.getName(), amount)));
@@ -302,13 +316,13 @@ public class Auction implements Subject, Serializable {
         }
 
         // Broadcast BID_UPDATE với BidUpdateData cho tất cả clients online
-        if (com.auction.server.AuctionServer.getInstance() != null) {
-            com.auction.server.AuctionServer.getInstance().broadcast(new Notification("BID_UPDATE",
-                new com.auction.network.BidUpdateData(id, currentHighestBid, bidder.getUsername(), bidHistory.size())));
+        if (AuctionServer.getInstance() != null) {
+            AuctionServer.getInstance().broadcast(new Notification("BID_UPDATE",
+                new BidUpdateData(id, currentHighestBid, bidder.getUsername(), bidHistory.size())));
         }
     }
 
-    private void readObject(java.io.ObjectInputStream ois) throws java.io.IOException, ClassNotFoundException {
+    private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException {
         ois.defaultReadObject();
         if (observers == null) {
             observers = new CopyOnWriteArrayList<>();
@@ -414,12 +428,12 @@ public class Auction implements Subject, Serializable {
 
         // Kích hoạt Auto-Bid ngay lập tức nếu bidder vừa đăng ký không phải là winner hiện tại
         Bidder bidder = null;
-        for (com.auction.pattern.observer.Observer obs : observers) {
+        for (Observer obs : observers) {
             if (obs instanceof Bidder b && b.getId() == config.getBidderId()) {
                 bidder = b;
                 break;
             } else if (obs instanceof ClientHandler handler) {
-                com.auction.model.user.User clientUser = handler.getLoggedInUser();
+                User clientUser = handler.getLoggedInUser();
                 if (clientUser != null && clientUser.getId() == config.getBidderId() && clientUser instanceof Bidder b) {
                     bidder = b;
                     break;
@@ -427,7 +441,7 @@ public class Auction implements Subject, Serializable {
             }
         }
         if (bidder == null) {
-            com.auction.model.user.User u = UserManager.getInstance().findUserById(config.getBidderId());
+            User u = UserManager.getInstance().findUserById(config.getBidderId());
             if (u instanceof Bidder b) {
                 bidder = b;
             }
@@ -447,53 +461,64 @@ public class Auction implements Subject, Serializable {
      *  nếu có thì tự động đặt giá thêm 1 bước.
      */
 
-    private void triggerAutoBid(Bidder justBidder) {
-        // Vòng lặp đặt giá tự động ngay lập tức đối với các bên khác
-        while (true) {
-            AutoBidConfig best = null;
-            double bestNextBid = 0;
-            for (AutoBidConfig cfg : autoBidConfigs.values()) {
-                if (currentWinner != null && cfg.getBidderId() == currentWinner.getId()) continue;
-                double nextBid = currentHighestBid + cfg.getIncrement();
-                if (nextBid > cfg.getMaxBid()) continue;
-                if (best == null || cfg.getMaxBid() > best.getMaxBid()) {
-                    best = cfg;
-                    bestNextBid = nextBid;
-                }
-            }
-            if (best == null) break;
+    private synchronized void triggerAutoBid(Bidder justBidder) {
+        // Chỉ chạy nếu phiên đấu giá vẫn đang hoạt động
+        if (status != AuctionStatus.RUNNING) return;
 
-            // Tìm đối tượng Bidder tương ứng
-            Bidder bidder = null;
-            for (com.auction.pattern.observer.Observer obs : observers) {
-                if (obs instanceof Bidder b && b.getId() == best.getBidderId()) {
+        AutoBidConfig best = null;
+        double bestNextBid = 0;
+        for (AutoBidConfig cfg : autoBidConfigs.values()) {
+            if (currentWinner != null && cfg.getBidderId() == currentWinner.getId()) continue;
+            double nextBid = currentHighestBid + cfg.getIncrement();
+            if (nextBid > cfg.getMaxBid()) continue;
+            if (best == null || cfg.getMaxBid() > best.getMaxBid()) {
+                best = cfg;
+                bestNextBid = nextBid;
+            }
+        }
+        if (best == null) return;
+
+        // Tìm đối tượng Bidder tương ứng
+        Bidder bidder = null;
+        for (Observer obs : observers) {
+            if (obs instanceof Bidder b && b.getId() == best.getBidderId()) {
+                bidder = b;
+                break;
+            } else if (obs instanceof ClientHandler handler) {
+                User clientUser = handler.getLoggedInUser();
+                if (clientUser != null && clientUser.getId() == best.getBidderId() && clientUser instanceof Bidder b) {
                     bidder = b;
                     break;
-                } else if (obs instanceof ClientHandler handler) {
-                    com.auction.model.user.User clientUser = handler.getLoggedInUser();
-                    if (clientUser != null && clientUser.getId() == best.getBidderId() && clientUser instanceof Bidder b) {
-                        bidder = b;
-                        break;
-                    }
                 }
             }
+        }
 
-            if (bidder == null) {
-                com.auction.model.user.User u = UserManager.getInstance().findUserById(best.getBidderId());
-                if (u instanceof Bidder b) {
-                    bidder = b;
-                }
+        if (bidder == null) {
+           User u = UserManager.getInstance().findUserById(best.getBidderId());
+            if (u instanceof Bidder b) {
+                bidder = b;
             }
+        }
 
-            if (bidder == null) break;
-            Bidder activeBidder = bidder;
+        if (bidder == null) return;
+        Bidder activeBidder = bidder;
 
-            try {
-                placeBidInternal(activeBidder, bestNextBid, true);
-            } catch (Exception e) {
-                System.err.println("[AutoBid] Lỗi khi xử lý Auto-Bid: " + e.getMessage());
-                break;
-            }
+        try {
+            placeBidInternal(activeBidder, bestNextBid, true);
+
+            // Lập lịch kích hoạt lượt thầu tự động tiếp theo sau 3 giây để đảm bảo giãn cách
+            autoBidExecutor.schedule(() -> {
+                triggerAutoBid(activeBidder);
+            }, 3, java.util.concurrent.TimeUnit.SECONDS);
+
+        } catch (Exception e) {
+            System.err.println("[AutoBid] Lỗi khi xử lý Auto-Bid của @" + activeBidder.getUsername() + ": " + e.getMessage());
+            autoBidConfigs.remove(best.getBidderId()); // Loại bỏ cấu hình bị lỗi
+
+            // Nếu có lỗi (ví dụ hết tiền), kích hoạt kiểm tra lại ngay cho các bên khác sau 500ms
+            autoBidExecutor.schedule(() -> {
+                triggerAutoBid(activeBidder);
+            }, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
         }
     }
     public Map<Integer , AutoBidConfig> getAutoBidConfigs(){
@@ -508,7 +533,7 @@ public class Auction implements Subject, Serializable {
 
     private void checkAndExtend() {
         if (extensionCount >= MAX_EXTENSIONS) return;
-        long secondsLeft = java.time.Duration.between(LocalDateTime.now(), endTime).toSeconds();
+        long secondsLeft = Duration.between(LocalDateTime.now(), endTime).toSeconds();
         if (secondsLeft > 0 && secondsLeft <= SNIPE_WINDOW_SECONDS) {
             endTime = endTime.plusSeconds(EXTENSION_SECONDS);
             extensionCount++;

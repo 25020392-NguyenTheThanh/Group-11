@@ -15,8 +15,8 @@ public class BidTransactionRepository {
     }
 
     //Ghi lịch sử một lần đặt giá và đánh dấu bidder đã tham gia phiên.
-    public void save(int auctionId, int bidderId, String bidderName, double amount) {
-        String sql = "INSERT INTO bid_transactions (auction_id, bidder_id, bidder_name, amount) VALUES (?,?,?,?)";
+    public void save(int auctionId, int bidderId, String bidderName, double amount, String bidType) {
+        String sql = "INSERT INTO bid_transactions (auction_id, bidder_id, bidder_name, amount, bid_type) VALUES (?,?,?,?,?)";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
@@ -24,6 +24,7 @@ public class BidTransactionRepository {
             ps.setInt   (2, bidderId);
             ps.setString(3, bidderName);
             ps.setDouble(4, amount);
+            ps.setString(5, bidType);
             ps.executeUpdate();
 
             recordParticipation(con, bidderId, auctionId);
@@ -36,7 +37,7 @@ public class BidTransactionRepository {
     // Lấy lịch sử đặt giá của một phiên, sắp xếp tăng dần theo thời gian.
     public List<BidTransaction> findByAuction(int auctionId) {
         List<BidTransaction> list = new ArrayList<>();
-        String sql = "SELECT * FROM bid_transactions WHERE auction_id = ? ORDER BY bid_time ASC";
+        String sql = "SELECT * FROM bid_transactions WHERE auction_id = ? ORDER BY id ASC";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
@@ -46,7 +47,8 @@ public class BidTransactionRepository {
                     list.add(new BidTransaction(
                             rs.getInt("bidder_id"),
                             rs.getString("bidder_name"),
-                            rs.getDouble("amount")
+                            rs.getDouble("amount"),
+                            rs.getString("bid_type")
                     ));
                 }
             }

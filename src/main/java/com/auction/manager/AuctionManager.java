@@ -64,11 +64,11 @@ public class AuctionManager {
     }
 
     // Ghi nhận một lần đặt giá: cập nhật + MySQL + lưu lịch sử bid.
-    public void recordBid(int auctionId, int bidderId, String bidderName, double amount) {
+    public void recordBid(int auctionId, int bidderId, String bidderName, double amount, String bidType) {
         // Cập nhật bảng auctions (current_highest_bid, current_winner_id)
         DataManager.getInstance().updateAuctionBid(auctionId, bidderId, amount);
         // Ghi lịch sử vào bid_transactions
-        DataManager.getInstance().saveBidTransaction(auctionId, bidderId, bidderName, amount);
+        DataManager.getInstance().saveBidTransaction(auctionId, bidderId, bidderName, amount, bidType);
     }
 
     // Kết thúc phiên: cập nhật đúng trạng thái (FINISHED hoặc CANCELED) trong MySQL.
@@ -115,6 +115,18 @@ public class AuctionManager {
             List<BidTransaction> history = DataManager.getInstance().getBidHistory(a.getId());
             a.getBidHistory().clear();
             a.getBidHistory().addAll(history);
+
+            // Khôi phục giá cao nhất và người thắng cuộc từ lịch sử thực tế nếu có lịch sử đặt giá
+            if (!history.isEmpty()) {
+                BidTransaction highestBidTx = history.get(history.size() - 1);
+                a.restoreHighestBid(highestBidTx.getAmount());
+                com.auction.model.user.User winner = com.auction.manager.UserManager.getInstance().findUserById(highestBidTx.getBidderId());
+                if (winner instanceof com.auction.model.user.Bidder b) {
+                    a.restoreCurrentWinner(b);
+                }
+                // Đồng bộ ngược lại bảng auctions để dọn sạch dữ liệu cũ/lệch trong DB
+                DataManager.getInstance().updateAuctionBid(a.getId(), highestBidTx.getBidderId(), highestBidTx.getAmount());
+            }
 
             // Tự động kích hoạt nếu phiên OPEN đã đến giờ bắt đầu lúc khởi động server
             if (a.getStatus() == AuctionStatus.OPEN && (a.getStartTime() == null || !a.getStartTime().isAfter(now))) {

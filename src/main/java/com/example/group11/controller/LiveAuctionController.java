@@ -209,7 +209,7 @@ public class LiveAuctionController implements Initializable {
                 if (stage != null) {
                     openStages.put(auction.getId(), stage);
                     stage.setOnCloseRequest(event -> {
-                        cleanupAndClose(false);
+                        cleanupAndClose(true);
                     });
                 }
             }
@@ -742,27 +742,8 @@ public class LiveAuctionController implements Initializable {
      */
     @FXML
     private void handleBack(ActionEvent event) {
-        if (countdownTimeline != null) {
-            countdownTimeline.stop();
-        }
+        cleanupAndClose(true);
 
-        ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
-
-        if (auction != null) {
-            //enteredAuctionIds.remove(user.getId() + ":" + auction.getId());
-            openStages.remove(auction.getId());
-            Task<Response> closeTask = new Task<>() {
-                @Override
-                protected Response call() throws Exception {
-                    GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auction.getId(), false);
-                    payload.decrementView = false;
-                    return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
-                }
-            };
-            Thread t = new Thread(closeTask);
-            t.setDaemon(true);
-            t.start();
-        }
         // Swap root về màn hình danh sách — KHÔNG đóng Stage
         if (previousRoot != null && ownerStage != null) {
             ownerStage.getScene().setRoot(previousRoot);
@@ -786,10 +767,12 @@ public class LiveAuctionController implements Initializable {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
-        openStages.remove(auction.getId());
-//        if (user != null && auction != null) {
-//            enteredAuctionIds.remove(user.getId() + ":" + auction.getId());
-//        }
+        if (auction != null) {
+            openStages.remove(auction.getId());
+        }
+        if (user != null && auction != null) {
+            enteredAuctionIds.remove(user.getId() + ":" + auction.getId());
+        }
         ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
 
         if (decrementView && auction != null) {

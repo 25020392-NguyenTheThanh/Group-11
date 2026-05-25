@@ -139,7 +139,8 @@ public class RequestProcessor {
                     payload.auctionId,
                     bidder.getId(),
                     bidder.getUsername(),
-                    payload.amount
+                    payload.amount,
+                    "MANUAL"
             );
 
             // Broadcast BID_UPDATE tới TẤT CẢ client (kể cả đang ở màn hình danh sách)
@@ -151,7 +152,7 @@ public class RequestProcessor {
             );
             handler.getServer().broadcast(new Notification("BID_UPDATE", upd));
 
-            return Response.ok("Đặt giá thành công");
+            return Response.ok(bidder.getBalance());
         } catch (Exception e) {
             return Response.error(e.getMessage());
         }

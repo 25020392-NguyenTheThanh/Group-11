@@ -1,3 +1,23 @@
+-- 1. Xem các bid trùng (cùng bidder + amount + timestamp)
+SELECT bidder_id, bidder_name, amount, bid_time, COUNT(*) as cnt
+FROM bid_transactions
+WHERE auction_id = 8
+GROUP BY bidder_id, bidder_name, amount, bid_time
+HAVING COUNT(*) > 1;
+
+-- 2. Xóa bid trùng, chỉ giữ id nhỏ nhất (Sửa lỗi MySQL Target Table)
+DELETE b1 FROM bid_transactions b1
+INNER JOIN bid_transactions b2
+WHERE b1.auction_id = 8
+  AND b2.auction_id = 8
+  AND b1.bidder_id = b2.bidder_id
+  AND b1.amount = b2.amount
+  AND b1.bid_time = b2.bid_time
+  AND b1.id > b2.id; -- Xóa dòng có ID lớn hơn, giữ lại ID nhỏ nhất
+
+-- 3. Thêm cột phân biệt nguồn bid
+ALTER TABLE bid_transactions
+    ADD COLUMN bid_type ENUM('manual', 'auto') DEFAULT 'manual';
 -- Xoá CSDL cũ
 DROP DATABASE IF EXISTS auction_system;
 
@@ -84,6 +104,7 @@ CREATE TABLE bid_transactions (
     bidder_name VARCHAR(50) NOT NULL,
     amount DECIMAL(18,2) NOT NULL,
     bid_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    bid_type ENUM('MANUAL','AUTO') NOT NULL DEFAULT 'MANUAL',
     CONSTRAINT fk_bid_auction FOREIGN KEY (auction_id) REFERENCES auctions(id)
 	ON DELETE CASCADE 
     ON UPDATE CASCADE,

@@ -86,8 +86,7 @@ public class AuctionRepository {
      *return {true} nếu cập nhật thành công (auction đang RUNNING).
      */
     public boolean updateBid(int auctionId, int bidderId, double amount) {
-        String sql = "UPDATE auctions SET current_highest_bid = ?, current_winner_id = ? "
-                + "WHERE id = ? AND status = 'RUNNING'";
+        String sql = "UPDATE auctions SET current_highest_bid = ?, current_winner_id = ? WHERE id = ?";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 

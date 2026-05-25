@@ -95,8 +95,8 @@ public class DataManager {
 
     // BidTransaction
 
-    public void saveBidTransaction(int auctionId, int bidderId, String bidderName, double amount) {
-        bidRepo.save(auctionId, bidderId, bidderName, amount);
+    public void saveBidTransaction(int auctionId, int bidderId, String bidderName, double amount, String bidType) {
+        bidRepo.save(auctionId, bidderId, bidderName, amount, bidType);
     }
 
     public List<BidTransaction> getBidHistory(int auctionId) {
