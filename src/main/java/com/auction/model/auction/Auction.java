@@ -312,7 +312,7 @@ public class Auction implements Subject, Serializable {
                     if (bidHistory.size() % 5 == 0) {
                         client.sendNotification(new Notification("SELLER_BID_SURGE", String.format("Sản phẩm [%s] của bạn đang thu hút sự quan tâm với %d lượt đặt giá!", item.getName(), bidHistory.size())));
                     }
-                    if (amount >= item.getStartingPrice() * 2) {
+                    if (previousHighestBid < item.getStartingPrice() * 2 && amount >= item.getStartingPrice() * 2) {
                         client.sendNotification(new Notification("SELLER_PRICE_MILESTONE", String.format("Sản phẩm [%s] của bạn đã vượt mốc giá gấp đôi giá khởi điểm: $%,.2f!", item.getName(), amount)));
                     }
                     break;

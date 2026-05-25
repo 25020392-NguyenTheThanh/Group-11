@@ -266,29 +266,29 @@ public class SellerAuctionListController implements Initializable {
     private StackPane badgeContainer;
 
     private final Consumer<Notification> realtimeListener = notification -> {
-        addNotificationToUI(notification);
+        Platform.runLater(() -> {
+            addNotificationToUI(notification);
 
-        String type = notification.getType();
-        if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
-            System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
-            loadMyListingView();
-        } else if ("PAYMENT_RECEIVED".equals(type)) {
-            // Seller nhận thông báo thanh toán thành công → reload danh sách
-            Platform.runLater(() -> {
+            String type = notification.getType();
+            if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
+                System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
+                loadMyListingView();
+            } else if ("PAYMENT_RECEIVED".equals(type)) {
+                // Seller nhận thông báo thanh toán thành công → reload danh sách
                 loadMyListingView();
                 String text = notification.getData() != null ? notification.getData().toString() : "";
                 NotificationController.showNotification("💰 Đã nhận thanh toán!", text);
-            });
-        }
-
-        if (notificationDropdown != null && !notificationDropdown.isVisible()) {
-            if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
-                // ignore
-            } else {
-                unreadNotificationsCount++;
-                updateNotificationBadge(unreadNotificationsCount);
             }
-        }
+
+            if (notificationDropdown != null && !notificationDropdown.isVisible()) {
+                if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+                    // ignore
+                } else {
+                    unreadNotificationsCount++;
+                    updateNotificationBadge(unreadNotificationsCount);
+                }
+            }
+        });
     };
 
     private String linkImageUrl;
@@ -374,17 +374,7 @@ public class SellerAuctionListController implements Initializable {
      * hoặc trạng thái sản phẩm thay đổi.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(notification -> {
-            addNotificationToUI(notification);
-
-            String type = notification.getType();
-            if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
-                System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
-                loadMyListingView();
-            } else if ("PAYMENT_RECEIVED".equals(type)) {
-                Platform.runLater(() -> loadMyListingView());
-            }
-        });
+        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
     }
 
 
@@ -1404,14 +1394,14 @@ public class SellerAuctionListController implements Initializable {
                         NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập thuộc tính đặc trưng của danh mục (Nghệ sĩ, Thương hiệu, Năm)!");
                         return;
                     }
-                    switch (updateItemPayload.type) {
-                        case "Electronics":
+                    switch (updateItemPayload.type.toUpperCase()) {
+                        case "ELECTRONICS":
                             updateItemPayload.brand = attributeValue;
                             break;
-                        case "Art":
+                        case "ART":
                             updateItemPayload.artist = attributeValue;
                             break;
-                        case "Vehicle":
+                        case "VEHICLE":
                             try {
                                 updateItemPayload.year = Integer.parseInt(attributeValue);
                             } catch (NumberFormatException e) {
@@ -1461,14 +1451,14 @@ public class SellerAuctionListController implements Initializable {
                         NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập thuộc tính đặc trưng của danh mục (Nghệ sĩ, Thương hiệu, Năm)!");
                         return;
                     }
-                    switch (createItemPayload.type) {
-                        case "Electronics":
+                    switch (createItemPayload.type.toUpperCase()) {
+                        case "ELECTRONICS":
                             createItemPayload.brand = attributeValue;
                             break;
-                        case "Art":
+                        case "ART":
                             createItemPayload.artist = attributeValue;
                             break;
-                        case "Vehicle":
+                        case "VEHICLE":
                             try {
                                 createItemPayload.year = Integer.parseInt(attributeValue);
                             } catch (NumberFormatException e) {

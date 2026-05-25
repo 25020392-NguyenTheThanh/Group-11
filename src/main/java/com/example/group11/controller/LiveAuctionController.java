@@ -92,8 +92,16 @@ public class LiveAuctionController implements Initializable {
     private final Consumer<com.auction.network.Notification> realtimeListener = notification -> {
         Platform.runLater(() -> {
             System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
-            if ("BID_UPDATE".equals(notification.getType())
-                    || "AUCTION_ENDED".equals(notification.getType())
+            if ("BID_UPDATE".equals(notification.getType())) {
+                Object data = notification.getData();
+                if (data instanceof com.auction.network.BidUpdateData upd) {
+                    if (auction != null && upd.auctionId == auction.getId()) {
+                        refreshAuctionDetails(false);
+                    }
+                } else {
+                    refreshAuctionDetails(false);
+                }
+            } else if ("AUCTION_ENDED".equals(notification.getType())
                     || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                 refreshAuctionDetails(false);
             } else if ("TIME_EXTENDED".equals(notification.getType())) {
@@ -371,23 +379,7 @@ public class LiveAuctionController implements Initializable {
      * kết thúc phiên đấu giá hoặc thay đổi trạng thái sản phẩm để cập nhật tức thời phòng đấu giá.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(notification -> {
-            Platform.runLater(() -> {
-                String type = notification.getType();
-                // Chỉ xử lý notification liên quan đến phiên này
-                if ("BID_UPDATE".equals(type) || "AUCTION_ENDED".equals(type)
-                        || "ITEM_STATUS_CHANGED".equals(type)
-                        || "TIME_EXTENDED".equals(type)) {
-                    refreshAuctionDetails(false);
-                    if ("TIME_EXTENDED".equals(type)) {
-                        NotificationController.showAlert("Gia hạn phiên!",
-                                "Có người vừa đặt giá trong 30 giây cuối.\nPhiên được gia hạn thêm 60 giây!");
-                    }
-                } else if ("WATCHLIST_ENDING_SOON".equals(type)) {
-                    NotificationController.showAlert("Sắp kết thúc!", notification.getData().toString());
-                }
-            });
-        });
+        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
     }
 
     /**

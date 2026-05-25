@@ -112,6 +112,10 @@ public class ClientHandler implements Runnable , Observer {
             }
             return;
         }
+        if (message != null && message.startsWith("TIME_EXTENDED:")) {
+            sendNotification(new Notification("TIME_EXTENDED", message.substring("TIME_EXTENDED:".length())));
+            return;
+        }
         sendNotification(new Notification("BID_UPDATE", message));
     }
     public synchronized void sendNotification(Notification notification) {
