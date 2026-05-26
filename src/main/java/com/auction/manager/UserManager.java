@@ -53,6 +53,12 @@ public class UserManager {
                 .findFirst().orElse(null);
     }
 
+    public User findUserByEmail(String email) {
+        return getUsers().stream()
+                .filter(u -> email.equalsIgnoreCase(u.getEmail()))
+                .findFirst().orElse(null);
+    }
+
     // Tìm user theo id.
     public User findUserById(int id) {
         return getUsers().stream()

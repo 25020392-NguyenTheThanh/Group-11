@@ -36,10 +36,10 @@ public class ForgotPasswordController implements Initializable {
     private PasswordField newPasswordField;
 
     @FXML
-    private VBox usernameBox;
+    private VBox emailBox;
 
     @FXML
-    private TextField usernameField;
+    private TextField emailField;
 
     @FXML
     private Text welcomeText;
@@ -70,10 +70,10 @@ public class ForgotPasswordController implements Initializable {
      * @param event Sự kiện kích hoạt hành động từ nút bấm xác nhận
      */
     @FXML
-    private void handleVerifyUsername(ActionEvent event) {
-        String usernameInput = usernameField.getText().trim();
-        if (usernameInput.isEmpty()) {
-            NotificationController.showAlert("Lỗi", "Vui lòng nhập tên đăng nhập!");
+    private void handleVerifyEmail(ActionEvent event) {
+        String emailInput = emailField.getText().trim();
+        if (emailInput.isEmpty()) {
+            NotificationController.showAlert("Lỗi", "Vui lòng nhập email!");
             return;
         }
 
@@ -88,19 +88,19 @@ public class ForgotPasswordController implements Initializable {
             }
         }
 
-        Response response = connection.send(RequestType.VERIFY_USERNAME, usernameInput);
+        Response response = connection.send(RequestType.VERIFY_EMAIL, emailInput);
         if (response != null && response.isSuccess()) {
             currentUser = (User) response.getData();
             // Hiệu ứng chuyển đổi: Ẩn Box1, Hiện Box2
-            usernameBox.setVisible(false);
-            usernameBox.setManaged(false);
+            emailBox.setVisible(false);
+            emailBox.setManaged(false);
 
             newPasswordBox.setVisible(true);
             newPasswordBox.setManaged(true);
 
             welcomeText.setText("Chào " + currentUser.getUsername() + ", hãy nhập mật khẩu mới.");
         } else {
-            String errorMsg = (response != null) ? response.getMessage() : "Tên đăng nhập không tồn tại!";
+            String errorMsg = (response != null) ? response.getMessage() : "Email không tồn tại!";
             NotificationController.showAlert("Lỗi", errorMsg);
         }
     }

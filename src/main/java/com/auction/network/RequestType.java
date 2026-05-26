@@ -19,7 +19,7 @@ public enum RequestType {
     SET_AUTO_BID, // đăng kí auto bid
     CANCEL_AUTO_BID, // hủy auto bid
     CHANGE_PASSWORD, // đổi mật khẩu
-    VERIFY_USERNAME, // xác thực username quên mật khẩu
+    VERIFY_EMAIL, // xác thực email quên mật khẩu
     RESET_PASSWORD ,// khôi phục mật khẩu mới
     ADMIN_GET_ALL_USERS,          // Xem danh sách toàn bộ user
     ADMIN_BAN_USER,              // Khóa tài khoản

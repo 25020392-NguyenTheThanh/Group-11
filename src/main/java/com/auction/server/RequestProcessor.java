@@ -51,7 +51,7 @@ public class RequestProcessor {
                 case SET_AUTO_BID -> handleSetAutoBid(request, handler);
                 case CANCEL_AUTO_BID -> handleCancelAutoBid(request, handler);
                 case CHANGE_PASSWORD -> handleChangePassword(request, handler);
-                case VERIFY_USERNAME -> handleVerifyUsername(request);
+                case VERIFY_EMAIL -> handleVerifyEmail(request);
                 case RESET_PASSWORD -> handleResetPassword(request);
 
                 // --- ADMIN CASE ---
@@ -615,16 +615,16 @@ public class RequestProcessor {
         }
     }
 
-    private static Response handleVerifyUsername(Request request) {
+    private static Response handleVerifyEmail(Request request) {
         if (request.getPayload() == null || !(request.getPayload() instanceof String)) {
-            return Response.error("Tên đăng nhập không hợp lệ!");
+            return Response.error("Email không hợp lệ!");
         }
-        String username = (String) request.getPayload();
-        User user = UserManager.getInstance().findUser(username);
+        String email = (String) request.getPayload();
+        User user = UserManager.getInstance().findUserByEmail(email);
         if (user != null) {
             return Response.ok(user);
         } else {
-            return Response.error("Tên đăng nhập không tồn tại!");
+            return Response.error("Email không tồn tại trên hệ thống!");
         }
     }
 
