@@ -93,7 +93,7 @@ public class ClientHandler implements Runnable , Observer {
                         User u = UserManager.getInstance().findUserById(bidderId);
                         if (u instanceof Bidder bidder){
                             try {
-                                a.placeBid(bidder, nextBid);
+                                a.placeBid(bidder, nextBid, true);
                                 AuctionManager.getInstance().recordBid(a.getId(), bidderId, bidder.getUsername(), nextBid, "AUTO");
                                 server.broadcast(new Notification("BID_UPDATE",
                                         new BidUpdateData(
