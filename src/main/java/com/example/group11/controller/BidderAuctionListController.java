@@ -1,5 +1,6 @@
 package com.example.group11.controller;
 
+import static com.example.group11.controller.AuctionUIHelper.*;
 import com.auction.client.ServerConnection;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
@@ -143,6 +144,7 @@ public class BidderAuctionListController implements Initializable {
     private User user;
     private List<Auction> allAuctions = new ArrayList<>();
     private String currentTab = "DASHBOARD";
+    private List<Button> allButtons;
 
     @FXML
     private StackPane addFundsOverlay;
@@ -270,6 +272,7 @@ public class BidderAuctionListController implements Initializable {
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        allButtons = List.of(btnDashboardS, btnMyBids, btnWatchlist, btnHistory, btnSettings);
         // Mặc định khi mở lên, Dashboard sẽ ở trạng thái Active
         setActiveStyle(btnDashboardS);
 
@@ -352,49 +355,30 @@ public class BidderAuctionListController implements Initializable {
         String tabName = clickedButton.getText().trim().toUpperCase();
 
         // 1. Reset màu sắc của tất cả nút Sidebar và highlight nút vừa bấm
-        resetAllButtons();
+        resetAllButtons(allButtons);
         setActiveStyle(clickedButton);
 
         currentTab = tabName;
 
+        boolean isSettings = tabName.equals("SETTINGS");
+
         // 2. Xử lý hiển thị Header và ContentGrid tùy theo Tab
-        if (tabName.equals("SETTINGS")) {
-            headerSection.setVisible(false);
-            headerSection.setManaged(false);
+        headerSection.setVisible(!isSettings);
+        headerSection.setManaged(!isSettings);
+        contentGrid.setVisible(!isSettings);
+        contentGrid.setManaged(!isSettings);
 
-            contentGrid.setVisible(false);
-            contentGrid.setManaged(false);
+        VBox targetView = isSettings ? profileView : mainDashboardView;
+        showView(targetView, List.of(mainDashboardView, profileView));
 
-            if (mainDashboardView != null) {
-                mainDashboardView.setVisible(false);
-                mainDashboardView.setManaged(false);
-            }
-            if (profileView != null) {
-                profileView.setVisible(true);
-                profileView.setManaged(true);
-                // Rebuild profile view từ factory mỗi khi mở tab
-                profileView.getChildren().clear();
-                VBox builtProfile = ProfileViewFactory.create(user, msg ->
-                    NotificationController.showNotification("Đổi mật khẩu", msg)
-                );
-                profileView.getChildren().add(builtProfile);
-            }
+        if (isSettings && profileView != null) {
+            // Rebuild profile view từ factory mỗi khi mở tab
+            profileView.getChildren().clear();
+            VBox builtProfile = ProfileViewFactory.create(user, msg ->
+                NotificationController.showNotification("Đổi mật khẩu", msg)
+            );
+            profileView.getChildren().add(builtProfile);
         } else {
-            headerSection.setVisible(true);
-            headerSection.setManaged(true);
-
-            contentGrid.setVisible(true);
-            contentGrid.setManaged(true);
-
-            if (profileView != null) {
-                profileView.setVisible(false);
-                profileView.setManaged(false);
-            }
-            if (mainDashboardView != null) {
-                mainDashboardView.setVisible(true);
-                mainDashboardView.setManaged(true);
-            }
-
             applyFilters();
         }
         System.out.println("Bidder đang xem tab: " + tabName);
@@ -405,7 +389,7 @@ public class BidderAuctionListController implements Initializable {
         searchBar.clear();
         auctionStatus.setText("TRẠNG THÁI");
         auctionProduct.setText("SẢN PHẨM");
-        resetAllButtons();
+        resetAllButtons(allButtons);
         setActiveStyle(btnDashboardS);
         currentTab = "DASHBOARD";
         headerSection.setVisible(true);
@@ -413,14 +397,7 @@ public class BidderAuctionListController implements Initializable {
         contentGrid.setVisible(true);
         contentGrid.setManaged(true);
 
-        if (profileView != null) {
-            profileView.setVisible(false);
-            profileView.setManaged(false);
-        }
-        if (mainDashboardView != null) {
-            mainDashboardView.setVisible(true);
-            mainDashboardView.setManaged(true);
-        }
+        showView(mainDashboardView, List.of(mainDashboardView, profileView));
 
         loadAuctions();
         System.out.println("Hammer Portal clicked: reset to Dashboard and reloaded auctions.");
@@ -484,8 +461,16 @@ public class BidderAuctionListController implements Initializable {
         List<Auction> filtered = allAuctions.stream().filter(auction -> {
             // 1. Lọc theo Tab
             if (currentTab.equals("DASHBOARD")) {
-                if (auction.getStatus() != AuctionStatus.RUNNING && auction.getStatus() != AuctionStatus.OPEN) {
+                if (auction.getStatus() != AuctionStatus.RUNNING 
+                        && auction.getStatus() != AuctionStatus.OPEN 
+                        && auction.getStatus() != AuctionStatus.FINISHED
+                        && auction.getStatus() != AuctionStatus.PAID) {
                     return false;
+                }
+                if (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID) {
+                    if (auction.getEndTime() != null && auction.getEndTime().plusDays(10).isBefore(java.time.LocalDateTime.now())) {
+                        return false;
+                    }
                 }
             } else if (currentTab.equals("MY BIDS")) {
                 if (user instanceof Bidder bidder) {
@@ -1285,35 +1270,7 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Đưa tất cả các nút về trạng thái bình thường.
-     */
-    private void resetAllButtons() {
-        String inactiveStyle = "-fx-background-color: transparent; " +
-                "-fx-text-fill: #94A3B8; " +
-                "-fx-font-weight: bold; " +
-                "-fx-border-width: 0;";
 
-        btnDashboardS.setStyle(inactiveStyle);
-        btnMyBids.setStyle(inactiveStyle);
-        btnWatchlist.setStyle(inactiveStyle);
-        btnHistory.setStyle(inactiveStyle);
-        btnSettings.setStyle(inactiveStyle);
-    }
-
-    /**
-     * Làm nổi bật nút đang được chọn (Active).
-     *
-     * @param button Nút cần làm nổi bật
-     */
-    private void setActiveStyle(Button button) {
-        String activeStyle = "-fx-background-color: #112240; " +
-                "-fx-text-fill: #FFD700; " +
-                "-fx-font-weight: bold; " +
-                "-fx-border-color: transparent #FFD700 transparent transparent; " +
-                "-fx-border-width: 0 4 0 0;";
-        button.setStyle(activeStyle);
-    }
 
     /**
      * Tải dữ liệu profile vào view.

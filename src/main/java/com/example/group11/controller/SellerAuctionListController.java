@@ -1,17 +1,14 @@
 package com.example.group11.controller;
 
 import com.auction.client.ServerConnection;
-import com.auction.data.ItemRepository;
 import com.auction.model.item.Art;
 import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
-import com.auction.model.user.Seller;
 import com.auction.model.user.User;
 import com.auction.network.*;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
-import com.auction.model.item.ItemStatus;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -19,8 +16,6 @@ import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.geometry.Insets;
-import javafx.scene.Node;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
@@ -41,14 +36,11 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import java.time.format.DateTimeFormatter;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
 
-import static com.example.group11.controller.ImagesController.confirmRemoveImage;
-import static com.example.group11.controller.ImagesController.displayImage;
-import static com.example.group11.controller.SellerUIHelper.*;
+import static com.example.group11.controller.AuctionUIHelper.*;
 
 /**
  * Bộ điều khiển (Controller) cho màn hình danh sách sản phẩm và đấu giá của Người bán (Seller).
@@ -342,12 +334,12 @@ public class SellerAuctionListController implements Initializable {
         currentView = myListingsView;
 
         // Sử dụng Helper để hiển thị và đổi màu nút
-        SellerUIHelper.showView(currentView, allViews);
-        SellerUIHelper.setActiveStyle(btnMyListings);
+        AuctionUIHelper.showView(currentView, allViews);
+        AuctionUIHelper.setActiveStyle(btnMyListings);
 
         // NẠP DỮ LIỆU BAN ĐẦU
         // Gọi executeTabLogic với ID của tab mặc định
-        SellerUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
+        AuctionUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
 
         setupFilters();
         setupOrderTableColumns();
@@ -740,23 +732,23 @@ public class SellerAuctionListController implements Initializable {
         Button clickedButton = (Button) event.getSource();
         // Dùng ID của button để phân biệt (chính xác hơn dùng Text)
         String buttonId = clickedButton.getId();
-        VBox targetView = SellerUIHelper.getVBoxFromId(buttonId, viewMapping);
+        VBox targetView = AuctionUIHelper.getVBoxFromId(buttonId, viewMapping);
 
         // Chỉ lưu nếu view hiện tại khác với view sắp tới (tránh lưu đè chính nó)
         if (currentView != targetView) {
             lastView = currentView;
-            lastButton = SellerUIHelper.findActiveButton(allButtons); // Hàm phụ để tìm nút đang sáng
+            lastButton = AuctionUIHelper.findActiveButton(allButtons); // Hàm phụ để tìm nút đang sáng
         }
 
         // 1. Cập nhật UI Sidebar
-        SellerUIHelper.resetAllButtons(allButtons);
-        SellerUIHelper.setActiveStyle(clickedButton);
+        AuctionUIHelper.resetAllButtons(allButtons);
+        AuctionUIHelper.setActiveStyle(clickedButton);
 
         // Cập nhật currentView và hiển thị
         currentView = targetView;
-        SellerUIHelper.showView(currentView, allViews);
+        AuctionUIHelper.showView(currentView, allViews);
 
-        SellerUIHelper.executeTabLogic(buttonId, contentGrid, this);
+        AuctionUIHelper.executeTabLogic(buttonId, contentGrid, this);
     }
 
     @FXML
@@ -769,16 +761,16 @@ public class SellerAuctionListController implements Initializable {
         VBox targetView = myListingsView;
         if (currentView != targetView) {
             lastView = currentView;
-            lastButton = SellerUIHelper.findActiveButton(allButtons);
+            lastButton = AuctionUIHelper.findActiveButton(allButtons);
         }
 
-        SellerUIHelper.resetAllButtons(allButtons);
-        SellerUIHelper.setActiveStyle(btnMyListings);
+        AuctionUIHelper.resetAllButtons(allButtons);
+        AuctionUIHelper.setActiveStyle(btnMyListings);
 
         currentView = targetView;
-        SellerUIHelper.showView(currentView, allViews);
+        AuctionUIHelper.showView(currentView, allViews);
 
-        SellerUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
+        AuctionUIHelper.executeTabLogic("btnMyListings", contentGrid, this);
         System.out.println("Hammer Portal clicked: reset to My Listings and reloaded products.");
     }
 
@@ -805,12 +797,12 @@ public class SellerAuctionListController implements Initializable {
 
         // Lưu lại vết trước khi sang trang đăng ký
         lastView = currentView;
-        lastButton = SellerUIHelper.findActiveButton(allButtons);
+        lastButton = AuctionUIHelper.findActiveButton(allButtons);
 
         // Thay vì chuyển Scene, ta chuyển View trong cùng 1 cửa sổ
-        SellerUIHelper.resetAllButtons(allButtons); // Bỏ active ở các nút sidebar
+        AuctionUIHelper.resetAllButtons(allButtons); // Bỏ active ở các nút sidebar
         currentView = registerProductView;
-        SellerUIHelper.showView(registerProductView, allViews);
+        AuctionUIHelper.showView(registerProductView, allViews);
     }
 
     /**
@@ -823,12 +815,12 @@ public class SellerAuctionListController implements Initializable {
     private void handleBackToListings(ActionEvent event) {
         if (lastView != null) {
             // 1. Cập nhật UI Sidebar
-            SellerUIHelper.resetAllButtons(allButtons);
+            AuctionUIHelper.resetAllButtons(allButtons);
             if (lastButton != null) {
                 setActiveStyle(lastButton);
             }
             // 2. Quay lại view cũ
-            SellerUIHelper.showView(lastView, allViews);
+            AuctionUIHelper.showView(lastView, allViews);
             // 3. Cập nhật lại currentView
             currentView = lastView;
         }
@@ -1360,10 +1352,10 @@ public class SellerAuctionListController implements Initializable {
 
         // Chuyển sang view sửa (sử dụng chung giao diện đăng ký)
         lastView = currentView;
-        lastButton = SellerUIHelper.findActiveButton(allButtons);
-        SellerUIHelper.resetAllButtons(allButtons);
+        lastButton = AuctionUIHelper.findActiveButton(allButtons);
+        AuctionUIHelper.resetAllButtons(allButtons);
         currentView = registerProductView;
-        SellerUIHelper.showView(registerProductView, allViews);
+        AuctionUIHelper.showView(registerProductView, allViews);
     }
 
     /**
@@ -1422,7 +1414,7 @@ public class SellerAuctionListController implements Initializable {
             if (response != null && response.isSuccess()) {
                 System.out.println("[DATABASE] Đã cập nhật sản phẩm thành công!");
                 NotificationController.showNotification("Thành công", "Cập nhật sản phẩm thành công!");
-                SellerUIHelper.setNeedsRefresh(true);
+                AuctionUIHelper.setNeedsRefresh(true);
                 clearRegistrationForm();
                 editingItem = null;
                 handleBackToListings(null);
@@ -1514,7 +1506,7 @@ public class SellerAuctionListController implements Initializable {
                     NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
                 }
 
-                SellerUIHelper.setNeedsRefresh(true);
+                AuctionUIHelper.setNeedsRefresh(true);
                 clearRegistrationForm();
                 handleBackToListings(null);
                 loadMyListingView();

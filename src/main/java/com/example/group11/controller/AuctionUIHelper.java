@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Lớp trợ giúp (Helper) quản lý trạng thái hiển thị giao diện người bán (Seller UI).
+ * Lớp trợ giúp (Helper) quản lý trạng thái hiển thị giao diện đấu giá (Auction UI).
  * Cung cấp các phương thức điều hướng tab, chuyển đổi view, và định dạng trạng thái nút bấm.
  */
-public class SellerUIHelper {
+public class AuctionUIHelper {
     @FXML
     public static Button btnAnalytics;
 
@@ -156,4 +156,3 @@ public class SellerUIHelper {
         return null;
     }
 }
-
