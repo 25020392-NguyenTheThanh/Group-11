@@ -77,11 +77,31 @@ public class Auction implements Subject, Serializable {
     @Override
     public void addObserver(Observer observer) {
         observers.add(observer);
+        updateViewCountInternal();
     }
 
     @Override
     public void removeObserver(Observer observer) {
         observers.remove(observer);
+        updateViewCountInternal();
+    }
+
+    private void updateViewCountInternal() {
+        if (observers != null) {
+            this.viewCount = (int) observers.stream()
+                    .map(obs -> {
+                        if (obs instanceof com.auction.server.ClientHandler ch) {
+                            return ch.getLoggedInUser();
+                        } else if (obs instanceof com.auction.model.user.User u) {
+                            return u;
+                        }
+                        return null;
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .map(com.auction.model.user.User::getId)
+                    .distinct()
+                    .count();
+        }
     }
 
     @Override
@@ -169,9 +189,13 @@ public class Auction implements Subject, Serializable {
         
         // Chạy auto-bid bất đồng bộ sau 3 giây delay để tạo cảm giác thực tế và tránh trùng timestamp
         if (!isAutoBid) {
-            autoBidExecutor.schedule(() -> {
+            if (DataManager.isTestMode()) {
                 triggerAutoBid(bidder);
-            }, 3, java.util.concurrent.TimeUnit.SECONDS);
+            } else {
+                autoBidExecutor.schedule(() -> {
+                    triggerAutoBid(bidder);
+                }, 3, java.util.concurrent.TimeUnit.SECONDS);
+            }
         }
     }
 
@@ -215,19 +239,27 @@ public class Auction implements Subject, Serializable {
                     minAccepted, currentHighestBid, minBidStep));
 
         // Khấu trừ tiền của new bidder bằng giao dịch DB an toàn
-        boolean success = DataManager.getInstance().deductBidderBalance(bidder.getId(), amount);
-        if (!success) {
-            throw new InvalidBidException(String.format("Số dư không đủ hoặc lỗi hệ thống (Cần $%,.0f)", amount));
+        if (DataManager.isTestMode()) {
+            bidder.setBalance(bidder.getBalance() - amount);
+        } else {
+            boolean success = DataManager.getInstance().deductBidderBalance(bidder.getId(), amount);
+            if (!success) {
+                throw new InvalidBidException(String.format("Số dư không đủ hoặc lỗi hệ thống (Cần $%,.0f)", amount));
+            }
+            // Cập nhật RAM cho new bidder
+            bidder.setBalance(DataManager.getInstance().getBidderBalance(bidder.getId()));
         }
-        // Cập nhật RAM cho new bidder
-        bidder.setBalance(DataManager.getInstance().getBidderBalance(bidder.getId()));
 
         // Hoàn tiền cho người ra giá cao nhất trước đó (nếu có)
         Bidder previousWinner = currentWinner;
         double previousHighestBid = currentHighestBid;
         if (currentWinner != null) {
-            DataManager.getInstance().addBidderBalance(currentWinner.getId(), previousHighestBid);
-            currentWinner.setBalance(DataManager.getInstance().getBidderBalance(currentWinner.getId()));
+            if (DataManager.isTestMode()) {
+                currentWinner.setBalance(currentWinner.getBalance() + previousHighestBid);
+            } else {
+                DataManager.getInstance().addBidderBalance(currentWinner.getId(), previousHighestBid);
+                currentWinner.setBalance(DataManager.getInstance().getBidderBalance(currentWinner.getId()));
+            }
         }
 
         // Lưu vào lịch sử
@@ -419,26 +451,27 @@ public class Auction implements Subject, Serializable {
 
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime ; }
 
-    // Lấy số lượt xem của phiên đấu giá
+    // Lấy số lượt xem của phiên đấu giá (Số lượng người dùng đang truy cập trực tiếp vào màn hình)
     public int getViewCount() {
-        return viewCount;
-    }
-
-    // Tăng số lượt xem của phiên đấu giá lên 1 (đồng bộ chống race-condition)
-    public synchronized void incrementViewCount() {
-        this.viewCount++;
-    }
-
-    // Giảm số lượt xem của phiên đấu giá đi 1 (đồng bộ chống race-condition)
-    public synchronized void decrementViewCount() {
-        if (this.viewCount > 0) {
-            this.viewCount--;
+        if (observers != null && !observers.isEmpty()) {
+            updateViewCountInternal();
         }
+        return this.viewCount;
+    }
+
+    // Tăng số lượt xem của phiên đấu giá lên 1 (Không còn dùng thuộc tính biến, dùng động từ observers)
+    public synchronized void incrementViewCount() {
+        // NOP - computed dynamically
+    }
+
+    // Giảm số lượt xem của phiên đấu giá đi 1 (Không còn dùng thuộc tính biến, dùng động từ observers)
+    public synchronized void decrementViewCount() {
+        // NOP - computed dynamically
     }
 
     // Thiết lập/khôi phục số lượt xem của phiên đấu giá
     public void restoreViewCount(int viewCount) {
-        this.viewCount = viewCount;
+        // NOP - computed dynamically
     }
 
     // bidder đăng kí auto-bid cho phiên này
@@ -528,19 +561,27 @@ public class Auction implements Subject, Serializable {
         try {
             placeBidInternal(activeBidder, bestNextBid, true);
 
-            // Lập lịch kích hoạt lượt thầu tự động tiếp theo sau 3 giây để đảm bảo giãn cách
-            autoBidExecutor.schedule(() -> {
+            if (DataManager.isTestMode()) {
                 triggerAutoBid(activeBidder);
-            }, 3, java.util.concurrent.TimeUnit.SECONDS);
+            } else {
+                // Lập lịch kích hoạt lượt thầu tự động tiếp theo sau 3 giây để đảm bảo giãn cách
+                autoBidExecutor.schedule(() -> {
+                    triggerAutoBid(activeBidder);
+                }, 3, java.util.concurrent.TimeUnit.SECONDS);
+            }
 
         } catch (Exception e) {
             System.err.println("[AutoBid] Lỗi khi xử lý Auto-Bid của @" + activeBidder.getUsername() + ": " + e.getMessage());
             autoBidConfigs.remove(best.getBidderId()); // Loại bỏ cấu hình bị lỗi
 
-            // Nếu có lỗi (ví dụ hết tiền), kích hoạt kiểm tra lại ngay cho các bên khác sau 500ms
-            autoBidExecutor.schedule(() -> {
+            if (DataManager.isTestMode()) {
                 triggerAutoBid(activeBidder);
-            }, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            } else {
+                // Nếu có lỗi (ví dụ hết tiền), kích hoạt kiểm tra lại ngay cho các bên khác sau 500ms
+                autoBidExecutor.schedule(() -> {
+                    triggerAutoBid(activeBidder);
+                }, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
+            }
         }
     }
     public Map<Integer , AutoBidConfig> getAutoBidConfigs(){
@@ -559,7 +600,9 @@ public class Auction implements Subject, Serializable {
         if (secondsLeft > 0 && secondsLeft <= SNIPE_WINDOW_SECONDS) {
             endTime = endTime.plusSeconds(EXTENSION_SECONDS);
             extensionCount++;
-            DataManager.getInstance().updateAuctionEndTime(id, endTime);
+            if (!DataManager.isTestMode()) {
+                DataManager.getInstance().updateAuctionEndTime(id, endTime);
+            }
             String msg = String.format(
                     "Anti-Snipe! Phiên #%d được gia hạn thêm %ds (lần %d/%d) — kết thúc lúc %s",
                     id, EXTENSION_SECONDS, extensionCount, MAX_EXTENSIONS,

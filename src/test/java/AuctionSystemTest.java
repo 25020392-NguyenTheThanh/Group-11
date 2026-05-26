@@ -10,13 +10,20 @@ import com.auction.model.user.Bidder;
 import com.auction.pattern.factory.ElectronicsFactory;
 import com.auction.pattern.factory.ArtFactory;
 import com.auction.pattern.factory.VehicleFactory;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import com.auction.data.DataManager;
 
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AuctionSystemTest {
+
+    @BeforeAll
+    static void setUpAll() {
+        DataManager.setTestMode(true);
+    }
 
     // valid bid : kiểm tra đấu giá hợp lệ
     @Test

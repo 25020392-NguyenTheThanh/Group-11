@@ -8,10 +8,7 @@ import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.Seller;
 import com.auction.model.user.User;
-import com.auction.network.GetAuctionDetailPayload;
-import com.auction.network.PlaceBidPayload;
-import com.auction.network.RequestType;
-import com.auction.network.Response;
+import com.auction.network.*;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -26,10 +23,7 @@ import javafx.scene.Parent;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -89,12 +83,12 @@ public class LiveAuctionController implements Initializable {
     private Parent previousRoot;
     private BidderAuctionListController listController;
 
-    private final Consumer<com.auction.network.Notification> realtimeListener = notification -> {
+    private final Consumer<Notification> realtimeListener = notification -> {
         Platform.runLater(() -> {
             System.out.println("LiveAuction nhận thông báo realtime: " + notification.getType() + " - " + notification.getData());
             if ("BID_UPDATE".equals(notification.getType())) {
                 Object data = notification.getData();
-                if (data instanceof com.auction.network.BidUpdateData upd) {
+                if (data instanceof BidUpdateData upd) {
                     if (auction != null && upd.auctionId == auction.getId()) {
                         refreshAuctionDetails(false);
                     }
@@ -227,7 +221,7 @@ public class LiveAuctionController implements Initializable {
                 if (stage != null) {
                     openStages.put(auction.getId(), stage);
                     stage.setOnCloseRequest(event -> {
-                        cleanupAndClose(true);
+                        cleanupAndClose(false);
                     });
                 }
             }
@@ -760,7 +754,28 @@ public class LiveAuctionController implements Initializable {
      */
     @FXML
     private void handleBack(ActionEvent event) {
-        cleanupAndClose(true);
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
+
+        ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
+
+        if (auction != null) {
+            openStages.remove(auction.getId());
+
+            Task<Response> closeTask = new Task<>() {
+                @Override
+                protected Response call() throws Exception {
+                    GetAuctionDetailPayload payload = new GetAuctionDetailPayload(auction.getId(), false);
+                    payload.decrementView = true;
+                    return ServerConnection.getInstance().send(RequestType.GET_AUCTION_DETAIL, payload);
+                }
+            };
+
+            Thread t = new Thread(closeTask);
+            t.setDaemon(true);
+            t.start();
+        }
 
         // Swap root về màn hình danh sách — KHÔNG đóng Stage
         if (previousRoot != null && ownerStage != null) {
@@ -785,12 +800,9 @@ public class LiveAuctionController implements Initializable {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
-        if (auction != null) {
-            openStages.remove(auction.getId());
-        }
-        if (user != null && auction != null) {
-            enteredAuctionIds.remove(user.getId() + ":" + auction.getId());
-        }
+
+        openStages.remove(auction.getId());
+
         ServerConnection.getInstance().removeNotificationHandler(realtimeListener);
 
         if (decrementView && auction != null) {
@@ -873,8 +885,9 @@ public class LiveAuctionController implements Initializable {
         t.start();
     }
 
+
     private void showAutoBidDialog() {
-        javafx.scene.control.Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
+        Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
         dialog.setTitle("HANK AUCTIONS");
         dialog.setHeaderText("🤖 Cài đặt Auto-Bid");
 

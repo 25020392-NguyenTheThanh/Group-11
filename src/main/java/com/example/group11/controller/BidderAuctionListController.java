@@ -235,7 +235,7 @@ public class BidderAuctionListController implements Initializable {
             }
 
             if (notificationDropdown != null && !notificationDropdown.isVisible()) {
-                if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+                if ("BID_UPDATE".equals(type) || (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString()))) {
                     // ignore
                 } else {
                     unreadNotificationsCount++;
@@ -638,7 +638,7 @@ public class BidderAuctionListController implements Initializable {
 
                 liveController.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
 
-                javafx.scene.Scene scene = new javafx.scene.Scene(root);
+                Scene scene = new Scene(root);
                 newStage.setScene(scene);
                 newStage.setTitle("HANK AUCTION - Phòng Đấu Giá: " + detailed.getItem().getName());
                 newStage.show();
@@ -1004,6 +1004,9 @@ public class BidderAuctionListController implements Initializable {
 
     private void addNotificationToDropdown(Notification notification) {
         if (notificationListContainer != null) {
+            if ("BID_UPDATE".equals(notification.getType())) {
+                return;
+            }
             if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
                 return;
             }

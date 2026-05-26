@@ -23,6 +23,8 @@ module com.example.group11 {
     exports com.auction.model.user;
     exports com.auction.exception;
     exports com.auction.pattern.factory;
+    exports com.auction.data;
+    exports com.auction.manager;
     opens com.example.group11.controller to javafx.fxml;
 
 }

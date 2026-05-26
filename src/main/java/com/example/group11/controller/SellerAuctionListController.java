@@ -281,7 +281,7 @@ public class SellerAuctionListController implements Initializable {
             }
 
             if (notificationDropdown != null && !notificationDropdown.isVisible()) {
-                if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
+                if ("BID_UPDATE".equals(type) || (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString()))) {
                     // ignore
                 } else {
                     unreadNotificationsCount++;
@@ -386,6 +386,9 @@ public class SellerAuctionListController implements Initializable {
      */
     private void addNotificationToUI(com.auction.network.Notification notification) {
         if (notificationListContainer == null) return;
+        if ("BID_UPDATE".equals(notification.getType())) {
+            return;
+        }
         if (notification.getData() != null && "VIEW_UPDATE".equals(notification.getData().toString())) {
             return;
         }

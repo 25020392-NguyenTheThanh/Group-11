@@ -6,6 +6,10 @@ import com.auction.model.auction.AuctionStatus;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
+import com.auction.model.user.Bidder;
+import com.auction.model.user.User;
+import com.auction.pattern.observer.Observer;
+import com.auction.server.ClientHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -65,6 +69,7 @@ public class AuctionManager {
 
     // Ghi nhận một lần đặt giá: cập nhật + MySQL + lưu lịch sử bid.
     public void recordBid(int auctionId, int bidderId, String bidderName, double amount, String bidType) {
+        if (DataManager.isTestMode()) return;
         // Cập nhật bảng auctions (current_highest_bid, current_winner_id)
         DataManager.getInstance().updateAuctionBid(auctionId, bidderId, amount);
         // Ghi lịch sử vào bid_transactions
@@ -110,7 +115,7 @@ public class AuctionManager {
 
     public void loadAuctionsFromDatabase() {
         List<Auction> dbAuctions = DataManager.getInstance().getAllAuctions();
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         for (Auction a : dbAuctions) {
             List<BidTransaction> history = DataManager.getInstance().getBidHistory(a.getId());
             a.getBidHistory().clear();
@@ -120,8 +125,8 @@ public class AuctionManager {
             if (!history.isEmpty()) {
                 BidTransaction highestBidTx = history.get(history.size() - 1);
                 a.restoreHighestBid(highestBidTx.getAmount());
-                com.auction.model.user.User winner = com.auction.manager.UserManager.getInstance().findUserById(highestBidTx.getBidderId());
-                if (winner instanceof com.auction.model.user.Bidder b) {
+                User winner = UserManager.getInstance().findUserById(highestBidTx.getBidderId());
+                if (winner instanceof Bidder b) {
                     a.restoreCurrentWinner(b);
                 }
                 // Đồng bộ ngược lại bảng auctions để dọn sạch dữ liệu cũ/lệch trong DB
@@ -146,16 +151,16 @@ public class AuctionManager {
         System.out.println("Loaded " + dbAuctions.size() + " auctions from database.");
     }
 
-    public void removeObserverFromAllAuctions(com.auction.pattern.observer.Observer observer) {
+    public void removeObserverFromAllAuctions(Observer observer) {
         for (Auction a : auctions.values()) {
             if (a.hasObserver(observer)) {
                 boolean hasOtherConnection = false;
-                if (observer instanceof com.auction.server.ClientHandler ch) {
-                    com.auction.model.user.User u = ch.getLoggedInUser();
+                if (observer instanceof ClientHandler ch) {
+                    User u = ch.getLoggedInUser();
                     if (u != null) {
-                        for (com.auction.pattern.observer.Observer obs : a.getObservers()) {
-                            if (obs != observer && obs instanceof com.auction.server.ClientHandler otherCh) {
-                                com.auction.model.user.User otherUser = otherCh.getLoggedInUser();
+                        for (Observer obs : a.getObservers()) {
+                            if (obs != observer && obs instanceof ClientHandler otherCh) {
+                                User otherUser = otherCh.getLoggedInUser();
                                 if (otherUser != null && otherUser.getId() == u.getId()) {
                                     hasOtherConnection = true;
                                     break;
@@ -165,6 +170,9 @@ public class AuctionManager {
                     }
                 }
                 a.removeObserver(observer);
+                if (!hasOtherConnection) {
+                    a.decrementViewCount();
+                }
                 a.notifyObservers("VIEW_UPDATE");
             }
         }

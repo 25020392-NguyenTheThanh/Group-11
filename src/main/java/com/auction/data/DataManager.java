@@ -11,6 +11,15 @@ import java.util.List;
 public class DataManager {
 
     private static DataManager instance;
+    private static boolean testMode = false;
+
+    public static boolean isTestMode() {
+        return testMode;
+    }
+
+    public static void setTestMode(boolean mode) {
+        testMode = mode;
+    }
 
     private final UserRepository userRepo;
     private final ItemRepository itemRepo;
