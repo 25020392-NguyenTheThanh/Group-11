@@ -132,7 +132,7 @@ public class SellerAuctionListController implements Initializable {
     private TableColumn<Order, String> colStatus;
 
     @FXML
-    private GridPane contentGrid;
+    GridPane contentGrid;
 
     @FXML
     private TextArea descriptionArea;
@@ -215,7 +215,7 @@ public class SellerAuctionListController implements Initializable {
     private Label totalBidsLabel;
 
     @FXML
-    private Label totalProductsLabel;
+    Label totalProductsLabel;
 
     @FXML
     private Label totalRevenueLabel;
@@ -280,8 +280,8 @@ public class SellerAuctionListController implements Initializable {
 
 
     // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
-    private List<Item> auctionItems = new ArrayList<>();
-    private Map<Integer, Auction> itemAuctionMap = new HashMap<>();
+    List<Item> auctionItems = new ArrayList<>();
+    Map<Integer, Auction> itemAuctionMap = new HashMap<>();
 
     /**
      * Thiết lập thông tin người dùng hiện tại (Người bán).
@@ -538,55 +538,12 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Thực hiện lọc và sắp xếp danh sách sản phẩm dựa trên từ khóa tìm kiếm,
-     * trạng thái sản phẩm/phiên đấu giá và kiểu sắp xếp đã lựa chọn.
-     * Sau đó cập nhật lại giao diện lưới hiển thị sản phẩm.
-     */
-    private void applyFiltersAndSort() {
+    void applyFiltersAndSort() {
         if (auctionItems == null) return;
-
         String query = filterSearchId.getText() != null ? filterSearchId.getText().trim().toLowerCase() : "";
         String selectedStatus = filterStatus.getText() != null ? filterStatus.getText().trim().toUpperCase() : "TRẠNG THÁI";
-
-        List<Item> filteredItems = new ArrayList<>();
-        for (Item item : auctionItems) {
-            boolean matchesSearch = query.isEmpty() ||
-                    String.valueOf(item.getId()).contains(query) ||
-                    (item.getName() != null && item.getName().toLowerCase().contains(query)) ||
-                    (item.getDescription() != null && item.getDescription().toLowerCase().contains(query));
-
-            if (!matchesSearch) continue;
-
-            boolean matchesStatus = true;
-            if (!selectedStatus.equals("TẤT CẢ") && !selectedStatus.equals("TRẠNG THÁI")) {
-                matchesStatus = (item.getStatus() != null &&
-                        item.getStatus().name().equalsIgnoreCase(selectedStatus));
-            }
-
-            if (matchesStatus) {
-                filteredItems.add(item);
-            }
-        }
-
         String selectedSort = filterSort.getText() != null ? filterSort.getText().trim().toUpperCase() : "SẮP XẾP";
-        if (selectedSort.equals("GIÁ: THẤP ĐẾN CAO")) {
-            filteredItems.sort(Comparator.comparingDouble(Item::getStartingPrice));
-        } else if (selectedSort.equals("GIÁ: CAO ĐẾN THẤP")) {
-            filteredItems.sort((a, b) -> Double.compare(b.getStartingPrice(), a.getStartingPrice()));
-        } else if (selectedSort.equals("KẾT THÚC SỚM NHẤT")) {
-            filteredItems.sort((a, b) -> {
-                Auction auctionA = itemAuctionMap.get(a.getId());
-                Auction auctionB = itemAuctionMap.get(b.getId());
-                LocalDateTime timeA = (auctionA != null && auctionA.getEndTime() != null) ? auctionA.getEndTime() : LocalDateTime.MAX;
-                LocalDateTime timeB = (auctionB != null && auctionB.getEndTime() != null) ? auctionB.getEndTime() : LocalDateTime.MAX;
-                return timeA.compareTo(timeB);
-            });
-        } else {
-            // Default "MỚI NHẤT": Sort by ID descending
-            filteredItems.sort((a, b) -> Integer.compare(b.getId(), a.getId()));
-        }
-
+        List<Item> filteredItems = SellerFilterManager.filterAndSort(auctionItems, itemAuctionMap, query, selectedStatus, selectedSort);
         renderProductCards(filteredItems);
     }
 
@@ -819,79 +776,8 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Tải danh sách sản phẩm cá nhân và thông tin các phiên đấu giá từ Server.
-     * Thực hiện chạy tác vụ tải dữ liệu trong một luồng ngầm (Background Task) để không chặn luồng giao diện chính (UI Thread).
-     */
     public void loadMyListingView() {
-        // 1. ƯU TIÊN ỨNG DỤNG TRƯỚC: Xóa sạch lưới UI cũ và đưa số lượng về 0 ngay lập tức
-        contentGrid.getChildren().clear();
-        CalculatorView.updateCount(totalProductsLabel, 0);
-
-        // Hiển thị một nhãn thông báo trạng thái đang tải tạm thời để người dùng không cảm thấy ứng dụng bị "đơ"
-        Label loadingLabel = new Label("Đang kết nối máy chủ để tải danh sách...");
-        loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
-        contentGrid.add(loadingLabel, 0, 0);
-
-        System.out.println("Đang gửi yêu cầu lấy danh sách sản phẩm cá nhân và phiên đấu giá từ Server ở Luồng Ngầm...");
-
-        // 2. KHỞI TẠO TÁC VỤ CHẠY NGẦM (BACKGROUND TASK)
-        Task<Map<String, Response>> fetchTask = new Task<>() {
-            @Override
-            protected Map<String, Response> call() throws Exception {
-                Response itemsRes = ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
-                Response auctionsRes = ServerConnection.getInstance().send(RequestType.GET_AUCTIONS, null);
-                Map<String, Response> map = new HashMap<>();
-                map.put("items", itemsRes);
-                map.put("auctions", auctionsRes);
-                return map;
-            }
-        };
-
-        // 3. XỬ LÝ KHI TẢI DỮ LIỆU THÀNH CÔNG (Tự động chuyển về luồng giao diện JavaFX)
-        fetchTask.setOnSucceeded(event -> {
-            contentGrid.getChildren().remove(loadingLabel); // Xóa bỏ dòng chữ "Đang tải"
-            Map<String, Response> results = fetchTask.getValue();
-            Response itemsResponse = results.get("items");
-            Response auctionsResponse = results.get("auctions");
-
-            if (itemsResponse != null && itemsResponse.isSuccess()) {
-                auctionItems = (List<Item>) itemsResponse.getData();
-                itemAuctionMap.clear();
-
-                if (auctionsResponse != null && auctionsResponse.isSuccess()) {
-                    List<Auction> auctions = (List<Auction>) auctionsResponse.getData();
-                    if (auctions != null) {
-                        for (Auction auction : auctions) {
-                            if (auction.getItem() != null) {
-                                itemAuctionMap.put(auction.getItem().getId(), auction);
-                            }
-                        }
-                    }
-                }
-
-                // Thực hiện lọc, sắp xếp và render các card sản phẩm
-                applyFiltersAndSort();
-                updateHeaderRevenue();
-            } else {
-                String errorMsg = (itemsResponse != null) ? itemsResponse.getMessage() : "Không thể kết nối tới máy chủ!";
-                NotificationController.showError(
-                        "Lỗi tải dữ liệu",
-                        "Hệ thống gặp sự cố khi đồng bộ danh sách sản phẩm.\nChi tiết: " + errorMsg
-                );
-            }
-        });
-
-        // 4. XỬ LÝ KHI GẶP LỖI HỆ THỐNG TRONG LUỒNG NGẦM
-        fetchTask.setOnFailed(e -> {
-            contentGrid.getChildren().remove(loadingLabel);
-            NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi bất ngờ khi tải dữ liệu từ luồng nền.");
-        });
-
-        // 5. KÍCH HOẠT VÀ CHẠY THREAD KHÔNG BLOCKING
-        Thread thread = new Thread(fetchTask);
-        thread.setDaemon(true); // Đảm bảo tiểu trình tự đóng khi ứng dụng tắt
-        thread.start();
+        SellerProductService.loadMyListingView(this);
     }
 
     /**
@@ -900,102 +786,10 @@ public class SellerAuctionListController implements Initializable {
      * và vẽ biểu đồ hình cột thống kê doanh thu.
      */
     public void loadAnalyticsData() {
-        // 1. Xóa dữ liệu cũ
-        revenueChart.getData().clear();
-
-        // 2. Tạo 4 Series đại diện cho 4 đường biểu đồ
-        XYChart.Series<String, Number> totalSeries = new XYChart.Series<>();
-        totalSeries.setName("Tổng doanh thu");
-
-        XYChart.Series<String, Number> electronicsSeries = new XYChart.Series<>();
-        electronicsSeries.setName("Electronics");
-
-        XYChart.Series<String, Number> artSeries = new XYChart.Series<>();
-        artSeries.setName("Art");
-
-        XYChart.Series<String, Number> vehicleSeries = new XYChart.Series<>();
-        vehicleSeries.setName("Vehicle");
-
-        // Khởi tạo 12 tháng với giá trị 0.0
-        String[] months = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-        Map<String, Double> totalMap = new LinkedHashMap<>();
-        Map<String, Double> electronicsMap = new LinkedHashMap<>();
-        Map<String, Double> artMap = new LinkedHashMap<>();
-        Map<String, Double> vehicleMap = new LinkedHashMap<>();
-
-        for (String m : months) {
-            totalMap.put(m, 0.0);
-            electronicsMap.put(m, 0.0);
-            artMap.put(m, 0.0);
-            vehicleMap.put(m, 0.0);
-        }
-
-        double totalRevenue = 0.0;
-        int soldCount = 0;
-        int totalBids = 0;
-
-        if (auctionItems != null && itemAuctionMap != null) {
-            for (Item item : auctionItems) {
-                Auction auction = itemAuctionMap.get(item.getId());
-                if (auction != null) {
-                    // Sum the bids for all auctions of the seller's items
-                    if (auction.getBidHistory() != null) {
-                        totalBids += auction.getBidHistory().size();
-                    }
-
-                    // Check if the auction ended successfully (with a winner, and status is FINISHED or PAID)
-                    if ((auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID)
-                            && auction.getCurrentWinner() != null) {
-
-                        soldCount++;
-                        double price = auction.getCurrentHighestBid();
-                        if (auction.getStatus() == AuctionStatus.PAID) {
-                            totalRevenue += price;
-
-                            String monthAbbr = getMonthAbbreviation(auction.getEndTime());
-
-                            // Add to total
-                            totalMap.put(monthAbbr, totalMap.get(monthAbbr) + price);
-
-                            // Add to category
-                            String category = item.getCategory();
-                            if (category != null) {
-                                switch (category.toUpperCase()) {
-                                    case "ELECTRONICS":
-                                        electronicsMap.put(monthAbbr, electronicsMap.get(monthAbbr) + price);
-                                        break;
-                                    case "ART":
-                                        artMap.put(monthAbbr, artMap.get(monthAbbr) + price);
-                                        break;
-                                    case "VEHICLE":
-                                        vehicleMap.put(monthAbbr, vehicleMap.get(monthAbbr) + price);
-                                        break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Đưa dữ liệu đã tính toán vào các Series
-        for (String m : months) {
-            totalSeries.getData().add(new XYChart.Data<>(m, totalMap.get(m)));
-            electronicsSeries.getData().add(new XYChart.Data<>(m, electronicsMap.get(m)));
-            artSeries.getData().add(new XYChart.Data<>(m, artMap.get(m)));
-            vehicleSeries.getData().add(new XYChart.Data<>(m, vehicleMap.get(m)));
-        }
-
-        // Cập nhật các Label thống kê lên giao diện
-        CalculatorView.updateCurrency(totalRevenueLabel, totalRevenue);
-        CalculatorView.updateCount(soldProductsLabel, soldCount);
-        CalculatorView.updateCount(totalBidsLabel, totalBids);
-
-        // 4. Đưa tất cả series vào biểu đồ
-        revenueChart.getData().addAll(totalSeries, electronicsSeries, artSeries, vehicleSeries);
+        SellerAnalyticsCalculator.loadAnalyticsData(auctionItems, itemAuctionMap, revenueChart, totalRevenueLabel, soldProductsLabel, totalBidsLabel);
     }
 
-    private void updateHeaderRevenue() {
+    public void updateHeaderRevenue() {
         double totalPaidRevenue = 0.0;
         if (auctionItems != null && itemAuctionMap != null) {
             for (Item item : auctionItems) {
@@ -1510,12 +1304,6 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Bật/Tắt (Ẩn/Hiện) trình đơn thả xuống hiển thị danh sách các thông báo của hệ thống.
-     * Tự động ẩn danh sách thông tin tài khoản nếu nó đang mở để tránh chồng lấn giao diện.
-     *
-     * @param event Sự kiện nhấp nút thông báo
-     */
     @FXML
     private void handleToggleNotification(ActionEvent event) {
         if (profileDropdown != null && profileDropdown.isVisible()) {
@@ -1524,7 +1312,6 @@ public class SellerAuctionListController implements Initializable {
         }
 
         boolean isCurrentlyVisible = notificationDropdown.isVisible();
-        // Đảo ngược trạng thái hiển thị
         notificationDropdown.setVisible(!isCurrentlyVisible);
         notificationDropdown.setManaged(!isCurrentlyVisible);
 
@@ -1534,44 +1321,26 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Bật/Tắt (Ẩn/Hiện) trình đơn thả xuống chứa thông tin tài khoản cá nhân.
-     * Tự động ẩn danh sách thông báo hệ thống nếu nó đang mở để tránh chồng lấn giao diện.
-     *
-     * @param event Sự kiện nhấp nút ảnh đại diện
-     */
     @FXML
     private void handleToggleProfile(ActionEvent event) {
-        // Nếu đang mở thông báo thì đóng thông báo lại để tránh đè giao diện
         if (notificationDropdown.isVisible()) {
             notificationDropdown.setVisible(false);
             notificationDropdown.setManaged(false);
         }
 
-        // Đảo ngược trạng thái hiển thị của profile
         boolean isVisible = profileDropdown.isVisible();
         profileDropdown.setVisible(!isVisible);
         profileDropdown.setManaged(!isVisible);
     }
 
-    /**
-     * Xử lý sự kiện khi người dùng lựa chọn mục "Thông tin cá nhân".
-     *
-     * @param event Sự kiện nhấn nút
-     */
     @FXML
     private void handleViewProfile(ActionEvent event) {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
-        // Thêm logic chuyển Tab hoặc mở Window mới tại đây
         profileDropdown.setVisible(false); // Ẩn menu đi sau khi chọn
         profileDropdown.setManaged(false);
         handleSwitchTab(new ActionEvent(btnSettings, null));
     }
 
-    /**
-     * Tải giao diện thông tin cá nhân vào profileView bằng ProfileViewFactory.
-     * Thay thế hoàn toàn cách set text vào FXML label cũ.
-     */
     public void loadProfileData() {
         if (user == null || profileView == null) return;
         profileView.getChildren().clear();
@@ -1581,13 +1350,6 @@ public class SellerAuctionListController implements Initializable {
         profileView.getChildren().add(builtProfile);
     }
 
-    /**
-     * Xử lý sự kiện đăng xuất tài khoản.
-     * Hiển thị hộp thoại xác nhận, dừng lắng nghe sự kiện từ Server, ngắt kết nối
-     * và chuyển hướng người dùng quay trở lại màn hình đăng nhập.
-     *
-     * @param event Sự kiện click nút đăng xuất
-     */
     @FXML
     private void handleLogout(ActionEvent event) {
         boolean confirm = NotificationController.showConfirmation(
@@ -1599,28 +1361,8 @@ public class SellerAuctionListController implements Initializable {
         );
         if (confirm) {
             try {
-                System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
-                LiveAuctionController.clearEnteredAuctions();
-                // Gửi LOGOUT lên server TRƯỚC khi cắt kết nối để server dọn observer
-                try {
-                    ServerConnection.getInstance().send(RequestType.LOGOUT, null);
-                } catch (Exception ignored) {}
-                ServerConnection.getInstance().stopListening();
-                ServerConnection.getInstance().disconnect();
-                FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng nhập");
-
-                if (loader != null) {
-                    user = null;
-                    LoginController controller = loader.getController();
-                    // (Tùy chọn) hiển thị thông báo đăng xuất thành công bên màn hình Login
-                } else {
-                    System.err.println("Lỗi: Không thể tải giao diện login-view.fxml");
-                }
-//                } else {
-//                    // Trường hợp Server trả về lỗi (Ví dụ: "Chưa đăng nhập" hoặc lỗi DB)
-//                    String errorMsg = (response != null) ? response.getMessage() : "Không nhận được phản hồi từ Server.";
-//                    NotificationController.showError("Lỗi đăng xuất", errorMsg);
-//                }
+                SessionManager.logout(event, user);
+                user = null;
             } catch (Exception e) {
                 System.err.println("Lỗi kết nối khi đăng xuất: " + e.getMessage());
                 NotificationController.showError("Lỗi kết nối", "Không thể kết nối tới Server để đăng xuất.");

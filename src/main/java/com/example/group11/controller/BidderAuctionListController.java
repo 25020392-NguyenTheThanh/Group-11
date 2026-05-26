@@ -108,7 +108,7 @@ public class BidderAuctionListController implements Initializable {
 
 
     @FXML
-    private GridPane contentGrid;
+    GridPane contentGrid;
 
     @FXML
     private VBox headerSection;
@@ -117,13 +117,13 @@ public class BidderAuctionListController implements Initializable {
     private BorderPane mainPane;
 
     @FXML
-    private TextField searchBar;
+    TextField searchBar;
 
     @FXML
-    private Label totalAuctionsLabel;
+    Label totalAuctionsLabel;
 
     @FXML
-    private Label walletBalance;
+    Label walletBalance;
 
     @FXML
     private VBox profileDropdown;
@@ -134,9 +134,9 @@ public class BidderAuctionListController implements Initializable {
     @FXML
     private VBox notificationListContainer;
 
-    private User user;
-    private List<Auction> allAuctions = new ArrayList<>();
-    private String currentTab = "DASHBOARD";
+    User user;
+    List<Auction> allAuctions = new ArrayList<>();
+    String currentTab = "DASHBOARD";
     private List<Button> allButtons;
 
     @FXML
@@ -440,95 +440,11 @@ public class BidderAuctionListController implements Initializable {
         thread.start();
     }
 
-    /**
-     * Áp dụng đồng thời các bộ lọc dữ liệu: từ khóa tìm kiếm, trạng thái phiên đấu giá,
-     * danh mục sản phẩm và tab chức năng hiện tại để cập nhật danh sách hiển thị.
-     */
-    private void applyFilters() {
+    void applyFilters() {
         if (allAuctions == null) return;
-
-        String query = (searchBar.getText() != null) ? searchBar.getText().trim().toLowerCase() : "";
         String statusFilter = auctionStatus.getText().trim().toUpperCase();
         String categoryFilter = auctionProduct.getText().trim().toUpperCase();
-
-        List<Auction> filtered = allAuctions.stream().filter(auction -> {
-            // 1. Lọc theo Tab
-            if (currentTab.equals("DASHBOARD")) {
-                if (auction.getStatus() != AuctionStatus.RUNNING 
-                        && auction.getStatus() != AuctionStatus.OPEN 
-                        && auction.getStatus() != AuctionStatus.FINISHED
-                        && auction.getStatus() != AuctionStatus.PAID) {
-                    return false;
-                }
-                if (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID) {
-                    if (auction.getEndTime() != null && auction.getEndTime().plusDays(10).isBefore(java.time.LocalDateTime.now())) {
-                        return false;
-                    }
-                }
-            } else if (currentTab.equals("MY BIDS")) {
-                if (user instanceof Bidder bidder) {
-                    boolean bidPlaced = bidder.getProfile().getParticipatedAuctions().contains(auction.getId()) ||
-                            auction.getBidHistory().stream().anyMatch(tx -> tx.getBidderId() == bidder.getId());
-                    if (!bidPlaced) return false;
-                } else {
-                    return false;
-                }
-            } else if (currentTab.equals("WATCHLIST")) {
-                if (user instanceof Bidder bidder) {
-                    List<Integer> wl = bidder.getProfile().getWatchlist();
-                    if (wl == null || !wl.contains(auction.getId())) return false;
-                } else {
-                    return false;
-                }
-            } else if (currentTab.equals("HISTORY")) {
-                if (auction.getStatus() != AuctionStatus.FINISHED
-                        && auction.getStatus() != AuctionStatus.CANCELED
-                        && auction.getStatus() != AuctionStatus.PAID) {
-                    return false;
-                }
-                if (user instanceof Bidder bidder) {
-                    boolean won = (auction.getCurrentWinner() != null && auction.getCurrentWinner().getId() == bidder.getId())
-                            || bidder.getProfile().getWonAuctions().contains(auction.getId());
-                    boolean participated = bidder.getProfile().getParticipatedAuctions().contains(auction.getId())
-                            || auction.getBidHistory().stream().anyMatch(tx -> tx.getBidderId() == bidder.getId());
-                    if (!won && !participated) {
-                        return false;
-                    }
-                } else {
-                    return false;
-                }
-            }
-
-            // 2. Lọc theo trạng thái từ MenuButton
-            if (!statusFilter.equals("TRẠNG THÁI") && !statusFilter.equals("TẤT CẢ")) {
-                if (!auction.getStatus().toString().equals(statusFilter)) {
-                    return false;
-                }
-            }
-
-            // 3. Lọc theo danh mục từ MenuButton
-            if (!categoryFilter.equals("SẢN PHẨM") && !categoryFilter.equals("TẤT CẢ")) {
-                if (auction.getItem() == null || !auction.getItem().getCategory().toUpperCase().equals(categoryFilter)) {
-                    return false;
-                }
-            }
-
-            // 4. Lọc theo từ khóa tìm kiếm (ID, Tên, Mô tả)
-            if (!query.isEmpty()) {
-                String idStr = String.valueOf(auction.getId());
-                String itemName = (auction.getItem() != null && auction.getItem().getName() != null)
-                        ? auction.getItem().getName().toLowerCase() : "";
-                String itemDesc = (auction.getItem() != null && auction.getItem().getDescription() != null)
-                        ? auction.getItem().getDescription().toLowerCase() : "";
-
-                if (!idStr.contains(query) && !itemName.contains(query) && !itemDesc.contains(query)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }).collect(Collectors.toList());
-
+        List<Auction> filtered = BidderFilterManager.filter(allAuctions, user, currentTab, searchBar.getText(), statusFilter, categoryFilter);
         renderAuctionCards(filtered);
     }
 
@@ -573,77 +489,10 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    // Thay handleViewDetails bằng openLiveAuction
     private void openLiveAuction(Auction auction) {
-        // Kiểm tra xem phòng này đã được mở ở cửa sổ nào chưa
-        Stage existingStage = LiveAuctionController.getOpenStage(auction.getId());
-        if (existingStage != null) {
-            Platform.runLater(() -> {
-                existingStage.toFront();
-                existingStage.requestFocus();
-            });
-            return;
-        }
-
-        // Gọi GET_AUCTION_DETAIL để server đăng ký handler này là Observer
-        Task<Response> task = new Task<>() {
-            @Override
-            protected Response call() {
-                return ServerConnection.getInstance()
-                        .send(RequestType.GET_AUCTION_DETAIL, new GetAuctionDetailPayload(auction.getId(), true));
-            }
-        };
-
-        task.setOnSucceeded(evt -> {
-            Response res = task.getValue();
-            if (res == null || !res.isSuccess()) {
-                NotificationController.showError("Lỗi",
-                        "Không thể tải chi tiết phiên: "
-                                + (res != null ? res.getMessage() : "mất kết nối"));
-                return;
-            }
-
-            if (res.getData() instanceof Auction detailed) {
-                try {
-                Stage newStage = new Stage();
-                FXMLLoader loader = new FXMLLoader(
-                        getClass().getResource("/com/example/group11/liveAuction-view.fxml"));
-                Parent root = loader.load();
-                LiveAuctionController liveController = loader.getController();
-                
-                // Thiết lập previousRoot là null vì đây là cửa sổ mới riêng biệt, khi nhấn Back sẽ đóng cửa sổ này
-                liveController.setPreviousRoot(null, newStage, this);
-
-                liveController.setAuctionAndUser(detailed, user); // ← truyền dữ liệu vào controller
-
-                Scene scene = new Scene(root);
-                newStage.setScene(scene);
-                newStage.setTitle("HANK AUCTION - Phòng Đấu Giá: " + detailed.getItem().getName());
-                newStage.show();
-
-            } catch (java.io.IOException e) {
-                NotificationController.showError("Lỗi UI",
-                        "Không thể mở màn hình đấu giá.\n" + e.getMessage());
-            }
-            }
-        });
-
-        task.setOnFailed(evt ->
-                NotificationController.showError("Lỗi mạng", "Không thể kết nối server.")
-        );
-
-        Thread th = new Thread(task);
-        th.setDaemon(true);
-        th.start();
+        LiveAuctionNavigator.openLiveAuction(auction, user, this);
     }
 
-
-    /**
-     * Xử lý sự kiện khi người dùng nhấn đặt giá nhanh từ màn hình danh sách.
-     * Hiển thị hộp thoại nhập số tiền, kiểm tra số dư ví và gửi yêu cầu đặt giá lên máy chủ.
-     *
-     * @param auction Phiên đấu giá muốn đặt giá thầu
-     */
     private void handleBid(Auction auction) {
         if (auction.getStatus() == AuctionStatus.FINISHED) {
             handleConfirmPayment(auction);
@@ -678,40 +527,29 @@ public class BidderAuctionListController implements Initializable {
                     return;
                 }
 
-                Task<Response> bidTask = new Task<>() {
+                BidderActionService.placeBid(auction, bidAmount, user, new BidderActionService.ActionCallback() {
                     @Override
-                    protected Response call() throws Exception {
-                        PlaceBidPayload payload = new PlaceBidPayload();
-                        payload.auctionId = auction.getId();
-                        payload.amount = bidAmount;
-                        return ServerConnection.getInstance().send(RequestType.PLACE_BID, payload);
-                    }
-                };
-
-                bidTask.setOnSucceeded(evt -> {
-                    Response res = bidTask.getValue();
-                    if (res != null && res.isSuccess()) {
-                        NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
-                        if (user instanceof Bidder bidder) {
-                            double newBalance = (Double) res.getData();
-                            bidder.setBalance(newBalance);
-                            bidder.getProfile().addParticipatedAuction(auction.getId());
-                            walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
+                    public void onSuccess(Response res) {
+                        if (res != null && res.isSuccess()) {
+                            NotificationController.showNotification("Thành công", "Đã đặt giá thầu thành công!");
+                            if (user instanceof Bidder bidder) {
+                                double newBalance = (Double) res.getData();
+                                bidder.setBalance(newBalance);
+                                bidder.getProfile().addParticipatedAuction(auction.getId());
+                                walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
+                            }
+                            loadAuctions();
+                        } else {
+                            String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                            NotificationController.showError("Lỗi đặt giá", "Không thể đặt giá.\nChi tiết: " + errMsg);
                         }
-                        loadAuctions();
-                    } else {
-                        String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
-                        NotificationController.showError("Lỗi đặt giá", "Không thể đặt giá.\nChi tiết: " + errMsg);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable t) {
+                        NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu đặt giá.");
                     }
                 });
-
-                bidTask.setOnFailed(evt -> {
-                    NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu đặt giá.");
-                });
-
-                Thread t = new Thread(bidTask);
-                t.setDaemon(true);
-                t.start();
 
             } catch (NumberFormatException e) {
                 NotificationController.showError("Lỗi định dạng", "Vui lòng nhập một số hợp lệ.");
@@ -729,76 +567,53 @@ public class BidderAuctionListController implements Initializable {
         );
 
         if (confirm) {
-            Task<Response> payTask = new Task<>() {
+            BidderActionService.confirmPayment(auction, new BidderActionService.ActionCallback() {
                 @Override
-                protected Response call() throws Exception {
-                    return ServerConnection.getInstance().send(RequestType.CONFIRM_PAYMENT, auction.getId());
+                public void onSuccess(Response res) {
+                    if (res != null && res.isSuccess()) {
+                        NotificationController.showNotification("Thành công", "Đã xác nhận thanh toán thành công!");
+                        loadAuctions();
+                    } else {
+                        String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                        NotificationController.showError("Lỗi thanh toán", "Không thể thanh toán.\nChi tiết: " + errMsg);
+                    }
                 }
-            };
 
-            payTask.setOnSucceeded(evt -> {
-                Response res = payTask.getValue();
-                if (res != null && res.isSuccess()) {
-                    NotificationController.showNotification("Thành công", "Đã xác nhận thanh toán thành công!");
-                    loadAuctions();
-                } else {
-                    String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
-                    NotificationController.showError("Lỗi thanh toán", "Không thể thanh toán.\nChi tiết: " + errMsg);
+                @Override
+                public void onFailure(Throwable t) {
+                    NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu thanh toán.");
                 }
             });
-
-            payTask.setOnFailed(evt -> {
-                NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu thanh toán.");
-            });
-
-            Thread t = new Thread(payTask);
-            t.setDaemon(true);
-            t.start();
         }
     }
 
-    /**
-     * Thực hiện thêm hoặc xóa một phiên đấu giá khỏi danh sách theo dõi (Watchlist) của người dùng.
-     * Gửi yêu cầu tương ứng lên máy chủ và cập nhật lại giao diện.
-     *
-     * @param auction Phiên đấu giá cần thay đổi trạng thái theo dõi
-     */
     private void handleToggleWatchlist(Auction auction) {
         if (!(user instanceof Bidder bidder)) return;
         boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
-        RequestType type = isWatched ? RequestType.REMOVE_FROM_WATCHLIST : RequestType.ADD_TO_WATCHLIST;
 
-        Task<Response> task = new Task<>() {
+        BidderActionService.toggleWatchlist(auction, user, isWatched, new BidderActionService.ActionCallback() {
             @Override
-            protected Response call() throws Exception {
-                return ServerConnection.getInstance().send(type, auction.getId());
-            }
-        };
-
-        task.setOnSucceeded(evt -> {
-            Response res = task.getValue();
-            if (res != null && res.isSuccess()) {
-                if (isWatched) {
-                    bidder.getProfile().removeFromWatchlist(auction.getId());
-                    NotificationController.showNotification("Thành công", "Đã xóa khỏi danh sách theo dõi!");
+            public void onSuccess(Response res) {
+                if (res != null && res.isSuccess()) {
+                    if (isWatched) {
+                        bidder.getProfile().removeFromWatchlist(auction.getId());
+                        NotificationController.showNotification("Thành công", "Đã xóa khỏi danh sách theo dõi!");
+                    } else {
+                        bidder.getProfile().addToWatchlist(auction.getId());
+                        NotificationController.showNotification("Thành công", "Đã thêm vào danh sách theo dõi!");
+                    }
+                    applyFilters();
                 } else {
-                    bidder.getProfile().addToWatchlist(auction.getId());
-                    NotificationController.showNotification("Thành công", "Đã thêm vào danh sách theo dõi!");
+                    String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                    NotificationController.showError("Lỗi", "Không thể cập nhật danh sách theo dõi.\nChi tiết: " + errMsg);
                 }
-                applyFilters();
-            } else {
-                String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
-                NotificationController.showError("Lỗi", "Không thể cập nhật danh sách theo dõi.\nChi tiết: " + errMsg);
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu cập nhật danh sách theo dõi.");
             }
         });
-
-        task.setOnFailed(evt -> {
-            NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu cập nhật danh sách theo dõi.");
-        });
-
-        Thread t = new Thread(task);
-        t.setDaemon(true);
-        t.start();
     }
 
     /**
@@ -1032,20 +847,19 @@ public class BidderAuctionListController implements Initializable {
      *
      * @param event Sự kiện hành động của JavaFX
      */
+
     @FXML
     private void handleAddFunds(ActionEvent event) {
-        if (user instanceof Bidder bidder) {
-            if (!bidder.canTopUp()) {
-                if (bidder.getLastTopUpTime() != null) {
-                    java.time.Duration diff = java.time.Duration.between(java.time.LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
-                    long hours = diff.toHours();
-                    long mins = diff.toMinutesPart();
-                    NotificationController.showAlert("Thông báo", String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
-                } else {
-                    NotificationController.showAlert("Thông báo", "Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ.");
-                }
-                return;
+        if (!TopUpService.checkTopUpLimit(user)) {
+            if (user instanceof Bidder bidder && bidder.getLastTopUpTime() != null) {
+                java.time.Duration diff = java.time.Duration.between(java.time.LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
+                long hours = diff.toHours();
+                long mins = diff.toMinutesPart();
+                NotificationController.showAlert("Thông báo", String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
+            } else {
+                NotificationController.showAlert("Thông báo", "Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ.");
             }
+            return;
         }
 
         // Đặt lại trạng thái các gói nạp
@@ -1091,6 +905,7 @@ public class BidderAuctionListController implements Initializable {
             packageLabel = String.format("$%,.0f", amount);
         }
 
+        String finalPackageLabel = packageLabel;
         boolean confirm = NotificationController.showConfirmation(
                 "Xác nhận nạp tiền",
                 "Xác nhận nạp gói " + packageLabel + " vào tài khoản?",
@@ -1100,36 +915,28 @@ public class BidderAuctionListController implements Initializable {
         );
 
         if (confirm) {
-            if (user instanceof Bidder bidder) {
-                // Gửi request nạp tiền lên server để lưu vào database
-                Response res = ServerConnection.getInstance().send(RequestType.TOP_UP, amount);
-                if (res != null && res.isSuccess()) {
-                    double newBalance = (Double) res.getData();
-                    // Cập nhật lại đối tượng bidder ở phía client
-                    bidder.topUp(amount);
-                    bidder.setLastTopUpTime(java.time.LocalDateTime.now());
+            TopUpService.topUp(amount, user, new TopUpService.TopUpCallback() {
+                @Override
+                public void onSuccess(double newBalance) {
                     walletBalance.setText(String.format("%,.2f", newBalance));
-
-                    // Lưu trạng thái đã nạp tiền
-                    toppedUpBidders.add(bidder.getId());
-
-                    // Khóa nút cộng tiền
+                    if (user instanceof Bidder bidder) {
+                        toppedUpBidders.add(bidder.getId());
+                    }
                     addFundsBtn.setDisable(true);
-
                     NotificationController.showNotification("Thành công",
-                            String.format("Đã nạp thành công %s vào ví. Cổng nạp tiền hiện tại đã được khóa.", packageLabel));
-
-                    // Ẩn bảng nạp tiền
+                            String.format("Đã nạp thành công %s vào ví. Cổng nạp tiền hiện tại đã được khóa.", finalPackageLabel));
                     addFundsOverlay.setVisible(false);
                     addFundsOverlay.setManaged(false);
-                } else {
-                    NotificationController.showError("Lỗi nạp tiền", res != null ? res.getMessage() : "Không thể thực hiện nạp tiền");
+                }
+
+                @Override
+                public void onFailure(String message) {
+                    NotificationController.showError("Lỗi nạp tiền", message);
                     resetPackageStyles();
                     selectedPackageNode = null;
                 }
-            }
+            });
         } else {
-            // Người dùng hủy, đặt lại trạng thái các gói nạp
             resetPackageStyles();
             selectedPackageNode = null;
         }
@@ -1170,12 +977,6 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Ẩn/Hiện hộp thoại thông tin cá nhân thả xuống (Profile Dropdown) ở góc trên bên phải.
-     * Đồng thời ẩn Dropdown thông báo nếu đang mở.
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
     @FXML
     private void toggleProfileDropdown(ActionEvent event) {
         if (notificationDropdown.isVisible()) {
@@ -1188,12 +989,6 @@ public class BidderAuctionListController implements Initializable {
         profileDropdown.setManaged(!isVisible);
     }
 
-    /**
-     * Ẩn/Hiện hộp thoại danh sách thông báo thả xuống (Notification Dropdown).
-     * Đồng thời ẩn Dropdown thông tin cá nhân nếu đang mở.
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
     @FXML
     private void handleShowNotifications(ActionEvent event) {
         if (profileDropdown != null && profileDropdown.isVisible()) {
@@ -1211,11 +1006,6 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Xử lý sự kiện khi người dùng nhấn xem trang thông tin hồ sơ cá nhân.
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
     @FXML
     private void handleViewProfile(ActionEvent event) {
         System.out.println("Chuyển hướng đến trang Thông tin cá nhân...");
@@ -1224,12 +1014,6 @@ public class BidderAuctionListController implements Initializable {
         handleSwitchTab(new ActionEvent(btnSettings, null));
     }
 
-    /**
-     * Xử lý sự kiện đăng xuất tài khoản. Hiển thị hộp thoại xác nhận, ngắt kết nối
-     * thời gian thực và chuyển hướng người dùng quay trở lại giao diện Đăng nhập.
-     *
-     * @param event Sự kiện hành động của JavaFX
-     */
     @FXML
     private void handleLogout(ActionEvent event) {
         boolean confirm = NotificationController.showConfirmation(
@@ -1241,21 +1025,8 @@ public class BidderAuctionListController implements Initializable {
         );
         if (confirm) {
             try {
-                System.out.println("Đang thực hiện gửi yêu cầu đăng xuất lên Server...");
-                LiveAuctionController.clearEnteredAuctions();
-                // Gửi LOGOUT lên server TRƯỚC khi cắt kết nối để server dọn observer
-                try {
-                    ServerConnection.getInstance().send(com.auction.network.RequestType.LOGOUT, null);
-                } catch (Exception ignored) {}
-                ServerConnection.getInstance().stopListening();
-                ServerConnection.getInstance().disconnect();
-                FXMLLoader loader = GenerationSupport.changeScene(event, "login-view.fxml", "Đăng nhập");
-
-                if (loader != null) {
-                    user = null;
-                } else {
-                    System.err.println("Lỗi: Không thể tải giao diện login-view.fxml");
-                }
+                SessionManager.logout(event, user);
+                user = null;
             } catch (Exception e) {
                 System.err.println("Lỗi kết nối khi đăng xuất: " + e.getMessage());
                 NotificationController.showError("Lỗi kết nối", "Không thể kết nối tới Server để đăng xuất.");
@@ -1263,11 +1034,6 @@ public class BidderAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Tải dữ liệu profile vào view.
-     * Sau khi chuyển sang dùng ProfileViewFactory, phương thức này vẫn giữ để tương thích
-     * với các nơi khác gọi (điển hình: handleViewProfile dropdown).
-     */
     public void loadProfileData() {
         if (profileView == null || user == null) return;
         profileView.getChildren().clear();
@@ -1278,6 +1044,6 @@ public class BidderAuctionListController implements Initializable {
     }
 
     public void setupRealtimeNotificationsPublic() {
-        setupRealtimeNotifications(); // gọi lại method private hiện có
+        setupRealtimeNotifications();
     }
 }
