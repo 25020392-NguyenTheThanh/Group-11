@@ -12,17 +12,7 @@ import java.io.IOException;
 public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        // Kết nối tới server TRƯỚC khi mở bất kỳ màn hình nào
-        try {
-            ServerConnection.getInstance().connect();
-        } catch (IOException e) {
-            // Server chưa chạy — hiện thông báo lỗi
-            NotificationController.showError(
-                    "Lỗi Kết Nối Server!",
-                    "Không thể kết nối tới server!\nHãy chắc chắn rằng AuctionServer đã được chạy trước."
-            );
-            return; // thoát app
-        }
+        // BỎ phần connect ở đây, connect sẽ được xử lý trong LoginController
 
         FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
         Scene scene = new Scene(loader.load(), 1100, 750);
