@@ -52,6 +52,7 @@ public class UserManager {
                 .filter(u -> u.getUsername().equals(username))
                 .findFirst().orElse(null);
     }
+
     // Tìm user theo id.
     public User findUserById(int id) {
         return getUsers().stream()
@@ -59,6 +60,7 @@ public class UserManager {
                 .findFirst()
                 .orElse(null);
     }
+
     @Deprecated
     public void loadFromDisk() {
         System.out.println("[UserManager] loadFromDisk() đã bị bỏ — dữ liệu lấy từ MySQL.");
@@ -66,16 +68,47 @@ public class UserManager {
 
     @Deprecated
     public void saveToDisk() {
-        System.out.println("[UserManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");}
+        System.out.println("[UserManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");
+    }
 
     /** Đổi mật khẩu: hash rồi lưu DB, đồng thời cập nhật object trong RAM. */
     public boolean updatePassword(User user, String newPassword) {
         boolean ok = DataManager.getInstance().updatePassword(user.getId(), newPassword);
         if (ok) {
-            // Cập nhật RAM để các thao tác tiếp theo trong session dùng đúng password
             user.setPassWord(com.auction.security.PasswordUtil.hash(newPassword));
         }
         return ok;
     }
 
+    // =========================================================================
+    // --- CÁC HÀM BỔ SUNG DÀNH CHO PHÂN HỆ ADMIN ---
+    // =========================================================================
+
+    /**
+     * Phục vụ: handleAdminGetAllUsers
+     */
+    public List<User> getAllUsers() {
+        return DataManager.getInstance().getAllUsers();
+    }
+
+    /**
+     * Phục vụ: handleAdminBanUser
+     */
+    public boolean banUser(int userId, String reason) {
+        return DataManager.getInstance().updateUserStatus(userId, "BANNED", reason);
+    }
+
+    /**
+     * Phục vụ: handleAdminUnbanUser
+     */
+    public boolean unbanUser(int userId) {
+        return DataManager.getInstance().updateUserStatus(userId, "ACTIVE", null);
+    }
+
+    /**
+     * Phục vụ: handleAdminDeleteUser
+     */
+    public boolean deleteUserPermanently(int userId) {
+        return DataManager.getInstance().deleteUser(userId);
+    }
 }

@@ -286,5 +286,54 @@ public class UserRepository {
             return false;
         }
     }
+    // Thêm hàm này để xử lý Ban/Unban user
+    public boolean updateStatus(int userId, String status, String reason) {
+        String sql = "UPDATE users SET status = ?, ban_reason = ? WHERE id = ?";
+        try (java.sql.Connection conn = com.auction.data.DatabaseConnection.getConnection(); // Thay bằng class kết nối DB của bạn
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
 
+            ps.setString(1, status);
+            ps.setString(2, reason);
+            ps.setInt(3, userId);
+
+            return ps.executeUpdate() > 0;
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Thêm hàm này để xóa vĩnh viễn user
+    public boolean delete(int userId) {
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (java.sql.Connection conn = com.auction.data.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+            return ps.executeUpdate() > 0;
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Thêm hàm này để lấy danh sách log bảo mật (Audit Logs)
+    public java.util.List<String> getAuditLogs() {
+        java.util.List<String> logs = new java.util.ArrayList<>();
+        // Nếu bạn có bảng lịch sử hệ thống riêng (ví dụ: system_logs, audit_logs) thì query từ bảng đó.
+        // Dưới đây là phương án fallback đọc nhanh từ lịch sử lý do ban của các user:
+        String sql = "SELECT username, status, ban_reason FROM users WHERE ban_reason IS NOT NULL";
+        try (java.sql.Connection conn = com.auction.data.DatabaseConnection.getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql);
+             java.sql.ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                logs.add("User [" + rs.getString("username") + "] thay đổi trạng thái sang "
+                        + rs.getString("status") + " | Lý do: " + rs.getString("ban_reason"));
+            }
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return logs;
+    }
 }
