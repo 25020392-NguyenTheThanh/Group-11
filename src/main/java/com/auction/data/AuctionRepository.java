@@ -214,4 +214,34 @@ public class AuctionRepository {
             return false;
         }
     }
+    // Thêm hàm trả về một Map chứa các số liệu thống kê cho Admin Dashboard
+    public Object getSystemStatistics() {
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+
+        String sqlUser = "SELECT COUNT(*) FROM users";
+        String sqlItem = "SELECT COUNT(*) FROM items";
+        String sqlAuction = "SELECT COUNT(*) FROM auctions";
+
+        try (java.sql.Connection conn = com.auction.data.DatabaseConnection.getConnection()) {
+            // 1. Đếm số lượng Users
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sqlUser);
+                 java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("totalUsers", rs.getInt(1));
+            }
+            // 2. Đếm số lượng sản phẩm
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sqlItem);
+                 java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("totalItems", rs.getInt(1));
+            }
+            // 3. Đếm số lượng phiên đấu giá
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sqlAuction);
+                 java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) stats.put("totalAuctions", rs.getInt(1));
+            }
+
+        } catch (java.sql.SQLException e) {
+            e.printStackTrace();
+        }
+        return stats;
+    }
 }

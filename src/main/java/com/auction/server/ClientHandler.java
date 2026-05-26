@@ -131,6 +131,22 @@ public class ClientHandler implements Runnable , Observer {
             cleanup();
         }
     }
+    public void closeConnection() {
+        try {
+            // 1. Đóng các luồng dữ liệu nếu có (ObjectInputStream, ObjectOutputStream, BufferedReader...)
+            // Ví dụ nếu bạn dùng ObjectOutputStream đặt tên là out:
+            // if (out != null) out.close();
+            // if (in != null) in.close();
+
+            // 2. Đóng Socket vật lý kết nối với Client
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
+            System.out.println("[ClientHandler] Đã ngắt kết nối vật lý với client thành công.");
+        } catch (IOException e) {
+            System.err.println("Lỗi khi đóng kết nối Socket: " + e.getMessage());
+        }
+    }
 
     public void setLoggedInUser(User user) {
         this.loggedInUser = user;

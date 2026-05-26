@@ -5,6 +5,7 @@ import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
 import com.auction.pattern.factory.ItemFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -35,17 +36,14 @@ public class ItemManager {
      */
     public Item createItem(ItemFactory factory, int ownerId,
                            String name, String description, double startingPrice, String imageUrl) {
-        // Tạo tạm với id=0 để factory build đúng kiểu
         Item temp = factory.createItem(0, ownerId, name, description, startingPrice, imageUrl);
 
-        // Lưu vào MySQL — nhận id thật
         int dbId = DataManager.getInstance().addItem(temp);
         if (dbId == -1) {
             System.out.println("Lỗi lưu item vào DB: " + name);
             return null;
         }
 
-        // Tạo lại với id thật
         Item item = factory.createItem(dbId, ownerId, name, description, startingPrice, imageUrl );
         items.put(dbId, item);
 
@@ -53,12 +51,10 @@ public class ItemManager {
         return item;
     }
 
-    // Lấy item theo id — kiểm tra RAM trước, fallback về MySQL.
     public Item findItem(int id) {
         Item item = items.get(id);
         if (item != null) return item;
 
-        // Fallback: tìm trong DB rồi cache lại
         List<Item> all = DataManager.getInstance().getAllItems();
         for (Item i : all) {
             if (i.getId() == id) {
@@ -70,27 +66,22 @@ public class ItemManager {
         return null;
     }
 
-    // Lấy tất cả item đang AVAILABLE.
     public List<Item> getAvailableItems() {
         return items.values().stream()
                 .filter(i -> i.getStatus() == ItemStatus.AVAILABLE)
                 .collect(Collectors.toList());
     }
 
-    // Lấy item theo owner — từ MySQL để đảm bảo đủ dữ liệu ngay cả sau restart.
     public List<Item> getByOwner(int ownerId) {
         List<Item> fromDb = DataManager.getInstance().getItemsBySeller(ownerId);
-        // Đồng bộ cache
         fromDb.forEach(i -> items.put(i.getId(), i));
         return fromDb;
     }
 
-    // Xóa sản phẩm theo id khỏi database và cache.
     public boolean deleteItem(int id) {
         boolean success = DataManager.getInstance().deleteItem(id);
         if (success) {
             items.remove(id);
-            // Đồng bộ xóa cả phiên đấu giá liên kết khỏi cache RAM
             AuctionManager.getInstance().getAuctions().stream()
                     .filter(a -> a.getItem() != null && a.getItem().getId() == id)
                     .findFirst()
@@ -99,7 +90,6 @@ public class ItemManager {
         return success;
     }
 
-    // Cập nhật sản phẩm.
     public boolean updateItem(Item item) {
         boolean success = DataManager.getInstance().updateItem(item);
         if (success) {
@@ -108,7 +98,6 @@ public class ItemManager {
         return success;
     }
 
-    // Cập nhật trạng thái sản phẩm (đồng bộ cache và DB).
     public boolean updateItemStatus(int itemId, ItemStatus status) {
         boolean success = DataManager.getInstance().updateItemStatus(itemId, status);
         if (success) {
@@ -116,6 +105,48 @@ public class ItemManager {
             if (item != null) {
                 item.setStatus(status);
             }
+        }
+        return success;
+    }
+
+    // =========================================================================
+    // --- CÁC HÀM BỔ SUNG DÀNH CHO PHÂN HỆ ADMIN ---
+    // =========================================================================
+
+    /**
+     * Phục vụ: handleAdminGetAllItems
+     */
+    public List<Item> getAllItemsInSystem() {
+        List<Item> allItems = DataManager.getInstance().getAllItems();
+        if (allItems != null) {
+            allItems.forEach(i -> items.put(i.getId(), i));
+            return allItems;
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * Phục vụ: handleAdminForceDeleteItem
+     */
+    public boolean forceDeleteItemByAdmin(int itemId) {
+        Item item = findItem(itemId);
+        if (item == null) return false;
+
+        // Xử lý ràng buộc nếu mặt hàng đang trong một phiên đấu giá tích cực
+        if (item.getStatus() == ItemStatus.IN_AUCTION) {
+            AuctionManager.getInstance().getAuctions().stream()
+                    .filter(a -> a.getItem() != null && a.getItem().getId() == itemId)
+                    .findFirst()
+                    .ifPresent(a -> {
+                        AuctionManager.getInstance().cancelAuctionByAdmin(a.getId(), "Sản phẩm bị cưỡng chế xóa bởi Admin.");
+                        AuctionManager.getInstance().removeAuctionFromCache(a.getId());
+                    });
+        }
+
+        boolean success = DataManager.getInstance().deleteItem(itemId);
+        if (success) {
+            items.remove(itemId);
+            System.out.println("[ItemManager] Admin đã cưỡng chế xóa thành công sản phẩm ID: " + itemId);
         }
         return success;
     }

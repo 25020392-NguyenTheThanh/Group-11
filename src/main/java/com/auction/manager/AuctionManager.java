@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-// AuctionManager — quản lý phiên đấu giá + đồng bộ MySQL.
 public class AuctionManager {
 
     private static volatile AuctionManager instance;
@@ -22,8 +21,7 @@ public class AuctionManager {
     private final ConcurrentHashMap<Integer, Auction> auctions = new ConcurrentHashMap<>();
     private final AtomicInteger auctionCounter = new AtomicInteger(1);
 
-    private AuctionManager() {
-    }
+    private AuctionManager() {}
 
     public static AuctionManager getInstance() {
         if (instance == null) {
@@ -58,25 +56,20 @@ public class AuctionManager {
         Auction auction = new Auction(dbId, item, startTime, endTime, minBidStep);
         auctions.put(dbId, auction);
 
-        System.out.printf("Phiên #%d tạo cho [%s] — kết thúc: %s%n",
-                dbId, item.getName(), endTime);
+        System.out.printf("Phiên #%d tạo cho [%s] — kết thúc: %s%n", dbId, item.getName(), endTime);
         return auction;
     }
 
     // Ghi nhận một lần đặt giá: cập nhật + MySQL + lưu lịch sử bid.
     public void recordBid(int auctionId, int bidderId, String bidderName, double amount, String bidType) {
-        // Cập nhật bảng auctions (current_highest_bid, current_winner_id)
         DataManager.getInstance().updateAuctionBid(auctionId, bidderId, amount);
-        // Ghi lịch sử vào bid_transactions
         DataManager.getInstance().saveBidTransaction(auctionId, bidderId, bidderName, amount, bidType);
     }
 
     // Kết thúc phiên: cập nhật đúng trạng thái (FINISHED hoặc CANCELED) trong MySQL.
     public void finishAuction(int auctionId) {
         Auction auction = auctions.get(auctionId);
-        String finalStatus = (auction != null)
-                ? auction.getStatus().name()   // lấy trạng thái thực tế từ RAM
-                : "FINISHED";
+        String finalStatus = (auction != null) ? auction.getStatus().name() : "FINISHED";
         DataManager.getInstance().finishAuction(auctionId, finalStatus);
     }
 
@@ -116,7 +109,6 @@ public class AuctionManager {
             a.getBidHistory().clear();
             a.getBidHistory().addAll(history);
 
-            // Khôi phục giá cao nhất và người thắng cuộc từ lịch sử thực tế nếu có lịch sử đặt giá
             if (!history.isEmpty()) {
                 BidTransaction highestBidTx = history.get(history.size() - 1);
                 a.restoreHighestBid(highestBidTx.getAmount());
@@ -124,11 +116,9 @@ public class AuctionManager {
                 if (winner instanceof com.auction.model.user.Bidder b) {
                     a.restoreCurrentWinner(b);
                 }
-                // Đồng bộ ngược lại bảng auctions để dọn sạch dữ liệu cũ/lệch trong DB
                 DataManager.getInstance().updateAuctionBid(a.getId(), highestBidTx.getBidderId(), highestBidTx.getAmount());
             }
 
-            // Tự động kích hoạt nếu phiên OPEN đã đến giờ bắt đầu lúc khởi động server
             if (a.getStatus() == AuctionStatus.OPEN && (a.getStartTime() == null || !a.getStartTime().isAfter(now))) {
                 try {
                     a.start();
@@ -178,5 +168,38 @@ public class AuctionManager {
     @Deprecated
     public void saveToDisk() {
         System.out.println("[AuctionManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");
+    }
+
+    // =========================================================================
+    // --- CÁC HÀM BỔ SUNG DÀNH CHO PHÂN HỆ ADMIN ---
+    // =========================================================================
+
+    /**
+     * Phục vụ: handleAdminGetAllAuctions
+     */
+    public List<Auction> getAllAuctionsIncludingInactive() {
+        // Đồng bộ đọc mới dữ liệu từ Database lên
+        List<Auction> dbAuctions = DataManager.getInstance().getAllAuctions();
+        for (Auction a : dbAuctions) {
+            auctions.put(a.getId(), a); // Cập nhật/ghi đè lại vào Runtime Cache RAM
+        }
+        return auctions.values().stream().collect(Collectors.toList());
+    }
+
+    /**
+     * Phục vụ: handleAdminCancelAuction
+     */
+    public boolean cancelAuctionByAdmin(int auctionId, String reason) {
+        // Cập nhật trạng thái "CANCELED" xuống DB
+        boolean ok = DataManager.getInstance().finishAuction(auctionId, "CANCELED");
+        if (ok) {
+            Auction auction = auctions.get(auctionId);
+            if (auction != null) {
+                // Thay đổi trạng thái đối tượng đấu giá sang CANCELED ngay trên bộ nhớ tạm RAM
+                auction.restoreStatus(AuctionStatus.CANCELED);
+            }
+            System.out.println("[AuctionManager] Admin đã hủy phiên đấu giá #" + auctionId + " | Lý do: " + reason);
+        }
+        return ok;
     }
 }
