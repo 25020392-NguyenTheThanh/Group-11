@@ -1,33 +1,3 @@
--- 1. Xem các bid trùng (cùng bidder + amount + timestamp)
-SELECT bidder_id, bidder_name, amount, bid_time, COUNT(*) as cnt
-FROM bid_transactions
-WHERE auction_id = 8
-GROUP BY bidder_id, bidder_name, amount, bid_time
-HAVING COUNT(*) > 1;
-
--- 2. Xóa bid trùng, chỉ giữ id nhỏ nhất (Sửa lỗi MySQL Target Table)
-DELETE b1 FROM bid_transactions b1
-INNER JOIN bid_transactions b2
-WHERE b1.auction_id = 8
-  AND b2.auction_id = 8
-  AND b1.bidder_id = b2.bidder_id
-  AND b1.amount = b2.amount
-  AND b1.bid_time = b2.bid_time
-  AND b1.id > b2.id; -- Xóa dòng có ID lớn hơn, giữ lại ID nhỏ nhất
-
--- 3. Thêm cột phân biệt nguồn bid
-ALTER TABLE bid_transactions
-    ADD COLUMN bid_type ENUM('manual', 'auto') DEFAULT 'manual';
--- Xoá CSDL cũ
-DROP DATABASE IF EXISTS auction_system;
-
--- Tạo Database auction 
-CREATE DATABASE auction_system
-	CHARACTER SET utf8mb4 -- Chỉ định bảng mã cho database (ở đây là Unicode đầy đủ)
-    COLLATE utf8mb4_unicode_ci; -- Quy tắc so sánh theo chuẩn Unicode và ci-không pb hoa thường
-
-USE auction_system;
-
 -- Bảng Users (thông tin chung)
 CREATE TABLE users (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, 
@@ -36,14 +6,14 @@ CREATE TABLE users (
     email VARCHAR(100) NOT NULL UNIQUE,
     role ENUM('BIDDER','SELLER','ADMIN') NOT NULL,
     active TINYINT(1) NOT NULL DEFAULT 1, -- Trạng thái tài khoản (hoạt động trả giá trị 1)
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP -- Tự lưu thời gian tạo tài khoản
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Tự lưu thời gian tạo tài khoản
 );
 
 -- Bảng Bidders (thông tin riêng của bidders)
 CREATE TABLE bidders (
     user_id INT NOT NULL PRIMARY KEY, 
     balance DECIMAL(18,2) NOT NULL DEFAULT 0.00,
-    last_top_up_time DATETIME DEFAULT NULL,
+    last_top_up_time TIMESTAMP NULL DEFAULT NULL,
     CONSTRAINT fk_bidder_user FOREIGN KEY (user_id) REFERENCES users(id) -- Ràng buộc bidders.user_id phải tồn tại trong users.id
 	ON DELETE CASCADE -- Néu user.id bị xoá thì bidders.user_id xoá theo
     ON UPDATE CASCADE  -- Néu user.id thay đổi thì bidders.user_id thay đổi theo
@@ -72,7 +42,7 @@ CREATE TABLE items (
 	artist VARCHAR(100),  -- chỉ art
     brand VARCHAR(100),  -- chỉ electronics
 	manufacture_year SMALLINT, -- chỉ vehicle 
-	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, -- tự lưu thời gian tạo item
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- tự lưu thời gian tạo item
     CONSTRAINT fk_item_seller FOREIGN KEY (owner_id) REFERENCES users(id) 
 	ON DELETE RESTRICT -- Không cho xoá user nếu còn item
     ON UPDATE CASCADE -- Néu user.id thay đổi thì item.owner_id thay đổi theo
@@ -88,7 +58,7 @@ CREATE TABLE auctions (
     start_time DATETIME NOT NULL, -- Thời gian bắt đầu đấu giá
 	end_time DATETIME NOT NULL, -- Thời gian kết thúc đấu giá
     min_bid_step DECIMAL(18,2) NOT NULL DEFAULT 0.00, -- Giá đấu đặt tối thiểu
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, 
     CONSTRAINT fk_auction_item FOREIGN KEY (item_id) REFERENCES items(id)
 	ON DELETE RESTRICT 
 	ON UPDATE CASCADE,
@@ -104,7 +74,7 @@ CREATE TABLE bid_transactions (
     bidder_id INT NOT NULL,
     bidder_name VARCHAR(50) NOT NULL,
     amount DECIMAL(18,2) NOT NULL,
-    bid_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    bid_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     bid_type ENUM('MANUAL','AUTO') NOT NULL DEFAULT 'MANUAL',
     CONSTRAINT fk_bid_auction FOREIGN KEY (auction_id) REFERENCES auctions(id)
 	ON DELETE CASCADE 
@@ -115,35 +85,20 @@ CREATE TABLE bid_transactions (
     INDEX idx_auction_time (auction_id, bid_time)
 );
 
--- Bảng bidder_watchlist (danh sách phiên theo dõi)
-CREATE TABLE bid_watchlist (
-	bidder_id INT NOT NULL,
-    auction_id INT NOT NULL,
-    PRIMARY KEY (bidder_id, auction_id),
-    CONSTRAINT fk_wl_bidder  FOREIGN KEY (bidder_id)  REFERENCES users(id)   
-    ON DELETE CASCADE,
-    CONSTRAINT fk_wl_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) 
-    ON DELETE CASCADE
-);
+-- Các truy vấn xử lý bid (chạy sau khi đã tạo bảng)
+-- 1. Xem các bid trùng (cùng bidder + amount + timestamp)
+SELECT bidder_id, bidder_name, amount, bid_time, COUNT(*) as cnt
+FROM bid_transactions
+WHERE auction_id = 8
+GROUP BY bidder_id, bidder_name, amount, bid_time
+HAVING COUNT(*) > 1;
 
--- Bảng bidder_participated  (phiên đã từng đặt giá)
-CREATE TABLE bidder_participated (
-    bidder_id INT NOT NULL,
-    auction_id INT NOT NULL,
-    PRIMARY KEY (bidder_id, auction_id),
-    CONSTRAINT fk_part_bidder  FOREIGN KEY (bidder_id)  REFERENCES users(id)   
-    ON DELETE CASCADE,
-    CONSTRAINT fk_part_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) 
-    ON DELETE CASCADE
-);
-
--- Bảng bidder_won (phiên đã thắng)
-CREATE TABLE bidder_won (
-	bidder_id  INT NOT NULL,
-    auction_id INT NOT NULL,
-    PRIMARY KEY (bidder_id, auction_id),
-    CONSTRAINT fk_won_bidder FOREIGN KEY (bidder_id) REFERENCES users(id)   
-    ON DELETE CASCADE,
-    CONSTRAINT fk_won_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) 
-    ON DELETE CASCADE
-);
+-- 2. Xóa bid trùng, chỉ giữ id nhỏ nhất (Sửa lỗi MySQL Target Table)
+DELETE b1 FROM bid_transactions b1
+INNER JOIN bid_transactions b2
+WHERE b1.auction_id = 8
+  AND b2.auction_id = 8
+  AND b1.bidder_id = b2.bidder_id
+  AND b1.amount = b2.amount
+  AND b1.bid_time = b2.bid_time
+  AND b1.id > b2.id; -- Xóa dòng có ID lớn hơn, giữ lại ID nhỏ nhất

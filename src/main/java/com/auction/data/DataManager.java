@@ -53,6 +53,7 @@ public class DataManager {
     }
 
     public List<User> getAllUsers() { return userRepo.findAll(); }
+
     public boolean deleteItem(int id) {
         return itemRepo.delete(id);
     }
@@ -71,8 +72,8 @@ public class DataManager {
     public List<Item> getAllItems() { return itemRepo.findAll(); }
 
     // Auction
-    public int createAuction(int itemId,LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
-        return auctionRepo.create(itemId,startTime, endTime, minBidStep);
+    public int createAuction(int itemId, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
+        return auctionRepo.create(itemId, startTime, endTime, minBidStep);
     }
 
     public boolean updateAuctionBid(int auctionId, int bidderId, double amount) {
@@ -103,7 +104,6 @@ public class DataManager {
     }
 
     // BidTransaction
-
     public void saveBidTransaction(int auctionId, int bidderId, String bidderName, double amount, String bidType) {
         bidRepo.save(auctionId, bidderId, bidderName, amount, bidType);
     }
@@ -155,4 +155,36 @@ public class DataManager {
         return auctionRepo.payAuction(auctionId);
     }
 
+    // =========================================================================
+    // --- CÁC HÀM BỔ SUNG DÀNH CHO PHÂN HỆ ADMIN ---
+    // =========================================================================
+
+    /**
+     * Phục vụ: UserManager.banUser và unbanUser
+     */
+    public boolean updateUserStatus(int userId, String status, String reason) {
+        return userRepo.updateStatus(userId, status, reason);
+    }
+
+    /**
+     * Phục vụ: UserManager.deleteUserPermanently
+     */
+    public boolean deleteUser(int userId) {
+        return userRepo.delete(userId);
+    }
+
+    /**
+     * Phục vụ: handleAdminGetStats
+     */
+    public Object getSystemStatisticsDto() {
+        // Ủy quyền xuống cho AuctionRepository hoặc một Thống kê chung xử lý tính toán số liệu
+        return auctionRepo.getSystemStatistics();
+    }
+
+    /**
+     * Phục vụ: handleAdminGetAuditLog
+     */
+    public List<?> getSecurityAuditLogs() {
+        return userRepo.getAuditLogs();
+    }
 }

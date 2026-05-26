@@ -187,4 +187,37 @@ public class AuctionManager {
     public void saveToDisk() {
         System.out.println("[AuctionManager] saveToDisk() đã bị bỏ — dữ liệu lưu vào MySQL.");
     }
+
+    // =========================================================================
+    // --- CÁC HÀM BỔ SUNG DÀNH CHO PHÂN HỆ ADMIN ---
+    // =========================================================================
+
+    /**
+     * Phục vụ: handleAdminGetAllAuctions
+     */
+    public List<Auction> getAllAuctionsIncludingInactive() {
+        // Đồng bộ đọc mới dữ liệu từ Database lên
+        List<Auction> dbAuctions = DataManager.getInstance().getAllAuctions();
+        for (Auction a : dbAuctions) {
+            auctions.put(a.getId(), a); // Cập nhật/ghi đè lại vào Runtime Cache RAM
+        }
+        return auctions.values().stream().collect(Collectors.toList());
+    }
+
+    /**
+     * Phục vụ: handleAdminCancelAuction
+     */
+    public boolean cancelAuctionByAdmin(int auctionId, String reason) {
+        // Cập nhật trạng thái "CANCELED" xuống DB
+        boolean ok = DataManager.getInstance().finishAuction(auctionId, "CANCELED");
+        if (ok) {
+            Auction auction = auctions.get(auctionId);
+            if (auction != null) {
+                // Thay đổi trạng thái đối tượng đấu giá sang CANCELED ngay trên bộ nhớ tạm RAM
+                auction.restoreStatus(AuctionStatus.CANCELED);
+            }
+            System.out.println("[AuctionManager] Admin đã hủy phiên đấu giá #" + auctionId + " | Lý do: " + reason);
+        }
+        return ok;
+    }
 }
