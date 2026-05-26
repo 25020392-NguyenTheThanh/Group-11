@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 public class ServerConnection {
 
     // Địa chỉ server
-    public static final String DEFAULT_HOST = "sql12.freesqldatabase.com";
+    public static final String DEFAULT_HOST = "localhost";
 
     // Port server
     public static final int DEFAULT_PORT = 9999;
