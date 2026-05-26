@@ -13,29 +13,6 @@ import java.util.Map;
  * Cung cấp các phương thức điều hướng tab, chuyển đổi view, và định dạng trạng thái nút bấm.
  */
 public class AuctionUIHelper {
-    @FXML
-    public static Button btnAnalytics;
-
-    @FXML
-    public static Button btnMyListings;
-
-    @FXML
-    public static Button btnOrderHistory;
-
-    @FXML
-    public static Button btnSettings;
-
-    @FXML
-    public static VBox myListingsView;
-
-    @FXML
-    public static VBox orderHistoryView;
-
-    @FXML
-    public static VBox registerProductView;
-
-    @FXML
-    public static VBox analyticsPane;
 
     public static boolean needsRefresh = true;
 
