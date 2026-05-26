@@ -15,10 +15,10 @@ import java.util.function.Consumer;
 public class ServerConnection {
 
     // Địa chỉ server
-    private static final String HOST = "localhost";
+    public static final String DEFAULT_HOST = "localhost";
 
     // Port server
-    private static final int PORT = 9999;
+    public static final int DEFAULT_PORT = 9999;
 
     // Singleton instance
     // volatile giúp đồng bộ thread an toàn
@@ -67,8 +67,11 @@ public class ServerConnection {
         return instance;
     }
 
-    // Kết nối tới server
     public synchronized void connect() throws IOException {
+        connect(DEFAULT_HOST , DEFAULT_PORT);
+    }
+    // Kết nối tới server
+    public synchronized void connect(String host , int port) throws IOException {
 
         // Reset hoàn toàn trạng thái cũ trước khi kết nối mới
         listenerThread    = null;
@@ -76,7 +79,7 @@ public class ServerConnection {
         requestInProgress = false;
 
         // Tạo socket với timeout đọc 30 giây để tránh block vô hạn
-        socket = new Socket(HOST, PORT);
+        socket = new Socket(host , port);
         socket.setSoTimeout(30_000); // 30 s read timeout
 
         // Tạo output stream trước — tránh deadlock
