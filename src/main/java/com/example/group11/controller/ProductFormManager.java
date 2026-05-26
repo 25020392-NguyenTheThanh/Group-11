@@ -10,8 +10,19 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.scene.image.Image;
 
+/**
+ * Trình quản lý biểu mẫu sản phẩm (Product Form Manager).
+ * Hỗ trợ Controller thiết lập và điều khiển các trường thông tin đầu vào cho biểu mẫu đăng ký
+ * và chỉnh sửa sản phẩm đấu giá của Người bán (Seller).
+ */
 public class ProductFormManager {
 
+    /**
+     * Khởi tạo các danh mục sản phẩm (Electronics, Vehicle, Art) bên trong thực đơn thả xuống (MenuButton).
+     * Gắn kèm logic thay đổi biểu mẫu nhập động tương ứng với từng danh mục được chọn.
+     *
+     * @param controller Đối tượng Controller của màn hình Người bán
+     */
     public static void setupCategoryMenuItems(SellerAuctionListController controller) {
         MenuItem menuItemElectronics = new MenuItem("Electronics");
         MenuItem menuItemVehicle = new MenuItem("Vehicle");
@@ -24,6 +35,15 @@ public class ProductFormManager {
         controller.categoryMenuButton.getItems().setAll(menuItemElectronics, menuItemVehicle, menuItemArt);
     }
 
+    /**
+     * Xử lý thay đổi các trường nhập thuộc tính động của sản phẩm dựa trên danh mục được chọn.
+     * Tạo thêm Label và TextField tùy chọn tương ứng (Thương hiệu cho Electronics, Nghệ sĩ cho Art, Năm sản xuất cho Vehicle).
+     *
+     * @param controller   Đối tượng Controller của màn hình Người bán
+     * @param categoryName Tên danh mục được chọn (Electronics, Vehicle, Art)
+     * @param labelText    Tiêu đề hiển thị cho trường động
+     * @param promptText   Gợi ý nhập liệu cho trường động
+     */
     public static void handleCategorySelection(SellerAuctionListController controller, String categoryName, String labelText, String promptText) {
         controller.categoryMenuButton.setText(categoryName);
 
@@ -46,6 +66,14 @@ public class ProductFormManager {
         }
     }
 
+    /**
+     * Kích hoạt chế độ chỉnh sửa thông tin cho một sản phẩm cụ thể.
+     * Đưa thông tin sản phẩm hiện tại vào form nhập, khóa các trường liên quan đến cấu hình phiên đấu giá
+     * và đổi tiêu đề nút sang "LƯU THAY ĐỔI".
+     *
+     * @param controller Đối tượng Controller của màn hình Người bán
+     * @param item       Đối tượng sản phẩm cần chỉnh sửa
+     */
     public static void handleStartEditProduct(SellerAuctionListController controller, Item item) {
         controller.editingItem = item;
 
@@ -125,6 +153,11 @@ public class ProductFormManager {
         AuctionUIHelper.showView(controller.registerProductView, controller.allViews);
     }
 
+    /**
+     * Xóa sạch dữ liệu và khôi phục trạng thái mặc định ban đầu của biểu mẫu đăng ký sản phẩm.
+     *
+     * @param controller Đối tượng Controller của màn hình Người bán
+     */
     public static void clearRegistrationForm(SellerAuctionListController controller) {
         controller.productNameField.clear();
         controller.startingPriceField.clear();

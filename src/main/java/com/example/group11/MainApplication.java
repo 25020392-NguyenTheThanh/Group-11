@@ -15,7 +15,7 @@ public class MainApplication extends Application {
         // BỎ phần connect ở đây, connect sẽ được xử lý trong LoginController
 
         FXMLLoader loader = new FXMLLoader(MainApplication.class.getResource("login-view.fxml"));
-        Scene scene = new Scene(loader.load(), 1100, 750);
+        Scene scene = new Scene(loader.load(), 1280, 800);
         stage.setTitle("Welcome to Auction Floor!");
         stage.setScene(scene);
         stage.setOnCloseRequest(e -> {

@@ -19,14 +19,14 @@
 <?import javafx.scene.text.Font?>
 
 <?import javafx.scene.layout.RowConstraints?>
-<StackPane alignment="TOP_RIGHT" prefHeight="750.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.BidderAuctionListController">
+<StackPane alignment="TOP_RIGHT" prefHeight="800.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.BidderAuctionListController">
     <children>
         <!-- GIAO DIỆN CHÍNH (BorderPane) -->
         <BorderPane fx:id="mainPane" style="-fx-background-color: #0A192F;">
 
             <!-- HEADER (TOP) -->
             <top>
-                <HBox alignment="CENTER_LEFT" prefHeight="75.0" spacing="20.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent transparent #1E2D45 transparent; -fx-border-width: 1;" BorderPane.alignment="CENTER">
+                <HBox alignment="CENTER_LEFT" prefHeight="90.0" spacing="20.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent transparent #1E2D45 transparent; -fx-border-width: 1;" BorderPane.alignment="CENTER">
                     <children>
                         <!-- LOGO -->
                         <Label text="HANK AUCTIONS" textFill="#ffd700">
@@ -113,7 +113,7 @@
 
             <!-- SIDEBAR (LEFT) -->
             <left>
-                <VBox prefWidth="240.0" spacing="2.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent #1E2D45 transparent transparent;" BorderPane.alignment="CENTER">
+                <VBox prefWidth="270.0" spacing="2.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent #1E2D45 transparent transparent;" BorderPane.alignment="CENTER">
                     <children>
                         <VBox fx:id="auctionLive" onMouseClicked="#handleHammerPortalClick" spacing="5.0" style="-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;">
                             <children>
@@ -124,19 +124,19 @@
                             <VBox.margin><Insets bottom="20.0" left="15.0" right="15.0" top="20.0" /></VBox.margin>
                         </VBox>
 
-                        <Button fx:id="btnDashboardS" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   DASHBOARD">
+                        <Button fx:id="btnDashboardS" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   DASHBOARD">
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
-                        <Button fx:id="btnMyBids" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   MY BIDS">
+                        <Button fx:id="btnMyBids" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   MY BIDS">
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
-                        <Button fx:id="btnWatchlist" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   WATCHLIST">
+                        <Button fx:id="btnWatchlist" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   WATCHLIST">
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
-                        <Button fx:id="btnHistory" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   HISTORY">
+                        <Button fx:id="btnHistory" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   HISTORY">
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
-                        <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="50.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   SETTINGS">
+                        <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   SETTINGS">
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
                     </children>
@@ -168,9 +168,9 @@
 
                                         <GridPane fx:id="contentGrid" hgap="25.0" vgap="25.0">
                                             <columnConstraints>
-                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="33.33" />
+                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="33.33" />
+                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="33.33" />
                                             </columnConstraints>
                                         </GridPane>
                                     </children>
