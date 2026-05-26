@@ -20,6 +20,19 @@ public enum RequestType {
     CANCEL_AUTO_BID, // hủy auto bid
     CHANGE_PASSWORD, // đổi mật khẩu
     VERIFY_USERNAME, // xác thực username quên mật khẩu
-    RESET_PASSWORD // khôi phục mật khẩu mới
+    RESET_PASSWORD ,// khôi phục mật khẩu mới
+    ADMIN_GET_ALL_USERS,          // Xem danh sách toàn bộ user
+    ADMIN_BAN_USER,              // Khóa tài khoản
+    ADMIN_UNBAN_USER,            // Mở khóa tài khoản
+    ADMIN_DELETE_USER,           // Xóa hẳn user
+    ADMIN_RESET_USER_PASSWORD,   // Đặt lại mật khẩu cho user
+    ADMIN_GET_ALL_AUCTIONS,      // Xem tất cả phiên đấu giá
+    ADMIN_CANCEL_AUCTION,        // Hủy phiên đấu giá
+    ADMIN_GET_ALL_ITEMS,         // Xem toàn bộ sản phẩm
+    ADMIN_FORCE_DELETE_ITEM,     // Xóa sản phẩm bất kỳ (kể cả IN_AUCTION)
+    ADMIN_GET_STATS,             // Thống kê hệ thống
+    ADMIN_GET_AUDIT_LOG,         // Xem log bảo mật
+    ADMIN_GET_ACTIVE_SESSIONS,   // Xem session đang hoạt động
+    ADMIN_KICK_USER              // Ngắt kết nối 1 user
 }
 
