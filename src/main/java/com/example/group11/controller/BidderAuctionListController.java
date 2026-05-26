@@ -621,7 +621,7 @@ public class BidderAuctionListController implements Initializable {
      * Cập nhật danh sách đấu giá hoặc hiển thị hộp thoại cảnh báo khi có sự thay đổi hoặc sự kiện đặc biệt.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
+        RealtimeNotificationService.setupRealtimeNotifications(realtimeListener);
     }
     /**
      * Cập nhật giá realtime trên card đấu giá đang hiển thị,
@@ -744,23 +744,7 @@ public class BidderAuctionListController implements Initializable {
      * @param notification Đối tượng thông báo nhận được từ hệ thống
      */
     private String getFriendlyMessage(Notification notification) {
-        String type = notification.getType();
-        Object data = notification.getData();
-        String text = data != null ? data.toString() : "";
-
-        return switch (type) {
-            case "OUTBID" -> "⚠️ Bạn đã bị vượt giá! " + text;
-            case "BID_SUCCESS" -> "✅ " + text;
-            case "PAYMENT_SUCCESS" -> "💰 " + text;
-            case "ENDING_SOON" -> "⏳ " + text;
-            case "WATCHLIST_STARTED" -> "▶️ " + text;
-            case "AUCTION_WON" -> "🏆 Chúc mừng! " + text;
-            case "AUCTION_LOST" -> "❌ " + text;
-            case "PRODUCT_APPROVED" -> "✔️ " + text;
-            case "AUCTION_CREATED" -> "📅 " + text;
-            case "NEW_AUCTION" -> "🆕 " + text;
-            default -> "[" + type + "] " + text;
-        };
+        return RealtimeNotificationService.getFriendlyMessage(notification);
     }
 
     private void setupNotificationBadge() {

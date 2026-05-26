@@ -111,7 +111,7 @@ public class SellerAuctionListController implements Initializable {
 
 
     @FXML
-    private MenuButton categoryMenuButton;
+    MenuButton categoryMenuButton;
 
     @FXML
     private TableColumn<Order, String> colBuyer;
@@ -135,10 +135,10 @@ public class SellerAuctionListController implements Initializable {
     GridPane contentGrid;
 
     @FXML
-    private TextArea descriptionArea;
+    TextArea descriptionArea;
 
     @FXML
-    private DatePicker endDatePicker;
+    DatePicker endDatePicker;
 
     @FXML
     private TextField filterSearchId;
@@ -156,10 +156,10 @@ public class SellerAuctionListController implements Initializable {
     private BorderPane mainPane;
 
     @FXML
-    private TextField minimumBidIncrementField;
+    TextField minimumBidIncrementField;
 
     @FXML
-    private VBox myListingsView;
+    VBox myListingsView;
 
     @FXML
     private VBox notificationDropdown;
@@ -177,16 +177,16 @@ public class SellerAuctionListController implements Initializable {
     private TextField searchOrderField;
 
     @FXML
-    private ImageView productImageView;
+    ImageView productImageView;
 
     @FXML
-    private TextField productNameField;
+    TextField productNameField;
 
     @FXML
     private VBox profileDropdown;
 
     @FXML
-    private VBox registerProductView;
+    VBox registerProductView;
 
     @FXML
     private BarChart<String, Number> revenueChart;
@@ -195,21 +195,21 @@ public class SellerAuctionListController implements Initializable {
     private Label soldProductsLabel;
 
     @FXML
-    private DatePicker startDatePicker;
+    DatePicker startDatePicker;
 
     @FXML
-    private TextField startingPriceField;
+    TextField startingPriceField;
 
     @FXML
-    private Button submitButton;
+    Button submitButton;
 
     @FXML
-    private Label registerTitleLabel;
+    Label registerTitleLabel;
 
     @FXML
-    private Label registerSubtitleLabel;
+    Label registerSubtitleLabel;
 
-    private Item editingItem = null;
+    Item editingItem = null;
 
     @FXML
     private Label totalBidsLabel;
@@ -221,26 +221,25 @@ public class SellerAuctionListController implements Initializable {
     private Label totalRevenueLabel;
 
     @FXML
-    private VBox uploadPrompt;
+    VBox uploadPrompt;
 
     @FXML
     private Label walletBalance;
 
     @FXML
-    private VBox dynamicAttributesContainer;
+    VBox dynamicAttributesContainer;
 
-    private VBox lastView;
+    VBox lastView;
 
-    private Button lastButton;
+    Button lastButton;
 
-    private VBox currentView; // Lưu view hiện tại để gán cho lastView khi chuyển tiếp
+    VBox currentView; // Lưu view hiện tại để gán cho lastView khi chuyển tiếp
 
-    // Biến lưu trữ file ảnh đã chọn để dùng khi nhấn "XÁC NHẬN ĐĂNG KÝ"
-    private File selectedImageFile;
+    File selectedImageFile;
 
-    private List<Button> allButtons;
+    List<Button> allButtons;
 
-    private List<VBox> allViews;
+    List<VBox> allViews;
 
     private Map<String, VBox> viewMapping;
 
@@ -276,7 +275,7 @@ public class SellerAuctionListController implements Initializable {
         });
     };
 
-    private String linkImageUrl;
+    String linkImageUrl;
 
 
     // DANH SÁCH LƯU TRỮ SẢN PHẨM TẠM THỜI TRONG BỘ NHỚ
@@ -359,7 +358,7 @@ public class SellerAuctionListController implements Initializable {
      * hoặc trạng thái sản phẩm thay đổi.
      */
     private void setupRealtimeNotifications() {
-        ServerConnection.getInstance().addNotificationHandler(realtimeListener);
+        RealtimeNotificationService.setupRealtimeNotifications(realtimeListener);
     }
 
 
@@ -995,154 +994,17 @@ public class SellerAuctionListController implements Initializable {
         orderTable.setItems(filteredData);
     }
 
-    /**
-     * Khởi tạo các danh mục sản phẩm (Electronics, Vehicle, Art) bên trong thực đơn thả xuống (MenuButton).
-     * Gắn kèm logic thay đổi biểu mẫu nhập động tương ứng với từng danh mục được chọn.
-     */
-    private void setupCategoryMenuItems() {
-        MenuItem menuItemElectronics = new MenuItem("Electronics");
-        MenuItem menuItemVehicle = new MenuItem("Vehicle");
-        MenuItem menuItemArt = new MenuItem("Art");
-
-        // Gắn logic xử lý hiển thị nhãn & gợi ý nhập dựa trên file thiết kế của bạn
-        menuItemElectronics.setOnAction(e -> handleCategorySelection("Electronics", "THƯƠNG HIỆU (BRAND)", "Ví dụ: ASUS, Apple, Samsung..."));
-        menuItemVehicle.setOnAction(e -> handleCategorySelection("Vehicle", "NĂM SẢN XUẤT (YEAR)", "Ví dụ: 2024, 2025..."));
-        menuItemArt.setOnAction(e -> handleCategorySelection("Art", "NGHỆ SĨ (ARTIST)", "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh..."));
-
-        // Nạp các MenuItem này vào trong MenuButton giao diện
-        categoryMenuButton.getItems().setAll(menuItemElectronics, menuItemVehicle, menuItemArt);
+    void setupCategoryMenuItems() {
+        ProductFormManager.setupCategoryMenuItems(this);
     }
 
 
-    /**
-     * Xử lý thay đổi các trường nhập thuộc tính động của sản phẩm dựa trên danh mục được chọn.
-     * Tạo thêm Label và TextField tùy chọn tương ứng (Thương hiệu cho Electronics, Nghệ sĩ cho Art, Năm sản xuất cho Vehicle).
-     *
-     * @param categoryName Tên danh mục được chọn
-     * @param labelText    Tiêu đề hiển thị cho trường động
-     * @param promptText   Gợi ý nhập liệu cho trường động
-     */
-    private void handleCategorySelection(String categoryName, String labelText, String promptText) {
-        // 1. Cập nhật text hiển thị trên MenuButton
-        categoryMenuButton.setText(categoryName);
-
-        // 2. Xóa các thuộc tính cũ đang hiển thị (nếu có)
-        if (dynamicAttributesContainer != null) {
-            dynamicAttributesContainer.getChildren().clear();
-
-            // 3. Tạo VBox nhỏ để bọc Label và TextField mới
-            VBox fieldGroup = new VBox(5.0); // spacing = 5
-
-            // 4. Tạo Label (Áp dụng đúng style thiết kế)
-            Label dynamicLabel = new Label(labelText.toUpperCase());
-            dynamicLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 10px; -fx-font-weight: bold;");
-
-            // 5. Tạo TextField (Áp dụng đúng style input fields dark-theme của hệ thống)
-            TextField dynamicTextField = new TextField();
-            dynamicTextField.setPromptText(promptText);
-            dynamicTextField.setPrefHeight(45.0);
-            dynamicTextField.setStyle("-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8;");
-
-            // Đặt ID cố định để sau này dễ dàng gọi hàm .lookup() lấy dữ liệu ra
-            dynamicTextField.setId("customAttributeField");
-
-            // 6. Đưa Label và TextField vào nhóm, rồi đẩy vào container chính
-            fieldGroup.getChildren().addAll(dynamicLabel, dynamicTextField);
-            dynamicAttributesContainer.getChildren().add(fieldGroup);
-        }
+    void handleCategorySelection(String categoryName, String labelText, String promptText) {
+        ProductFormManager.handleCategorySelection(this, categoryName, labelText, promptText);
     }
 
-    /**
-     * Kích hoạt chế độ chỉnh sửa thông tin cho một sản phẩm cụ thể.
-     * Đưa thông tin sản phẩm hiện tại vào form nhập, khóa các trường liên quan đến cấu hình phiên đấu giá
-     * và đổi tiêu đề nút sang "LƯU THAY ĐỔI".
-     *
-     * @param item Đối tượng sản phẩm cần chỉnh sửa
-     */
-    private void handleStartEditProduct(Item item) {
-        editingItem = item;
-
-        // Điền dữ liệu vào form
-        productNameField.setText(item.getName());
-        startingPriceField.setText(String.valueOf(item.getStartingPrice()));
-        descriptionArea.setText(item.getDescription());
-
-        // Gán category
-        String category = item.getCategory();
-        categoryMenuButton.setText(category);
-
-        // Hiển thị và điền thuộc tính động
-        dynamicAttributesContainer.getChildren().clear();
-        String labelText = "";
-        String promptText = "";
-        String attributeValue = "";
-
-        if (item instanceof Art art) {
-            labelText = "NGHỆ SĨ (ARTIST)";
-            promptText = "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh...";
-            attributeValue = art.getArtist();
-        } else if (item instanceof Electronics elec) {
-            labelText = "THƯƠNG HIỆU (BRAND)";
-            promptText = "Ví dụ: ASUS, Apple, Samsung...";
-            attributeValue = elec.getBrand();
-        } else if (item instanceof Vehicle veh) {
-            labelText = "NĂM SẢN XUẤT (YEAR)";
-            promptText = "Ví dụ: 2024, 2025...";
-            attributeValue = String.valueOf(veh.getYear());
-        }
-
-        if (!labelText.isEmpty()) {
-            handleCategorySelection(category, labelText, promptText);
-            TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
-            if (customField != null) {
-                customField.setText(attributeValue);
-            }
-        }
-
-        // Vô hiệu hóa các trường liên quan đến đấu giá
-        minimumBidIncrementField.setDisable(true);
-        minimumBidIncrementField.setText("");
-        startDatePicker.setDisable(true);
-        startDatePicker.setValue(null);
-        endDatePicker.setDisable(true);
-        endDatePicker.setValue(null);
-
-        // Hiển thị ảnh hiện tại
-        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
-            linkImageUrl = item.getImageUrl();
-            selectedImageFile = null; // Chưa chọn ảnh mới
-
-            try {
-                java.io.File imgFile = new java.io.File("src/main/resources" + item.getImageUrl());
-                if (imgFile.exists()) {
-                    ImagesController.displayImage(imgFile, productImageView, uploadPrompt);
-                } else {
-                    productImageView.setImage(new Image("https://placehold.co/260x135/000000/FFFFFF/png?text=No+Image"));
-                    productImageView.setVisible(true);
-                    uploadPrompt.setVisible(false);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            productImageView.setImage(null);
-            productImageView.setVisible(false);
-            uploadPrompt.setVisible(true);
-            linkImageUrl = null;
-            selectedImageFile = null;
-        }
-
-        // Đổi tiêu đề form và nút bấm
-        registerTitleLabel.setText("SỬA THÔNG TIN SẢN PHẨM");
-        registerSubtitleLabel.setText("Thay đổi thông tin cho sản phẩm ID: " + item.getId());
-        submitButton.setText("LƯU THAY ĐỔI");
-
-        // Chuyển sang view sửa (sử dụng chung giao diện đăng ký)
-        lastView = currentView;
-        lastButton = AuctionUIHelper.findActiveButton(allButtons);
-        AuctionUIHelper.resetAllButtons(allButtons);
-        currentView = registerProductView;
-        AuctionUIHelper.showView(registerProductView, allViews);
+    void handleStartEditProduct(Item item) {
+        ProductFormManager.handleStartEditProduct(this, item);
     }
 
     /**
@@ -1370,29 +1232,8 @@ public class SellerAuctionListController implements Initializable {
         }
     }
 
-    /**
-     * Xóa sạch dữ liệu và khôi phục trạng thái mặc định của biểu mẫu đăng ký sản phẩm.
-     */
-    private void clearRegistrationForm() {
-        // 1. Xóa văn bản trong các ô TextField và TextArea
-        productNameField.clear();
-        startingPriceField.clear();
-        minimumBidIncrementField.clear();
-        descriptionArea.clear();
-
-        // 2. Đặt lại chữ mặc định cho MenuButton danh mục
-        categoryMenuButton.setText("Chọn danh mục"); // Thay bằng chữ mặc định ban đầu của bạn nếu khác
-
-        // 3. Xóa ngày đã chọn trong các ô DatePicker
-        startDatePicker.setValue(null);
-        endDatePicker.setValue(null);
-
-        // 4. Khôi phục lại trạng thái khung chọn ảnh ban đầu
-        selectedImageFile = null;
-        productImageView.setImage(null);
-        productImageView.setVisible(false); // Ẩn khung hiển thị ảnh đi
-        uploadPrompt.setVisible(true);// Hiện lại dòng chữ hướng dẫn "Bấm để chọn ảnh"
-        linkImageUrl = null;
+    void clearRegistrationForm() {
+        ProductFormManager.clearRegistrationForm(this);
     }
 
     /**

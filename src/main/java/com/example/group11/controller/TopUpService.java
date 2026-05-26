@@ -7,6 +7,8 @@ import com.auction.network.RequestType;
 import com.auction.network.Response;
 import javafx.concurrent.Task;
 
+import java.time.LocalDateTime;
+
 public class TopUpService {
 
     public interface TopUpCallback {
@@ -35,7 +37,7 @@ public class TopUpService {
                 if (res != null && res.isSuccess()) {
                     double newBalance = (Double) res.getData();
                     bidder.topUp(amount);
-                    bidder.setLastTopUpTime(java.time.LocalDateTime.now());
+                    bidder.setLastTopUpTime(LocalDateTime.now());
                     callback.onSuccess(newBalance);
                 } else {
                     callback.onFailure(res != null ? res.getMessage() : "Không thể thực hiện nạp tiền");
