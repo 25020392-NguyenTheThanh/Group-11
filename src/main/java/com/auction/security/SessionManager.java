@@ -2,24 +2,21 @@ package com.auction.security;
 
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
- * Quản lý session token cho người dùng đã đăng nhập.
- *
- * Mỗi lần đăng nhập thành công → cấp một token ngẫu nhiên (32 byte / 256-bit).
- * Mọi request cần xác thực phải kèm token này.
- *
- * Token hết hạn sau SESSION_TTL_SECONDS giây không hoạt động (idle timeout).
+ * Quản lý session token sau đăng nhập.
+ * - Token 256-bit ngẫu nhiên, hết hạn sau 30 phút không hoạt động (sliding window).
+ * - Mỗi user chỉ có 1 session duy nhất — đăng nhập mới hủy session cũ.
  */
 public class SessionManager {
 
-    private static final int TOKEN_BYTES        = 32;           // 256-bit token
-    private static final long SESSION_TTL_MS    = 30 * 60_000L; // 30 phút idle timeout
+    private static final int  TOKEN_BYTES     = 32;
+    private static final long SESSION_TTL_MS  = 30 * 60_000L; // 30 phút
 
-    // token -> SessionEntry
     private final ConcurrentHashMap<String, SessionEntry> sessions = new ConcurrentHashMap<>();
-
     private static volatile SessionManager instance;
     private final SecureRandom random = new SecureRandom();
 
@@ -34,67 +31,68 @@ public class SessionManager {
         return instance;
     }
 
-    /**
-     * Tạo session mới cho userId. Trả về token.
-     */
+    /** Tạo session mới — hủy session cũ của cùng userId nếu có */
     public String createSession(int userId, String role) {
-        // Vô hiệu session cũ của user này (nếu có) — chỉ cho phép 1 session/user
         invalidateByUserId(userId);
-
         byte[] bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-
         sessions.put(token, new SessionEntry(userId, role, System.currentTimeMillis()));
-        System.out.println("[Session] Tạo session mới cho userId=" + userId);
+        System.out.println("[Session] Tạo session cho userId=" + userId + " role=" + role);
         return token;
     }
 
-    /**
-     * Kiểm tra token hợp lệ và làm mới thời gian hết hạn.
-     * @return SessionEntry nếu hợp lệ, null nếu không hợp lệ / hết hạn
-     */
+    /** Validate token và gia hạn thời gian (sliding window) */
     public SessionEntry validateAndRefresh(String token) {
         if (token == null) return null;
         SessionEntry entry = sessions.get(token);
         if (entry == null) return null;
-        long idleMs = System.currentTimeMillis() - entry.lastActiveMs;
-        if (idleMs > SESSION_TTL_MS) {
+        if (System.currentTimeMillis() - entry.lastActiveMs > SESSION_TTL_MS) {
             sessions.remove(token);
             System.out.println("[Session] Token hết hạn, đã xóa.");
             return null;
         }
-        entry.lastActiveMs = System.currentTimeMillis(); // sliding window
+        entry.lastActiveMs = System.currentTimeMillis();
         return entry;
     }
 
-    /**
-     * Hủy session theo token (đăng xuất).
-     */
+    /** Hủy session theo token (đăng xuất) */
     public void invalidate(String token) {
-        if (token != null) {
-            sessions.remove(token);
-        }
+        if (token != null) sessions.remove(token);
     }
 
-    /**
-     * Hủy tất cả session của một userId.
-     */
+    /** Hủy tất cả session của một userId (đổi mật khẩu, Admin reset) */
     public void invalidateByUserId(int userId) {
         sessions.entrySet().removeIf(e -> e.getValue().userId == userId);
     }
 
-    /**
-     * Thông tin session.
-     */
+    /** Số session đang hoạt động */
+    public int activeCount() {
+        long now = System.currentTimeMillis();
+        sessions.entrySet().removeIf(e -> now - e.getValue().lastActiveMs > SESSION_TTL_MS);
+        return sessions.size();
+    }
+
+    /** Danh sách session cho Admin xem */
+    public List<String> getActiveSummaries() {
+        long now = System.currentTimeMillis();
+        return sessions.entrySet().stream()
+                .filter(e -> now - e.getValue().lastActiveMs <= SESSION_TTL_MS)
+                .map(e -> "userId=" + e.getValue().userId
+                        + " role=" + e.getValue().role
+                        + " idle=" + (now - e.getValue().lastActiveMs) / 1000 + "s"
+                        + " token=" + e.getKey().substring(0, 8) + "…")
+                .collect(Collectors.toList());
+    }
+
     public static class SessionEntry {
-        public final int userId;
+        public final int    userId;
         public final String role;
         public volatile long lastActiveMs;
 
         SessionEntry(int userId, String role, long lastActiveMs) {
-            this.userId = userId;
-            this.role   = role;
+            this.userId       = userId;
+            this.role         = role;
             this.lastActiveMs = lastActiveMs;
         }
     }

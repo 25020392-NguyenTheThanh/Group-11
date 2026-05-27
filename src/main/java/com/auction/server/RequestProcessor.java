@@ -6,6 +6,7 @@ import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
+import com.auction.model.auction.AuctionStatus;
 import com.auction.model.auction.AutoBidConfig;
 import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
@@ -19,62 +20,69 @@ import com.auction.pattern.factory.ElectronicsFactory;
 import com.auction.pattern.factory.ItemFactory;
 import com.auction.pattern.factory.VehicleFactory;
 import com.auction.pattern.observer.Observer;
+import com.auction.security.*;
 import com.example.group11.controller.NotificationController;
 import javafx.concurrent.Task;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
+
 
 // điều phối request từ client gửi lên server
 public class RequestProcessor {
     private static final ConcurrentHashMap<Integer, Long> lastBidTime = new ConcurrentHashMap<>();
+    private static final long BID_THROTTLE_MS = 500;
+    private static final AuditLogger  audit       = AuditLogger.getInstance();
+    private static final RateLimiter rateLimiter = RateLimiter.getInstance();
 
     // hàm trung tâm
     public static Response process(Request request, ClientHandler handler) {
         try {
             return switch (request.getType()) {
-                case LOGIN -> handleLogin(request, handler);
-                case REGISTER -> handleRegister(request);
-                case LOGOUT -> handleLogout(handler);
-                case GET_AUCTIONS -> handleGetAuctions();
-                case GET_AUCTION_DETAIL -> handleGetAuctionDetail(request, handler);
-                case PLACE_BID -> handlePlaceBid(request, handler);
-                case CREATE_ITEM -> handleCreateItem(request, handler);
-                case CREATE_AUCTION -> handleCreateAuction(request, handler);
-                case GET_MY_ITEMS -> handleGetMyItems(handler);
-                case DELETE_ITEM -> handleDeleteItem(request, handler);
-                case UPDATE_ITEM -> handleUpdateItem(request, handler);
-                case ADD_TO_WATCHLIST -> handleAddToWatchlist(request, handler);
-                case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
-                case TOP_UP -> handleTopUp(request, handler);
-                case CONFIRM_PAYMENT -> handleConfirmPayment(request, handler);
-                case DECLINE_PAYMENT -> handleDeclinePayment(request, handler);
-                case SET_AUTO_BID -> handleSetAutoBid(request, handler);
-                case CANCEL_AUTO_BID -> handleCancelAutoBid(request, handler);
-                case CHANGE_PASSWORD -> handleChangePassword(request, handler);
-                case VERIFY_EMAIL -> handleVerifyEmail(request);
+                // Auth
+                case LOGIN          -> handleLogin(request, handler);
+                case REGISTER       -> handleRegister(request, handler);
+                case LOGOUT         -> handleLogout(handler);
+                case VERIFY_EMAIL   -> handleVerifyEmail(request);
                 case RESET_PASSWORD -> handleResetPassword(request);
-
-                // --- ADMIN CASE ---
-                case ADMIN_GET_ALL_USERS -> handleAdminGetAllUsers(handler);
-                case ADMIN_BAN_USER -> handleAdminBanUser(request, handler);
-                case ADMIN_UNBAN_USER -> handleAdminUnbanUser(request, handler);
-                case ADMIN_DELETE_USER -> handleAdminDeleteUser(request, handler);
-                case ADMIN_RESET_USER_PASSWORD -> handleAdminResetUserPassword(request, handler);
-                case ADMIN_GET_ALL_AUCTIONS -> handleAdminGetAllAuctions(handler);
-                case ADMIN_CANCEL_AUCTION -> handleAdminCancelAuction(request, handler);
-                case ADMIN_GET_ALL_ITEMS -> handleAdminGetAllItems(handler);
-                case ADMIN_FORCE_DELETE_ITEM -> handleAdminForceDeleteItem(request, handler);
-                case ADMIN_GET_STATS -> handleAdminGetStats(handler);
-                case ADMIN_GET_AUDIT_LOG -> handleAdminGetAuditLog(handler);
-                case ADMIN_GET_ACTIVE_SESSIONS -> handleAdminGetActiveSessions(handler);
-                case ADMIN_KICK_USER -> handleAdminKickUser(request, handler);
+                case CHANGE_PASSWORD -> handleChangePassword(request, handler);
+                // Auction
+                case GET_AUCTIONS        -> handleGetAuctions();
+                case GET_AUCTION_DETAIL  -> handleGetAuctionDetail(request, handler);
+                case PLACE_BID           -> handlePlaceBid(request, handler);
+                case CREATE_AUCTION      -> handleCreateAuction(request, handler);
+                case SET_AUTO_BID        -> handleSetAutoBid(request, handler);
+                case CANCEL_AUTO_BID     -> handleCancelAutoBid(request, handler);
+                // Item
+                case CREATE_ITEM  -> handleCreateItem(request, handler);
+                case GET_MY_ITEMS -> handleGetMyItems(handler);
+                case DELETE_ITEM  -> handleDeleteItem(request, handler);
+                case UPDATE_ITEM  -> handleUpdateItem(request, handler);
+                // Bidder
+                case ADD_TO_WATCHLIST    -> handleAddToWatchlist(request, handler);
+                case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
+                case TOP_UP              -> handleTopUp(request, handler);
+                case CONFIRM_PAYMENT     -> handleConfirmPayment(request, handler);
+                // Admin
+                case ADMIN_GET_ALL_USERS        -> handleAdminGetAllUsers(handler);
+                case ADMIN_BAN_USER             -> handleAdminBanUser(request, handler);
+                case ADMIN_UNBAN_USER           -> handleAdminUnbanUser(request, handler);
+                case ADMIN_DELETE_USER          -> handleAdminDeleteUser(request, handler);
+                case ADMIN_RESET_USER_PASSWORD  -> handleAdminResetUserPassword(request, handler);
+                case ADMIN_GET_ALL_AUCTIONS     -> handleAdminGetAllAuctions(handler);
+                case ADMIN_CANCEL_AUCTION       -> handleAdminCancelAuction(request, handler);
+                case ADMIN_GET_ALL_ITEMS        -> handleAdminGetAllItems(handler);
+                case ADMIN_FORCE_DELETE_ITEM    -> handleAdminForceDeleteItem(request, handler);
+                case ADMIN_GET_STATS            -> handleAdminGetStats(handler);
+                case ADMIN_GET_AUDIT_LOG        -> handleAdminGetAuditLog(handler);
+                case ADMIN_GET_ACTIVE_SESSIONS  -> handleAdminGetActiveSessions(handler);
+                case ADMIN_KICK_USER            -> handleAdminKickUser(request, handler);
+                case DECLINE_PAYMENT -> null;
             };
         } catch (Exception e) {
-            // Safety net: bắt mọi exception chưa được xử lý trong handler
-            // Tránh crash connection khi có lỗi bất ngờ
-            System.err.println("[RequestProcessor] Unhandled exception in "
-                    + request.getType() + ": " + e.getMessage());
+            System.err.println("[RequestProcessor] Unhandled: " + request.getType() + " → " + e.getMessage());
             return Response.error("Lỗi xử lý yêu cầu: " + e.getMessage());
         }
     }
@@ -85,15 +93,33 @@ public class RequestProcessor {
         // Bạn có thể check qua user.getRole().equals("ADMIN") hoặc tùy cấu trúc thuộc tính Role của bạn
         return "ADMIN".equalsIgnoreCase(user.getRole());
     }
+    private static Response requireAdmin(ClientHandler handler) {
+        User u = handler.getLoggedInUser();
+        if (u == null) return Response.error("Bạn cần đăng nhập!");
+        if (!isAdmin(u)) return Response.error("Từ chối: Quyền Admin là bắt buộc!");
+        return null; // ok
+    }
 
     // kiểm tra danh tính
     private static Response handleLogin(Request request, ClientHandler handler) {
+        // ── Security 1: RateLimiter ──
+        String ip = handler.getClientIp();
+
+        String blocked = rateLimiter.check(ip);
+        if (blocked != null) {
+            audit.logIpBlocked(ip);
+            return Response.error(blocked);
+        }
         // Kiểm tra payload hợp lệ
         if (request.getPayload() == null || !(request.getPayload() instanceof LoginPayload)) {
             return Response.error("Dữ liệu đăng nhập không hợp lệ!");
         }
-
         LoginPayload payload = (LoginPayload) request.getPayload();
+// ── Security 2: InputValidator ──
+        if (!InputValidator.isValidUsername(payload.username)) {
+            rateLimiter.recordFailure(ip);
+            return Response.error("Tên đăng nhập không hợp lệ!");
+        }
         try {
             User user = UserManager.getInstance().login(payload.username, payload.password);
             if (user == null) {
@@ -111,9 +137,17 @@ public class RequestProcessor {
                 }
             }
 
+
             if (!user.isActive()) {
                 return Response.error("Tài khoản của bạn đã bị khóa! Lý do: " + user.getBanReason());
             }
+            rateLimiter.recordSuccess(ip);
+            audit.logLoginSuccess(ip, payload.username);
+
+            // ── Security 4: Tạo session token ──
+            String token = SessionManager.getInstance().createSession(user.getId(), user.getRole());
+            handler.setSessionToken(token);
+            handler.setLoggedInUser(user);
             // lưu User vào handler để biết ai đang gửi request
             handler.setLoggedInUser(user);
             return Response.ok(user);
@@ -122,25 +156,46 @@ public class RequestProcessor {
         }
     }
 
+
     // đăng kí tài khoản mới
-    private static Response handleRegister(Request request) {
-        if (request.getPayload() == null || !(request.getPayload() instanceof RegisterPayload)) {
-            return Response.error("Dữ liệu đăng ký không hợp lệ!");
+    private static Response handleRegister(Request request, ClientHandler handler) {
+        String ip = handler.getClientIp();
+
+        // ── Security 1: RateLimiter ──
+        String blocked = rateLimiter.check(ip);
+        if (blocked != null) {
+            audit.logIpBlocked(ip);
+            return Response.error(blocked);
         }
-        RegisterPayload p = (RegisterPayload) request.getPayload();
+
+        if (!(request.getPayload() instanceof RegisterPayload p))
+            return Response.error("Dữ liệu đăng ký không hợp lệ!");
+
+        // ── Security 2: Validate toàn bộ input ──
+        if (!InputValidator.isValidUsername(p.username))
+            return Response.error("Username chỉ gồm chữ, số, dấu _ và dài 3–30 ký tự!");
+
+        String pwErr = InputValidator.getPasswordError(p.password);
+        if (pwErr != null) return Response.error(pwErr);
+
+        if (!InputValidator.isValidEmail(p.email))
+            return Response.error("Email không hợp lệ!");
+
+        if (!InputValidator.isValidRole(p.role))
+            return Response.error("Vai trò không hợp lệ! Chỉ chấp nhận BIDDER hoặc SELLER.");
+
         try {
             User user = UserManager.getInstance().register(p.username, p.password, p.email, p.role);
             if (user == null) return Response.error("Đăng ký thất bại, vui lòng thử lại.");
+            audit.logRegister(ip, p.username);
             return Response.ok(user);
         } catch (IllegalArgumentException e) {
-            // USERNAME_EXISTS, EMAIL_EXISTS hoặc lỗi DB từ UserManager
+            rateLimiter.recordFailure(ip);
             return Response.error(e.getMessage());
         } catch (Exception e) {
-            System.err.println("[handleRegister] Lỗi không xác định: " + e.getMessage());
             return Response.error("Lỗi hệ thống khi đăng ký: " + e.getMessage());
         }
     }
-
     // xử lý đăng xuất
     private static Response handleLogout(ClientHandler handler) {
         try {
@@ -149,10 +204,15 @@ public class RequestProcessor {
                 user.logout();
                 AuctionManager.getInstance().removeObserverFromAllAuctions(handler);
             }
-            handler.setLoggedInUser(null); // Giải phóng user ngắt kết nối logic
+            // ── Security: hủy session token ──
+            if (handler.getSessionToken() != null) {
+                SessionManager.getInstance().invalidate(handler.getSessionToken());
+                handler.setSessionToken(null);
+            }
+            handler.setLoggedInUser(null);
             return Response.ok("Đăng xuất thành công");
         } catch (Exception e) {
-            return Response.error("Lỗi xóa phiên đăng nhập: " + e.getMessage());
+            return Response.error("Lỗi đăng xuất: " + e.getMessage());
         }
     }
 
@@ -164,28 +224,34 @@ public class RequestProcessor {
 
     // xử lý việc trả giá
     private static Response handlePlaceBid(Request request, ClientHandler handler) {
-        PlaceBidPayload payload = (PlaceBidPayload) request.getPayload();
         User user = handler.getLoggedInUser();
-        if (user == null) return Response.error("Bạn cần đăng nhập để đấu giá");
-        if (!(user instanceof Bidder)) return Response.error("Chỉ người mua (Bidder) mới có quyền đặt giá!");
+        if (user == null) return Response.error("Bạn cần đăng nhập để đấu giá!");
+        if (!(user instanceof Bidder bidder)) return Response.error("Chỉ Bidder mới có quyền đặt giá!");
+        if (!(request.getPayload() instanceof PlaceBidPayload payload))
+            return Response.error("Dữ liệu đặt giá không hợp lệ!");
+
+        // ── Security: throttle chống spam bid ──
+        long now = System.currentTimeMillis();
+        Long last = lastBidTime.get(user.getId());
+        if (last != null && now - last < BID_THROTTLE_MS)
+            return Response.error("Bạn đang gửi yêu cầu quá nhanh! Vui lòng đợi.");
+        lastBidTime.put(user.getId(), now);
+
+        // ── Security: validate số tiền ──
+        if (payload.amount <= 0) return Response.error("Số tiền đặt giá phải lớn hơn 0!");
 
         try {
             Auction auction = AuctionManager.getInstance().findAuctionById(payload.auctionId);
-            if (auction == null) return Response.error("Phiên không tồn tại");
-            Bidder bidder = (Bidder) user;
+            if (auction == null) return Response.error("Phiên đấu giá không tồn tại!");
 
             auction.placeBid(bidder, payload.amount);
             bidder.getProfile().addParticipatedAuction(payload.auctionId);
 
-            // Broadcast BID_UPDATE tới TẤT CẢ client (kể cả đang ở màn hình danh sách)
             BidUpdateData upd = new BidUpdateData(
-                    payload.auctionId,
-                    auction.getCurrentHighestBid(),
-                    bidder.getUsername(),
-                    auction.getBidHistory().size()
-            );
+                    payload.auctionId, auction.getCurrentHighestBid(),
+                    bidder.getUsername(), auction.getBidHistory().size());
             handler.getServer().broadcast(new Notification("BID_UPDATE", upd));
-
+            audit.logBid(handler.getClientIp(), user.getId(), payload.auctionId, payload.amount);
             return Response.ok(bidder.getBalance());
         } catch (Exception e) {
             return Response.error(e.getMessage());
@@ -205,7 +271,7 @@ public class RequestProcessor {
             User u = handler.getLoggedInUser();
             boolean hasOtherConnection = false;
             if (u != null) {
-                for (com.auction.pattern.observer.Observer obs : a.getObservers()) {
+                for (Observer obs : a.getObservers()) {
                     if (obs != handler && obs instanceof ClientHandler ch) {
                         User otherUser = ch.getLoggedInUser();
                         if (otherUser != null && otherUser.getId() == u.getId()) {
@@ -252,11 +318,14 @@ public class RequestProcessor {
         User user = handler.getLoggedInUser();
         if (user == null) return Response.error("Chưa đăng nhập");
         if (!(user instanceof Seller)) return Response.error("Chỉ Seller mới có thể tạo sản phẩm");
+        if (!(request.getPayload() instanceof CreateItemPayload p)) return Response.error("Payload không hợp lệ!");
+        if (p.startingPrice < 100) return Response.error("Giá khởi điểm tối thiểu là 100!");
 
-        CreateItemPayload p = (CreateItemPayload) request.getPayload();
-        if (p.startingPrice < 100) {
-            return Response.error("Giá khởi điểm tối thiểu là 100!");
-        }
+        // ── Security: sanitize name & description ──
+        String name = InputValidator.sanitize(p.name);
+        String desc = InputValidator.sanitize(p.description);
+        if (name.isBlank()) return Response.error("Tên sản phẩm không hợp lệ!");
+
         ItemFactory factory = switch (p.type.toUpperCase()) {
             case "ART" -> new ArtFactory(p.artist);
             case "VEHICLE" -> new VehicleFactory(p.year);
@@ -277,7 +346,7 @@ public class RequestProcessor {
 
         // Validate endTime: không được null và phải ở tương lai
         if (p.endTime == null) return Response.error("Thời gian kết thúc không được để trống");
-        if (!p.endTime.isAfter(java.time.LocalDateTime.now()))
+        if (!p.endTime.isAfter(LocalDateTime.now()))
             return Response.error("Thời gian kết thúc phải ở trong tương lai");
 
         Item item = ItemManager.getInstance().findItem(p.itemId);
@@ -287,10 +356,10 @@ public class RequestProcessor {
         if (auction == null) return Response.error("Không thể tạo phiên — sản phẩm không ở trạng thái AVAILABLE");
 
         // Chỉ kích hoạt (start) phiên đấu giá nếu thời gian bắt đầu đã đến hoặc ở quá khứ
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         if (p.startTime == null || !p.startTime.isAfter(now)) {
             auction.start();
-            com.auction.data.DataManager.getInstance().startAuction(auction.getId());
+            DataManager.getInstance().startAuction(auction.getId());
         }
         handler.sendNotification(new Notification("AUCTION_CREATED", String.format("Phiên đấu giá cho sản phẩm [%s] đã được tạo thành công!", item.getName())));
 
@@ -331,7 +400,7 @@ public class RequestProcessor {
             return Response.error("Bạn không phải chủ sở hữu của sản phẩm này");
         }
 
-        if (item.getStatus() == com.auction.model.item.ItemStatus.IN_AUCTION) {
+        if (item.getStatus() == ItemStatus.IN_AUCTION) {
             return Response.error("Không thể xóa sản phẩm đang ở trạng thái IN_AUCTION");
         }
 
@@ -367,10 +436,10 @@ public class RequestProcessor {
         }
 
         if (existingItem.getStatus() == ItemStatus.IN_AUCTION) {
-            com.auction.model.auction.Auction auction = com.auction.manager.AuctionManager.getInstance().getAuctions().stream()
+            Auction auction = AuctionManager.getInstance().getAuctions().stream()
                     .filter(a -> a.getItem().getId() == existingItem.getId())
                     .findFirst().orElse(null);
-            if (auction != null && auction.getStatus() != com.auction.model.auction.AuctionStatus.OPEN) {
+            if (auction != null && auction.getStatus() != AuctionStatus.OPEN) {
                 return Response.error("Chỉ có thể sửa sản phẩm khi phiên đấu giá chưa bắt đầu (OPEN).");
             }
         } else if (existingItem.getStatus() != ItemStatus.AVAILABLE) {
@@ -386,10 +455,13 @@ public class RequestProcessor {
         // Tạo item mới dựa trên factory để thay thế
         Item updatedItem = factory.createItem(p.id, user.getId(), p.name, p.description, p.startingPrice, p.imageUrl);
         updatedItem.setStatus(existingItem.getStatus());
+        // ── Security: sanitize ──
+        String name = InputValidator.sanitize(p.name);
+        String desc = InputValidator.sanitize(p.description);
 
         boolean success = ItemManager.getInstance().updateItem(updatedItem);
         if (success) {
-            com.auction.model.auction.Auction auction = com.auction.manager.AuctionManager.getInstance().getAuctions().stream()
+            Auction auction = AuctionManager.getInstance().getAuctions().stream()
                     .filter(a -> a.getItem().getId() == existingItem.getId())
                     .findFirst().orElse(null);
             if (auction != null) {
@@ -456,7 +528,7 @@ public class RequestProcessor {
             Bidder bidder = (Bidder) user;
             if (!bidder.canTopUp()) {
                 if (bidder.getLastTopUpTime() != null) {
-                    java.time.Duration diff = java.time.Duration.between(java.time.LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
+                    Duration diff = Duration.between(LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
                     long hours = diff.toHours();
                     long mins = diff.toMinutesPart();
                     return Response.error(String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
@@ -471,7 +543,7 @@ public class RequestProcessor {
                 // Đồng bộ số dư thực tế mới nhất từ DB vào RAM
                 double newBalance = DataManager.getInstance().getBidderBalance(bidder.getId());
                 bidder.setBalance(newBalance);
-                bidder.setLastTopUpTime(java.time.LocalDateTime.now());
+                bidder.setLastTopUpTime(LocalDateTime.now());
                 return Response.ok(bidder.getBalance());
             } else {
                 return Response.error("Không thể cập nhật số dư vào cơ sở dữ liệu");
@@ -489,7 +561,7 @@ public class RequestProcessor {
         AutoBidPayload p = (AutoBidPayload) request.getPayload();
         Auction auction = AuctionManager.getInstance().findAuctionById(p.auctionId);
         if (auction == null) return Response.error("Phiên không tồn tại");
-        if (auction.getStatus() != com.auction.model.auction.AuctionStatus.RUNNING)
+        if (auction.getStatus() != AuctionStatus.RUNNING)
             return Response.error("Phiên chưa chạy hoặc đã kết thúc");
 
         Bidder bidder = (Bidder) user;
@@ -522,7 +594,7 @@ public class RequestProcessor {
         ChangePasswordPayload p = (ChangePasswordPayload) request.getPayload();
 
         // So khớp mật khẩu cũ
-        if (!com.auction.security.PasswordUtil.verify(p.oldPassword, user.getPassword())) {
+        if (!PasswordUtil.verify(p.oldPassword, user.getPassword())) {
             return Response.error("Mật khẩu cũ không chính xác!");
         }
 
@@ -562,7 +634,7 @@ public class RequestProcessor {
         if (auction == null) {
             return Response.error("Phiên đấu giá không tồn tại!");
         }
-        if (auction.getStatus() != com.auction.model.auction.AuctionStatus.FINISHED) {
+        if (auction.getStatus() != AuctionStatus.FINISHED) {
             return Response.error("Phiên đấu giá chưa kết thúc hoặc đã được thanh toán!");
         }
         if (auction.getCurrentWinner() == null || auction.getCurrentWinner().getId() != user.getId()) {
@@ -579,7 +651,7 @@ public class RequestProcessor {
             boolean dbOk = AuctionManager.getInstance().payAuction(auctionId);
             if (!dbOk) {
                 // Rollback RAM
-                auction.restoreStatus(com.auction.model.auction.AuctionStatus.FINISHED);
+                auction.restoreStatus(AuctionStatus.FINISHED);
                 return Response.error("Không thể cập nhật trạng thái thanh toán vào cơ sở dữ liệu!");
             }
 
@@ -600,12 +672,12 @@ public class RequestProcessor {
             handler.sendNotification(new Notification("PAYMENT_SUCCESS", successMsg));
 
             // 6. Thông báo cho Seller (nếu đang online)
-            if (com.auction.server.AuctionServer.getInstance() != null) {
+            if (AuctionServer.getInstance() != null) {
                 String sellerMsg = String.format(
                         "💰 [%s] đã thanh toán $%,.2f cho sản phẩm [%s] — Phiên #%d.",
                         bidder.getUsername(), auction.getCurrentHighestBid(),
                         auction.getItem().getName(), auctionId);
-                for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
                     User u = client.getLoggedInUser();
                     if (u != null && u.getId() == sellerId) {
                         client.sendNotification(new Notification("PAYMENT_RECEIVED", sellerMsg));
@@ -615,8 +687,8 @@ public class RequestProcessor {
             }
 
             // 7. Broadcast AUCTION_ENDED để tất cả client reload card
-            if (com.auction.server.AuctionServer.getInstance() != null) {
-                com.auction.server.AuctionServer.getInstance().broadcast(
+            if (AuctionServer.getInstance() != null) {
+                AuctionServer.getInstance().broadcast(
                         new Notification("AUCTION_ENDED",
                                 String.format("Phiên #%d [%s] đã được thanh toán.", auctionId, auction.getItem().getName())));
             }
@@ -647,7 +719,7 @@ public class RequestProcessor {
         if (auction == null) {
             return Response.error("Phiên đấu giá không tồn tại!");
         }
-        if (auction.getStatus() != com.auction.model.auction.AuctionStatus.FINISHED) {
+        if (auction.getStatus() != AuctionStatus.FINISHED) {
             return Response.error("Chỉ có thể từ chối thanh toán khi phiên ở trạng thái FINISHED!");
         }
         if (auction.getCurrentWinner() == null || auction.getCurrentWinner().getId() != user.getId()) {
@@ -660,11 +732,11 @@ public class RequestProcessor {
             if (ok) {
                 // Gửi thông báo đến Seller (nếu online)
                 int sellerId = auction.getItem().getOwnerId();
-                if (com.auction.server.AuctionServer.getInstance() != null) {
+                if (AuctionServer.getInstance() != null) {
                     String sellerMsg = String.format(
                             "❌ Người thắng [%s] đã từ chối thanh toán cho sản phẩm [%s] — Phiên #%d. Phiên đấu giá bị hủy.",
                             user.getUsername(), auction.getItem().getName(), auctionId);
-                    for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                    for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
                         User u = client.getLoggedInUser();
                         if (u != null && u.getId() == sellerId) {
                             client.sendNotification(new Notification("PAYMENT_DECLINED", sellerMsg));
@@ -717,22 +789,24 @@ public class RequestProcessor {
     }
 
     private static Response handleAdminBanUser(Request request, ClientHandler handler) {
-        if (!isAdmin(handler.getLoggedInUser())) return Response.error("Từ chối truy cập: Quyền Admin là bắt buộc!");
-        if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Dữ liệu Admin không hợp lệ!");
+        Response guard = requireAdmin(handler);
+        if (guard != null) return guard;
+        if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Payload không hợp lệ!");
 
         boolean ok = UserManager.getInstance().banUser(p.targetId, p.reason);
         if (ok) {
-            // Tìm và ngắt kết nối luôn nếu user bị ban đang online
-            ClientHandler targetClient = handler.getServer().getConnectedClients().stream()
+            audit.logAdminBan(handler.getClientIp(), handler.getLoggedInUser().getId(), p.targetId, p.reason);
+            // Kick nếu đang online
+            handler.getServer().getConnectedClients().stream()
                     .filter(c -> c.getLoggedInUser() != null && c.getLoggedInUser().getId() == p.targetId)
-                    .findFirst().orElse(null);
-            if (targetClient != null) {
-                targetClient.sendNotification(new Notification("FORCE_LOGOUT", "Tài khoản của bạn đã bị khóa bởi Admin với lý do: " + p.reason));
-                targetClient.setLoggedInUser(null);
-            }
+                    .findFirst().ifPresent(c -> {
+                        c.sendNotification(new Notification("FORCE_LOGOUT",
+                                "Tài khoản bị khóa bởi Admin. Lý do: " + p.reason));
+                        c.setLoggedInUser(null);
+                    });
             return Response.ok("Đã khóa tài khoản thành công!");
         }
-        return Response.error("Không thể khóa tài khoản hoặc tài khoản không tồn tại.");
+        return Response.error("Không thể khóa tài khoản.");
     }
 
     private static Response handleAdminUnbanUser(Request request, ClientHandler handler) {
@@ -807,8 +881,11 @@ public class RequestProcessor {
     }
 
     private static Response handleAdminGetAuditLog(ClientHandler handler) {
-        if (!isAdmin(handler.getLoggedInUser())) return Response.error("Từ chối truy cập: Quyền Admin là bắt buộc!");
-        return Response.ok(DataManager.getInstance().getSecurityAuditLogs());
+        Response guard = requireAdmin(handler);
+        if (guard != null) return guard;
+        // ── Security: chỉ Admin mới được xem audit log ──
+        List<String> logs = AuditLogger.getInstance().getRecentLogs(200);
+        return Response.ok(logs);
     }
 
     private static Response handleAdminGetActiveSessions(ClientHandler handler) {
