@@ -232,7 +232,7 @@
         <!-- OVERLAY NẠP TIỀN (CENTERED MODAL) -->
         <StackPane fx:id="addFundsOverlay" visible="false" managed="false" style="-fx-background-color: rgba(0, 0, 0, 0.75);">
             <children>
-                <VBox alignment="CENTER" spacing="20.0" maxHeight="380.0" maxWidth="580.0"
+                <VBox alignment="CENTER" spacing="20.0" maxHeight="480.0" maxWidth="580.0"
                       style="-fx-background-color: #112240; -fx-border-color: #1E2D45; -fx-border-width: 2; -fx-border-radius: 16; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 20, 0, 0, 10);">
                     <padding><Insets bottom="25.0" left="25.0" right="25.0" top="25.0" /></padding>
                     <children>
@@ -247,6 +247,19 @@
                             </children>
                         </HBox>
                         
+                        <Region prefHeight="1.0" style="-fx-background-color: #1E2D45;" />
+
+                        <!-- Tự nhập số tiền -->
+                        <HBox alignment="CENTER" spacing="15.0">
+                            <children>
+                                <Label text="Hoặc nhập số tiền khác:" textFill="#94A3B8">
+                                    <font><Font name="System Bold" size="13.0" /></font>
+                                </Label>
+                                <TextField fx:id="txtCustomAmount" prefHeight="35.0" prefWidth="180.0" promptText="Nhập số tiền ($)..." style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-border-color: #334155; -fx-border-radius: 8; -fx-background-radius: 8;" />
+                                <Button fx:id="btnCustomTopUp" onAction="#handleCustomTopUp" mnemonicParsing="false" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;" prefHeight="35.0" text="Nạp tiền" />
+                            </children>
+                        </HBox>
+
                         <Region prefHeight="1.0" style="-fx-background-color: #1E2D45;" />
 
                         <!-- Grid 6 gói nạp -->

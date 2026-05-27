@@ -79,7 +79,7 @@ public class RequestProcessor {
                 case ADMIN_GET_AUDIT_LOG        -> handleAdminGetAuditLog(handler);
                 case ADMIN_GET_ACTIVE_SESSIONS  -> handleAdminGetActiveSessions(handler);
                 case ADMIN_KICK_USER            -> handleAdminKickUser(request, handler);
-                case DECLINE_PAYMENT -> null;
+                case DECLINE_PAYMENT -> handleDeclinePayment(request, handler);
             };
         } catch (Exception e) {
             System.err.println("[RequestProcessor] Unhandled: " + request.getType() + " → " + e.getMessage());
@@ -872,16 +872,47 @@ public class RequestProcessor {
         if (!isAdmin(handler.getLoggedInUser())) return Response.error("Từ chối truy cập: Quyền Admin là bắt buộc!");
         if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Dữ liệu Admin không hợp lệ!");
 
-        boolean ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.AVAILABLE);
+        Item item = ItemManager.getInstance().findItem(p.targetId);
+        if (item == null) return Response.error("Sản phẩm không tồn tại.");
+
+        Auction auction = AuctionManager.getInstance().getAuctions().stream()
+                .filter(a -> a.getItem() != null && a.getItem().getId() == p.targetId)
+                .findFirst().orElse(null);
+
+        boolean ok;
+        if (auction != null) {
+            LocalDateTime now = LocalDateTime.now();
+            if (auction.getStartTime() == null || !auction.getStartTime().isAfter(now)) {
+                auction.start();
+                DataManager.getInstance().startAuction(auction.getId());
+                ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.IN_AUCTION);
+            } else {
+                auction.restoreStatus(com.auction.model.auction.AuctionStatus.OPEN);
+                ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.IN_AUCTION);
+            }
+        } else {
+            ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.AVAILABLE);
+        }
+
         if (ok) {
-            Item item = ItemManager.getInstance().findItem(p.targetId);
-            if (item != null && AuctionServer.getInstance() != null) {
+            if (AuctionServer.getInstance() != null) {
                 String msg = String.format("Sản phẩm [%s] của bạn đã được Admin phê duyệt!", item.getName());
                 for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
                     User u = client.getLoggedInUser();
                     if (u != null && u.getId() == item.getOwnerId()) {
                         client.sendNotification(new Notification("PRODUCT_APPROVED", msg));
                         break;
+                    }
+                }
+                
+                AuctionServer.getInstance().broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(p.targetId)));
+
+                if (auction != null) {
+                    for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
+                        User u = client.getLoggedInUser();
+                        if (u instanceof Bidder) {
+                            client.sendNotification(new Notification("NEW_AUCTION", String.format("Sản phẩm mới [%s] vừa lên sàn đấu giá! Hãy tham gia ngay.", item.getName())));
+                        }
                     }
                 }
             }

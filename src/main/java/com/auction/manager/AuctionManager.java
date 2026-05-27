@@ -45,8 +45,8 @@ public class AuctionManager {
      * return Auction vừa tạo, hoặc null nếu item không ở trạng thái AVAILABLE.
      */
     public Auction createAuction(Item item, LocalDateTime startTime, LocalDateTime endTime, double minBidStep) {
-        if (item.getStatus() != ItemStatus.AVAILABLE) {
-            System.out.println("Sản phẩm không ở trạng thái AVAILABLE: " + item.getName());
+        if (item.getStatus() != ItemStatus.AVAILABLE && item.getStatus() != ItemStatus.PENDING) {
+            System.out.println("Sản phẩm không ở trạng thái AVAILABLE hoặc PENDING: " + item.getName());
             return null;
         }
 
@@ -57,7 +57,9 @@ public class AuctionManager {
             return null;
         }
 
-        item.setStatus(ItemStatus.IN_AUCTION);
+        if (item.getStatus() == ItemStatus.AVAILABLE) {
+            item.setStatus(ItemStatus.IN_AUCTION);
+        }
 
         Auction auction = new Auction(dbId, item, startTime, endTime, minBidStep);
         auctions.put(dbId, auction);

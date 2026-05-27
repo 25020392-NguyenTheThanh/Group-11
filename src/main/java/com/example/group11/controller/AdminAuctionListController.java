@@ -15,6 +15,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.StackPane;
 
 import java.io.IOException;
 import java.net.URL;
@@ -31,11 +32,17 @@ public class AdminAuctionListController implements Initializable {
     @FXML private Button btnAuditLogs;
     @FXML private Button btnLogout;
 
-    @FXML private VBox dashboardView;
-    @FXML private VBox usersView;
-    @FXML private VBox auctionsView;
-    @FXML private VBox itemsView;
-    @FXML private VBox auditLogsView;
+    @FXML private StackPane dashboardView;
+    @FXML private StackPane usersView;
+    @FXML private StackPane auctionsView;
+    @FXML private StackPane itemsView;
+    @FXML private StackPane auditLogsView;
+
+    @FXML private VBox dashboardLoading;
+    @FXML private VBox usersLoading;
+    @FXML private VBox auctionsLoading;
+    @FXML private VBox itemsLoading;
+    @FXML private VBox auditLogsLoading;
 
     // Dashboard Stats Labels
     @FXML private Label lblTotalUsers;
@@ -149,54 +156,77 @@ public class AdminAuctionListController implements Initializable {
     // --- Statistics & Sessions ---
     @FXML
     private void refreshStats() {
-        // Stats from server (returns Map)
-        Response statsRes = ServerConnection.getInstance().send(RequestType.ADMIN_GET_STATS, null);
-        if (statsRes != null && statsRes.isSuccess()) {
-            java.util.Map<String, Object> status = (java.util.Map<String, Object>) statsRes.getData();
-            if (status != null) {
-                int totalUsers = ((Number) status.getOrDefault("totalUsers", 0)).intValue();
-                int totalItems = ((Number) status.getOrDefault("totalItems", 0)).intValue();
-                int totalAuctions = ((Number) status.getOrDefault("totalAuctions", 0)).intValue();
+        dashboardLoading.setVisible(true);
+        dashboardLoading.setManaged(true);
 
-                lblTotalUsers.setText(String.valueOf(totalUsers));
-                lblTotalAuctions.setText(String.valueOf(totalAuctions));
-                lblTotalItems.setText(totalItems + " Items");
+        Thread thread = new Thread(() -> {
+            try {
+                // Stats from server (returns Map)
+                Response statsRes = ServerConnection.getInstance().send(RequestType.ADMIN_GET_STATS, null);
+
+                // Sessions
+                Response sessionsRes = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ACTIVE_SESSIONS, null);
+
+                // Fetch users to compute detailed user status stats
+                Response resUsers = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_USERS, null);
+
+                // Fetch auctions to compute detailed auction status stats and system revenue
+                Response resAuctions = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_AUCTIONS, null);
+
+                // Update UI elements in JavaFX Application Thread
+                Platform.runLater(() -> {
+                    if (statsRes != null && statsRes.isSuccess()) {
+                        java.util.Map<String, Object> status = (java.util.Map<String, Object>) statsRes.getData();
+                        if (status != null) {
+                            int totalUsers = ((Number) status.getOrDefault("totalUsers", 0)).intValue();
+                            int totalItems = ((Number) status.getOrDefault("totalItems", 0)).intValue();
+                            int totalAuctions = ((Number) status.getOrDefault("totalAuctions", 0)).intValue();
+
+                            lblTotalUsers.setText(String.valueOf(totalUsers));
+                            lblTotalAuctions.setText(String.valueOf(totalAuctions));
+                            lblTotalItems.setText(totalItems + " Items");
+                        }
+                    }
+
+                    if (sessionsRes != null && sessionsRes.isSuccess()) {
+                        List<String> sessions = (List<String>) sessionsRes.getData();
+                        listSessions.setItems(FXCollections.observableArrayList(sessions));
+                        lblActiveSessions.setText("Active Sessions: " + (sessions != null ? sessions.size() : 0));
+                    }
+
+                    if (resUsers != null && resUsers.isSuccess()) {
+                        List<User> list = (List<User>) resUsers.getData();
+                        long bidders = list.stream().filter(u -> "BIDDER".equalsIgnoreCase(u.getRole())).count();
+                        long sellers = list.stream().filter(u -> "SELLER".equalsIgnoreCase(u.getRole())).count();
+                        long banned = list.stream().filter(u -> !u.isActive()).count();
+                        lblUsersSub.setText(String.format("Bidders: %d | Sellers: %d | Banned: %d", bidders, sellers, banned));
+                    }
+
+                    if (resAuctions != null && resAuctions.isSuccess()) {
+                        List<Auction> list = (List<Auction>) resAuctions.getData();
+                        long running = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.RUNNING == a.getStatus()).count();
+                        long finished = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.FINISHED == a.getStatus() || com.auction.model.auction.AuctionStatus.PAID == a.getStatus()).count();
+                        long canceled = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.CANCELED == a.getStatus()).count();
+                        lblAuctionsSub.setText(String.format("Running: %d | Finished: %d | Canceled: %d", running, finished, canceled));
+
+                        double revenue = list.stream()
+                            .filter(a -> com.auction.model.auction.AuctionStatus.PAID == a.getStatus())
+                            .mapToDouble(Auction::getCurrentHighestBid)
+                            .sum();
+                        lblTotalRevenue.setText(String.format("$%,.2f", revenue));
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                Platform.runLater(() -> {
+                    dashboardLoading.setVisible(false);
+                    dashboardLoading.setManaged(false);
+                });
             }
-        }
-
-        // Sessions
-        Response sessionsRes = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ACTIVE_SESSIONS, null);
-        if (sessionsRes != null && sessionsRes.isSuccess()) {
-            List<String> sessions = (List<String>) sessionsRes.getData();
-            listSessions.setItems(FXCollections.observableArrayList(sessions));
-            lblActiveSessions.setText("Active Sessions: " + (sessions != null ? sessions.size() : 0));
-        }
-
-        // Fetch users to compute detailed user status stats
-        Response resUsers = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_USERS, null);
-        if (resUsers != null && resUsers.isSuccess()) {
-            List<User> list = (List<User>) resUsers.getData();
-            long bidders = list.stream().filter(u -> "BIDDER".equalsIgnoreCase(u.getRole())).count();
-            long sellers = list.stream().filter(u -> "SELLER".equalsIgnoreCase(u.getRole())).count();
-            long banned = list.stream().filter(u -> !u.isActive()).count();
-            lblUsersSub.setText(String.format("Bidders: %d | Sellers: %d | Banned: %d", bidders, sellers, banned));
-        }
-
-        // Fetch auctions to compute detailed auction status stats and system revenue
-        Response resAuctions = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_AUCTIONS, null);
-        if (resAuctions != null && resAuctions.isSuccess()) {
-            List<Auction> list = (List<Auction>) resAuctions.getData();
-            long running = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.RUNNING == a.getStatus()).count();
-            long finished = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.FINISHED == a.getStatus() || com.auction.model.auction.AuctionStatus.PAID == a.getStatus()).count();
-            long canceled = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.CANCELED == a.getStatus()).count();
-            lblAuctionsSub.setText(String.format("Running: %d | Finished: %d | Canceled: %d", running, finished, canceled));
-
-            double revenue = list.stream()
-                .filter(a -> com.auction.model.auction.AuctionStatus.PAID == a.getStatus())
-                .mapToDouble(Auction::getCurrentHighestBid)
-                .sum();
-            lblTotalRevenue.setText(String.format("$%,.2f", revenue));
-        }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @FXML
@@ -266,9 +296,8 @@ public class AdminAuctionListController implements Initializable {
     }
 
     private void loadUsers() {
-        Label loadingLabel = new Label("Đang tải dữ liệu người dùng từ database...");
-        loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-style: italic;");
-        tableUsers.setPlaceholder(loadingLabel);
+        usersLoading.setVisible(true);
+        usersLoading.setManaged(true);
         usersList.clear();
 
         javafx.concurrent.Task<Response> task = new javafx.concurrent.Task<>() {
@@ -279,6 +308,8 @@ public class AdminAuctionListController implements Initializable {
         };
 
         task.setOnSucceeded(evt -> {
+            usersLoading.setVisible(false);
+            usersLoading.setManaged(false);
             Response res = task.getValue();
             if (res != null && res.isSuccess()) {
                 List<User> list = (List<User>) res.getData();
@@ -291,6 +322,8 @@ public class AdminAuctionListController implements Initializable {
         });
 
         task.setOnFailed(evt -> {
+            usersLoading.setVisible(false);
+            usersLoading.setManaged(false);
             tableUsers.setPlaceholder(new Label("Lỗi kết nối khi tải danh sách người dùng."));
         });
 
@@ -433,11 +466,30 @@ public class AdminAuctionListController implements Initializable {
     }
 
     private void loadAuctions() {
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_AUCTIONS, null);
-        if (res != null && res.isSuccess()) {
-            List<Auction> list = (List<Auction>) res.getData();
-            auctionsList.setAll(list);
-        }
+        auctionsLoading.setVisible(true);
+        auctionsLoading.setManaged(true);
+        Thread thread = new Thread(() -> {
+            try {
+                Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_AUCTIONS, null);
+                Platform.runLater(() -> {
+                    if (res != null && res.isSuccess()) {
+                        List<Auction> list = (List<Auction>) res.getData();
+                        if (list != null) {
+                            auctionsList.setAll(list);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                Platform.runLater(() -> {
+                    auctionsLoading.setVisible(false);
+                    auctionsLoading.setManaged(false);
+                });
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @FXML
@@ -488,11 +540,30 @@ public class AdminAuctionListController implements Initializable {
     }
 
     private void loadItems() {
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_ITEMS, null);
-        if (res != null && res.isSuccess()) {
-            List<Item> list = (List<Item>) res.getData();
-            itemsList.setAll(list);
-        }
+        itemsLoading.setVisible(true);
+        itemsLoading.setManaged(true);
+        Thread thread = new Thread(() -> {
+            try {
+                Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_ITEMS, null);
+                Platform.runLater(() -> {
+                    if (res != null && res.isSuccess()) {
+                        List<Item> list = (List<Item>) res.getData();
+                        if (list != null) {
+                            itemsList.setAll(list);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                Platform.runLater(() -> {
+                    itemsLoading.setVisible(false);
+                    itemsLoading.setManaged(false);
+                });
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @FXML
@@ -555,11 +626,30 @@ public class AdminAuctionListController implements Initializable {
     }
 
     private void loadAuditLogs() {
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_AUDIT_LOG, null);
-        if (res != null && res.isSuccess()) {
-            List<String> logs = (List<String>) res.getData();
-            listAuditLogs.setItems(FXCollections.observableArrayList(logs));
-        }
+        auditLogsLoading.setVisible(true);
+        auditLogsLoading.setManaged(true);
+        Thread thread = new Thread(() -> {
+            try {
+                Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_AUDIT_LOG, null);
+                Platform.runLater(() -> {
+                    if (res != null && res.isSuccess()) {
+                        List<String> logs = (List<String>) res.getData();
+                        if (logs != null) {
+                            listAuditLogs.setItems(FXCollections.observableArrayList(logs));
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                Platform.runLater(() -> {
+                    auditLogsLoading.setVisible(false);
+                    auditLogsLoading.setManaged(false);
+                });
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
     }
 
     // --- Logout ---

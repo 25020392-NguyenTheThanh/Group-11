@@ -23,6 +23,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -141,9 +142,15 @@ public class BidderAuctionListController implements Initializable {
     List<Auction> allAuctions = new ArrayList<>();
     String currentTab = "DASHBOARD";
     private List<Button> allButtons;
+    private final java.util.Map<Integer, Auction> slotAuctions = new java.util.HashMap<>();
+    private final java.util.Map<Integer, VBox> slotCards = new java.util.HashMap<>();
+    private static final int FIXED_SLOT_COUNT = 12;
 
     @FXML
     private StackPane addFundsOverlay;
+
+    @FXML
+    private TextField txtCustomAmount;
 
     @FXML
     private VBox package1;
@@ -466,37 +473,81 @@ public class BidderAuctionListController implements Initializable {
      */
     private void renderAuctionCards(List<Auction> auctions) {
         contentGrid.getChildren().clear();
+        slotAuctions.clear();
+        slotCards.clear();
         totalAuctionsLabel.setText(String.valueOf(auctions.size()));
 
-        if (auctions.isEmpty()) {
-            Label noData = new Label("Không tìm thấy phiên đấu giá nào khớp bộ lọc.");
-            noData.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-font-style: italic;");
-            contentGrid.add(noData, 0, 0);
-            return;
-        }
+        int totalSlots = Math.max(FIXED_SLOT_COUNT, auctions.size());
 
-        for (int i = 0; i < auctions.size(); i++) {
-            Auction auction = auctions.get(i);
-            boolean isWatched = false;
-            if (user instanceof Bidder bidder) {
-                isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
+        for (int i = 1; i <= totalSlots; i++) {
+            VBox productCard;
+            if (i - 1 < auctions.size()) {
+                Auction auction = auctions.get(i - 1);
+                slotAuctions.put(i, auction);
+
+                boolean isWatched = false;
+                if (user instanceof Bidder bidder) {
+                    isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
+                }
+
+                productCard = AuctionCardFactory.createAuctionCard(
+                        auction,
+                        this::handleBid,
+                        this::openLiveAuction,
+                        isWatched,
+                        this::handleToggleWatchlist,
+                        this.user
+                );
+                
+                // Prepend the slot number to the auction ID label in the header
+                for (javafx.scene.Node node : productCard.getChildren()) {
+                    if (node instanceof HBox headerBar) {
+                        for (javafx.scene.Node child : headerBar.getChildren()) {
+                            if (child instanceof Label lbl && lbl.getText().startsWith("ID: #")) {
+                                lbl.setText("VỊ TRÍ #" + i + " | " + lbl.getText());
+                            }
+                        }
+                    }
+                }
+            } else {
+                slotAuctions.put(i, null);
+                productCard = createEmptySlotCard(i);
             }
-            // THAY THẾ HOÀN TOÀN FXML LOADER BẰNG CLASS JAVA CARD FACTORY
-            VBox productCard = AuctionCardFactory.createAuctionCard(
-                    auction,
-                    this::handleBid,          // Hàm callback xử lý đặt giá hiện tại của bạn
-                    this::openLiveAuction,   // Hàm callback xử lý xem chi tiết hiện tại của bạn   // Hàm callback xử lý xem chi tiết hiện tại của bạn
-                    isWatched,
-                    this::handleToggleWatchlist,
-                    this.user
 
-            );
-            productCard.setId("auction-card-" + auction.getId());
+            productCard.setId("auction-card-slot-" + i);
+            slotCards.put(i, productCard);
 
-            int column = i % 3;
-            int row = i / 3;
+            int column = (i - 1) % 3;
+            int row = (i - 1) / 3;
             contentGrid.add(productCard, column, row);
         }
+    }
+
+    private VBox createEmptySlotCard(int slotNumber) {
+        VBox cardContainer = new VBox();
+        cardContainer.setMaxWidth(260.0);
+        cardContainer.setPrefWidth(260.0);
+        cardContainer.setPrefHeight(300.0);
+        cardContainer.setAlignment(javafx.geometry.Pos.CENTER);
+        cardContainer.setSpacing(15.0);
+        cardContainer.setStyle(
+                "-fx-background-color: #0F172A; " +
+                "-fx-border-color: #1E293B; " +
+                "-fx-border-width: 1.5; " +
+                "-fx-background-radius: 15; " +
+                "-fx-border-radius: 15; " +
+                "-fx-border-style: dashed;"
+        );
+        cardContainer.setId("auction-card-slot-" + slotNumber);
+
+        Label slotLabel = new Label("VỊ TRÍ CỐ ĐỊNH #" + slotNumber);
+        slotLabel.setStyle("-fx-text-fill: #64748B; -fx-font-weight: bold; -fx-font-size: 14px;");
+
+        Label statusLabel = new Label("Trống / Chưa có sản phẩm");
+        statusLabel.setStyle("-fx-text-fill: #475569; -fx-font-size: 12px; -fx-font-style: italic;");
+
+        cardContainer.getChildren().addAll(slotLabel, statusLabel);
+        return cardContainer;
     }
 
     private void openLiveAuction(Auction auction) {
@@ -548,7 +599,7 @@ public class BidderAuctionListController implements Initializable {
                                 bidder.getProfile().addParticipatedAuction(auction.getId());
                                 walletBalance.setText(String.format("%,.2f", bidder.getBalance()));
                             }
-                            loadAuctions();
+                            updateSingleCard(auction.getId());
                         } else {
                             String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
                             NotificationController.showError("Lỗi đặt giá", "Không thể đặt giá.\nChi tiết: " + errMsg);
@@ -588,7 +639,7 @@ public class BidderAuctionListController implements Initializable {
                     public void onSuccess(Response res) {
                         if (res != null && res.isSuccess()) {
                             NotificationController.showNotification("Thành công", "Đã xác nhận thanh toán thành công!");
-                            loadAuctions();
+                            updateSingleCard(auction.getId());
                         } else {
                             String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
                             NotificationController.showError("Lỗi thanh toán", "Không thể thanh toán.\nChi tiết: " + errMsg);
@@ -618,7 +669,7 @@ public class BidderAuctionListController implements Initializable {
                         Response res = declineTask.getValue();
                         if (res != null && res.isSuccess()) {
                             NotificationController.showNotification("Thành công", "Đã từ chối thanh toán và hủy giao dịch.");
-                            loadAuctions();
+                            updateSingleCard(auction.getId());
                         } else {
                             NotificationController.showError("Lỗi", res != null ? res.getMessage() : "Không thể từ chối thanh toán.");
                         }
@@ -674,22 +725,28 @@ public class BidderAuctionListController implements Initializable {
 
     private void updateAuctionCardPrice(int auctionId, double newPrice,
                                         String winner, int totalBids) {
+        Integer slotKey = null;
         Auction found = null;
-        for (Auction a : allAuctions) {
-            if (a.getId() == auctionId) {
-                a.restoreHighestBid(newPrice);
-                found = a;
+        for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
+            if (entry.getValue() != null && entry.getValue().getId() == auctionId) {
+                slotKey = entry.getKey();
+                found = entry.getValue();
                 break;
             }
         }
 
-        if (found != null) {
-            final Auction updated = found;
-            // Dùng data local — không gọi server, không delay
-            for (Node node : contentGrid.getChildren()) {
-                if (("auction-card-" + auctionId).equals(node.getId())) {
-                    AuctionCardFactory.updateCard((VBox) node, updated);
-                    break;
+        if (found != null && slotKey != null) {
+            found.restoreHighestBid(newPrice);
+            VBox cardNode = slotCards.get(slotKey);
+            if (cardNode != null) {
+                AuctionCardFactory.updateCard(cardNode, found);
+                
+                // Update local list
+                for (Auction a : allAuctions) {
+                    if (a.getId() == auctionId) {
+                        a.restoreHighestBid(newPrice);
+                        break;
+                    }
                 }
             }
         } else {
@@ -710,7 +767,7 @@ public class BidderAuctionListController implements Initializable {
             Response res = task.getValue();
             if (res != null && res.isSuccess() && res.getData() instanceof Auction detailed) {
                 Platform.runLater(() -> {
-                    // Cập nhật đối tượng trong allAuctions để khi lọc không bị mất dữ liệu
+                    // Update in allAuctions
                     for (int i = 0; i < allAuctions.size(); i++) {
                         if (allAuctions.get(i).getId() == auctionId) {
                             allAuctions.set(i, detailed);
@@ -718,12 +775,57 @@ public class BidderAuctionListController implements Initializable {
                         }
                     }
 
-                    // C. Tìm card và update tại chỗ — KHÔNG tạo lại card mới
-                    for (javafx.scene.Node node : contentGrid.getChildren()) {
-                        if (("auction-card-" + auctionId).equals(node.getId())) {
-                            AuctionCardFactory.updateCard((VBox) node, detailed);
+                    // Find slot key and update card at that position
+                    Integer slotKey = null;
+                    for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
+                        if (entry.getValue() != null && entry.getValue().getId() == auctionId) {
+                            slotKey = entry.getKey();
                             break;
                         }
+                    }
+
+                    if (slotKey != null) {
+                        slotAuctions.put(slotKey, detailed);
+                        VBox oldCardNode = slotCards.get(slotKey);
+                        if (oldCardNode != null) {
+                            boolean isWatched = false;
+                            if (user instanceof Bidder bidder) {
+                                isWatched = bidder.getProfile().getWatchlist().contains(detailed.getId());
+                            }
+                            VBox newCardNode = AuctionCardFactory.createAuctionCard(
+                                    detailed,
+                                    this::handleBid,
+                                    this::openLiveAuction,
+                                    isWatched,
+                                    this::handleToggleWatchlist,
+                                    this.user
+                            );
+                            newCardNode.setId("auction-card-slot-" + slotKey);
+                            
+                            // Prepend slot text
+                            for (javafx.scene.Node n : newCardNode.getChildren()) {
+                                if (n instanceof HBox headerBar) {
+                                    for (javafx.scene.Node child : headerBar.getChildren()) {
+                                        if (child instanceof Label lbl && lbl.getText().startsWith("ID: #")) {
+                                            lbl.setText("VỊ TRÍ #" + slotKey + " | " + lbl.getText());
+                                        }
+                                    }
+                                }
+                            }
+
+                            int index = contentGrid.getChildren().indexOf(oldCardNode);
+                            if (index != -1) {
+                                contentGrid.getChildren().set(index, newCardNode);
+                            } else {
+                                contentGrid.getChildren().remove(oldCardNode);
+                                int column = (slotKey - 1) % 3;
+                                int row = (slotKey - 1) / 3;
+                                contentGrid.add(newCardNode, column, row);
+                            }
+                            slotCards.put(slotKey, newCardNode);
+                        }
+                    } else {
+                        loadAuctions();
                     }
                 });
             }
@@ -968,6 +1070,51 @@ public class BidderAuctionListController implements Initializable {
                     }
                 }
             }
+        }
+    }
+
+    @FXML
+    private void handleCustomTopUp(ActionEvent event) {
+        String text = txtCustomAmount.getText().trim();
+        if (text.isEmpty()) {
+            NotificationController.showError("Lỗi nhập liệu", "Vui lòng nhập số tiền cần nạp!");
+            return;
+        }
+        try {
+            double amount = Double.parseDouble(text);
+            if (amount <= 0) {
+                NotificationController.showError("Lỗi số tiền", "Số tiền nạp phải lớn hơn 0!");
+                return;
+            }
+            
+            boolean confirm = NotificationController.showConfirmation(
+                    "Xác nhận nạp tiền",
+                    String.format("Xác nhận nạp %,.2f $ vào tài khoản?", amount),
+                    "",
+                    "Đồng ý",
+                    "Hủy"
+            );
+
+            if (confirm) {
+                TopUpService.topUp(amount, user, new TopUpService.TopUpCallback() {
+                    @Override
+                    public void onSuccess(double newBalance) {
+                        walletBalance.setText(String.format("%,.2f", newBalance));
+                        NotificationController.showNotification("Thành công",
+                                String.format("Đã nạp thành công %,.2f $ vào ví.", amount));
+                        txtCustomAmount.clear();
+                        addFundsOverlay.setVisible(false);
+                        addFundsOverlay.setManaged(false);
+                    }
+
+                    @Override
+                    public void onFailure(String message) {
+                        NotificationController.showError("Lỗi nạp tiền", message);
+                    }
+                });
+            }
+        } catch (NumberFormatException e) {
+            NotificationController.showError("Lỗi định dạng", "Vui lòng nhập một số hợp lệ!");
         }
     }
 

@@ -20,6 +20,9 @@ public class BidderFilterManager {
         String categoryUpper = categoryFilter != null ? categoryFilter.trim().toUpperCase() : "SẢN PHẨM";
 
         List<Auction> filtered = allAuctions.stream().filter(auction -> {
+            if (auction.getItem() != null && auction.getItem().getStatus() == com.auction.model.item.ItemStatus.PENDING) {
+                return false;
+            }
             if (currentTab.equals("DASHBOARD")) {
                 if (auction.getStatus() != AuctionStatus.RUNNING
                         && auction.getStatus() != AuctionStatus.OPEN

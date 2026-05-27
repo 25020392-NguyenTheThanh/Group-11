@@ -797,7 +797,7 @@ public class SellerAuctionListController implements Initializable {
                             Integer row = GridPane.getRowIndex(oldCard);
 
                             VBox newCard = createSingleProductCard(updatedItem);
-                            // ✅ Thay thế trực tiếp trong list — GridPane không bị re-layout
+                            // Thay thế trực tiếp trong list — GridPane không bị re-layout
                             int idx = contentGrid.getChildren().indexOf(oldCard);
                             contentGrid.getChildren().set(idx, newCard);
 

@@ -17,6 +17,7 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.control.ProgressIndicator?>
 
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.RowConstraints?>
@@ -95,170 +96,220 @@
                             <children>
                                 
                                 <!-- 1. DASHBOARD VIEW -->
-                                <VBox fx:id="dashboardView" spacing="25.0">
+                                <StackPane fx:id="dashboardView">
                                     <children>
-                                        <Label text="SYSTEM STATISTICS" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                        
-                                        <!-- Row 1: Users, Auctions, Items, Revenue -->
-                                        <GridPane hgap="20.0" vgap="20.0">
-                                            <columnConstraints>
-                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
-                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
-                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
-                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
-                                            </columnConstraints>
-                                            <rowConstraints>
-                                                <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
-                                            </rowConstraints>
+                                        <VBox spacing="25.0">
                                             <children>
-                                                <!-- Total Users -->
-                                                <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="0" GridPane.rowIndex="0">
-                                                    <Label text="TOTAL USERS" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
-                                                    <Label fx:id="lblTotalUsers" text="0" textFill="#ffd700"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                    <Label fx:id="lblUsersSub" text="Bidders: 0 | Sellers: 0 | Banned: 0" textFill="#64748B"><font><Font size="10.0"/></font></Label>
-                                                </VBox>
-                                                <!-- Total Auctions -->
-                                                <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                                                    <Label text="TOTAL AUCTIONS" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
-                                                    <Label fx:id="lblTotalAuctions" text="0" textFill="#E2E8F0"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                    <Label fx:id="lblAuctionsSub" text="Running: 0 | Finished: 0 | Canceled: 0" textFill="#64748B"><font><Font size="10.0"/></font></Label>
-                                                </VBox>
-                                                <!-- Total Items & Sessions -->
-                                                <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="2" GridPane.rowIndex="0">
-                                                    <Label text="TOTAL ITEMS &amp; SESSIONS" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
-                                                    <Label fx:id="lblTotalItems" text="0 Items" textFill="#22C55E"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                    <Label fx:id="lblActiveSessions" text="Active Sessions: 0" textFill="#38BDF8"><font><Font size="11.0" name="System Bold"/></font></Label>
-                                                </VBox>
-                                                <!-- System Revenue -->
-                                                <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="3" GridPane.rowIndex="0">
-                                                    <Label text="TOTAL REVENUE" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
-                                                    <Label fx:id="lblTotalRevenue" text="/$0.00" textFill="#FFD700"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                    <Label text="Calculated across all transactions" textFill="#64748B"><font><Font size="10.0"/></font></Label>
+                                                <Label text="SYSTEM STATISTICS" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                
+                                                <!-- Row 1: Users, Auctions, Items, Revenue -->
+                                                <GridPane hgap="20.0" vgap="20.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" percentWidth="25.0" />
+                                                    </columnConstraints>
+                                                    <rowConstraints>
+                                                        <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
+                                                    </rowConstraints>
+                                                    <children>
+                                                        <!-- Total Users -->
+                                                        <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                                            <Label text="TOTAL USERS" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
+                                                            <Label fx:id="lblTotalUsers" text="0" textFill="#ffd700"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                            <Label fx:id="lblUsersSub" text="Bidders: 0 | Sellers: 0 | Banned: 0" textFill="#64748B"><font><Font size="10.0"/></font></Label>
+                                                        </VBox>
+                                                        <!-- Total Auctions -->
+                                                        <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                                            <Label text="TOTAL AUCTIONS" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
+                                                            <Label fx:id="lblTotalAuctions" text="0" textFill="#E2E8F0"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                            <Label fx:id="lblAuctionsSub" text="Running: 0 | Finished: 0 | Canceled: 0" textFill="#64748B"><font><Font size="10.0"/></font></Label>
+                                                        </VBox>
+                                                        <!-- Total Items & Sessions -->
+                                                        <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                                                            <Label text="TOTAL ITEMS &amp; SESSIONS" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
+                                                            <Label fx:id="lblTotalItems" text="0 Items" textFill="#22C55E"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                            <Label fx:id="lblActiveSessions" text="Active Sessions: 0" textFill="#38BDF8"><font><Font size="11.0" name="System Bold"/></font></Label>
+                                                        </VBox>
+                                                        <!-- System Revenue -->
+                                                        <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="3" GridPane.rowIndex="0">
+                                                            <Label text="TOTAL REVENUE" textFill="#94A3B8"><font><Font name="System Bold" size="11.0" /></font></Label>
+                                                            <Label fx:id="lblTotalRevenue" text="/$0.00" textFill="#FFD700"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                            <Label text="Calculated across all transactions" textFill="#64748B"><font><Font size="10.0"/></font></Label>
+                                                        </VBox>
+                                                    </children>
+                                                </GridPane>
+                                                
+                                                <!-- Active Sessions Section -->
+                                                <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;">
+                                                    <children>
+                                                        <HBox alignment="CENTER_LEFT">
+                                                            <children>
+                                                                <Label text="ACTIVE USER SESSIONS" textFill="WHITE"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                                                <Region HBox.hgrow="ALWAYS" />
+                                                                <Button onAction="#refreshStats" style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-cursor: hand;" text="🔄 Refresh Stats" />
+                                                            </children>
+                                                        </HBox>
+                                                        <ListView fx:id="listSessions" prefHeight="250.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240; -fx-text-fill: white;" />
+                                                        <HBox spacing="10.0" alignment="CENTER_RIGHT">
+                                                            <children>
+                                                                <Button fx:id="btnKick" onAction="#handleKickUser" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="Kick Selected Session" />
+                                                            </children>
+                                                        </HBox>
+                                                    </children>
                                                 </VBox>
                                             </children>
-                                        </GridPane>
-                                        
-                                        <!-- Active Sessions Section -->
-                                        <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;">
+                                        </VBox>
+                                        <VBox fx:id="dashboardLoading" alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;" visible="false">
                                             <children>
-                                                <HBox alignment="CENTER_LEFT">
+                                                <ProgressIndicator prefHeight="50.0" prefWidth="50.0" style="-fx-progress-color: #ffd700;" />
+                                                <Label text="Đang tải dữ liệu Dashboard..." textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </StackPane>
+
+                                <!-- 2. USER MANAGEMENT VIEW -->
+                                <StackPane fx:id="usersView" visible="false" managed="false">
+                                    <children>
+                                        <VBox spacing="20.0">
+                                            <children>
+                                                <HBox alignment="CENTER_LEFT" spacing="15.0">
                                                     <children>
-                                                        <Label text="ACTIVE USER SESSIONS" textFill="WHITE"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                                        <Label text="USER REGISTRY" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
                                                         <Region HBox.hgrow="ALWAYS" />
-                                                        <Button onAction="#refreshStats" style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-cursor: hand;" text="🔄 Refresh Stats" />
+                                                        <TextField fx:id="txtSearchUser" prefWidth="250.0" promptText="Search username/email..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
                                                     </children>
                                                 </HBox>
-                                                <ListView fx:id="listSessions" prefHeight="250.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240; -fx-text-fill: white;" />
-                                                <HBox spacing="10.0" alignment="CENTER_RIGHT">
+                                                <TableView fx:id="tableUsers" prefHeight="450.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
+                                                    <columns>
+                                                        <TableColumn fx:id="colUserId" prefWidth="60.0" text="ID" />
+                                                        <TableColumn fx:id="colUsername" prefWidth="150.0" text="USERNAME" />
+                                                        <TableColumn fx:id="colEmail" prefWidth="200.0" text="EMAIL" />
+                                                        <TableColumn fx:id="colRole" prefWidth="100.0" text="ROLE" />
+                                                        <TableColumn fx:id="colStatus" prefWidth="100.0" text="STATUS" />
+                                                        <TableColumn fx:id="colBanReason" prefWidth="200.0" text="BAN REASON" />
+                                                    </columns>
+                                                </TableView>
+                                                <HBox spacing="15.0" alignment="CENTER_LEFT">
                                                     <children>
-                                                        <Button fx:id="btnKick" onAction="#handleKickUser" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="Kick Selected Session" />
+                                                        <Button onAction="#handleBanUser" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🚫 Ban User" />
+                                                        <Button onAction="#handleUnbanUser" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Approve / Unban User" />
+                                                        <Button onAction="#handleResetUserPassword" style="-fx-background-color: #38BDF8; -fx-text-fill: #0A192F; -fx-font-weight: bold; -fx-cursor: hand;" text="🔑 Reset Password" />
+                                                        <Button onAction="#handleDeleteUser" style="-fx-background-color: #7F1D1D; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🗑 Delete Permanently" />
                                                     </children>
                                                 </HBox>
                                             </children>
                                         </VBox>
-                                    </children>
-                                </VBox>
-
-                                <!-- 2. USER MANAGEMENT VIEW -->
-                                <VBox fx:id="usersView" spacing="20.0" visible="false" managed="false">
-                                    <children>
-                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                        <VBox fx:id="usersLoading" alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;" visible="false">
                                             <children>
-                                                <Label text="USER REGISTRY" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <TextField fx:id="txtSearchUser" prefWidth="250.0" promptText="Search username/email..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                <ProgressIndicator prefHeight="50.0" prefWidth="50.0" style="-fx-progress-color: #ffd700;" />
+                                                <Label text="Đang tải danh sách người dùng..." textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
                                             </children>
-                                        </HBox>
-                                        <TableView fx:id="tableUsers" prefHeight="450.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
-                                            <columns>
-                                                <TableColumn fx:id="colUserId" prefWidth="60.0" text="ID" />
-                                                <TableColumn fx:id="colUsername" prefWidth="150.0" text="USERNAME" />
-                                                <TableColumn fx:id="colEmail" prefWidth="200.0" text="EMAIL" />
-                                                <TableColumn fx:id="colRole" prefWidth="100.0" text="ROLE" />
-                                                <TableColumn fx:id="colStatus" prefWidth="100.0" text="STATUS" />
-                                                <TableColumn fx:id="colBanReason" prefWidth="200.0" text="BAN REASON" />
-                                            </columns>
-                                        </TableView>
-                                        <HBox spacing="15.0" alignment="CENTER_LEFT">
-                                            <children>
-                                                <Button onAction="#handleBanUser" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🚫 Ban User" />
-                                                <Button onAction="#handleUnbanUser" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Approve / Unban User" />
-                                                <Button onAction="#handleResetUserPassword" style="-fx-background-color: #38BDF8; -fx-text-fill: #0A192F; -fx-font-weight: bold; -fx-cursor: hand;" text="🔑 Reset Password" />
-                                                <Button onAction="#handleDeleteUser" style="-fx-background-color: #7F1D1D; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🗑 Delete Permanently" />
-                                            </children>
-                                        </HBox>
+                                        </VBox>
                                     </children>
-                                </VBox>
+                                </StackPane>
 
                                 <!-- 3. AUCTION MANAGEMENT VIEW -->
-                                <VBox fx:id="auctionsView" spacing="20.0" visible="false" managed="false">
+                                <StackPane fx:id="auctionsView" visible="false" managed="false">
                                     <children>
-                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                        <VBox spacing="20.0">
                                             <children>
-                                                <Label text="AUCTION SESSIONS" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <TextField fx:id="txtSearchAuction" prefWidth="250.0" promptText="Search auction item..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                                    <children>
+                                                        <Label text="AUCTION SESSIONS" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <TextField fx:id="txtSearchAuction" prefWidth="250.0" promptText="Search auction item..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                    </children>
+                                                </HBox>
+                                                <TableView fx:id="tableAuctions" prefHeight="450.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
+                                                    <columns>
+                                                        <TableColumn fx:id="colAuctionId" prefWidth="80.0" text="ID" />
+                                                        <TableColumn fx:id="colAuctionItem" prefWidth="200.0" text="ITEM NAME" />
+                                                        <TableColumn fx:id="colAuctionStart" prefWidth="180.0" text="START TIME" />
+                                                        <TableColumn fx:id="colAuctionEnd" prefWidth="180.0" text="END TIME" />
+                                                        <TableColumn fx:id="colAuctionStatus" prefWidth="100.0" text="STATUS" />
+                                                        <TableColumn fx:id="colAuctionBid" prefWidth="120.0" text="HIGHEST BID" />
+                                                    </columns>
+                                                </TableView>
+                                                <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                                    <children>
+                                                        <Button onAction="#handleCancelAuction" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🛑 Cancel Selected Auction" />
+                                                    </children>
+                                                </HBox>
                                             </children>
-                                        </HBox>
-                                        <TableView fx:id="tableAuctions" prefHeight="450.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
-                                            <columns>
-                                                <TableColumn fx:id="colAuctionId" prefWidth="80.0" text="ID" />
-                                                <TableColumn fx:id="colAuctionItem" prefWidth="200.0" text="ITEM NAME" />
-                                                <TableColumn fx:id="colAuctionStart" prefWidth="180.0" text="START TIME" />
-                                                <TableColumn fx:id="colAuctionEnd" prefWidth="180.0" text="END TIME" />
-                                                <TableColumn fx:id="colAuctionStatus" prefWidth="100.0" text="STATUS" />
-                                                <TableColumn fx:id="colAuctionBid" prefWidth="120.0" text="HIGHEST BID" />
-                                            </columns>
-                                        </TableView>
-                                        <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                        </VBox>
+                                        <VBox fx:id="auctionsLoading" alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;" visible="false">
                                             <children>
-                                                <Button onAction="#handleCancelAuction" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🛑 Cancel Selected Auction" />
+                                                <ProgressIndicator prefHeight="50.0" prefWidth="50.0" style="-fx-progress-color: #ffd700;" />
+                                                <Label text="Đang tải danh sách phiên đấu giá..." textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
                                             </children>
-                                        </HBox>
+                                        </VBox>
                                     </children>
-                                </VBox>
+                                </StackPane>
 
                                 <!-- 4. ITEM MANAGEMENT VIEW -->
-                                <VBox fx:id="itemsView" spacing="20.0" visible="false" managed="false">
+                                <StackPane fx:id="itemsView" visible="false" managed="false">
                                     <children>
-                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                        <VBox spacing="20.0">
                                             <children>
-                                                <Label text="PRODUCT REGISTRY" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <TextField fx:id="txtSearchItem" prefWidth="250.0" promptText="Search items..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                                    <children>
+                                                        <Label text="PRODUCT REGISTRY" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <TextField fx:id="txtSearchItem" prefWidth="250.0" promptText="Search items..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                    </children>
+                                                </HBox>
+                                                <TableView fx:id="tableItems" prefHeight="450.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
+                                                    <columns>
+                                                        <TableColumn fx:id="colItemId" prefWidth="80.0" text="ID" />
+                                                        <TableColumn fx:id="colItemName" prefWidth="250.0" text="PRODUCT NAME" />
+                                                        <TableColumn fx:id="colItemPrice" prefWidth="150.0" text="STARTING PRICE" />
+                                                        <TableColumn fx:id="colItemOwner" prefWidth="120.0" text="OWNER ID" />
+                                                        <TableColumn fx:id="colItemStatus" prefWidth="120.0" text="STATUS" />
+                                                    </columns>
+                                                </TableView>
+                                                <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                                    <children>
+                                                        <Button onAction="#handleApproveItem" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Approve Item" />
+                                                        <Button onAction="#handleForceDeleteItem" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🗑 Force Delete Item" />
+                                                    </children>
+                                                </HBox>
                                             </children>
-                                        </HBox>
-                                        <TableView fx:id="tableItems" prefHeight="450.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
-                                            <columns>
-                                                <TableColumn fx:id="colItemId" prefWidth="80.0" text="ID" />
-                                                <TableColumn fx:id="colItemName" prefWidth="250.0" text="PRODUCT NAME" />
-                                                <TableColumn fx:id="colItemPrice" prefWidth="150.0" text="STARTING PRICE" />
-                                                <TableColumn fx:id="colItemOwner" prefWidth="120.0" text="OWNER ID" />
-                                                <TableColumn fx:id="colItemStatus" prefWidth="120.0" text="STATUS" />
-                                            </columns>
-                                        </TableView>
-                                        <HBox spacing="15.0" alignment="CENTER_LEFT">
+                                        </VBox>
+                                        <VBox fx:id="itemsLoading" alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;" visible="false">
                                             <children>
-                                                <Button onAction="#handleApproveItem" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Approve Item" />
-                                                <Button onAction="#handleForceDeleteItem" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🗑 Force Delete Item" />
+                                                <ProgressIndicator prefHeight="50.0" prefWidth="50.0" style="-fx-progress-color: #ffd700;" />
+                                                <Label text="Đang tải danh sách sản phẩm..." textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
                                             </children>
-                                        </HBox>
+                                        </VBox>
                                     </children>
-                                </VBox>
+                                </StackPane>
 
                                 <!-- 5. AUDIT LOGS VIEW -->
-                                <VBox fx:id="auditLogsView" spacing="20.0" visible="false" managed="false">
+                                <StackPane fx:id="auditLogsView" visible="false" managed="false">
                                     <children>
-                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                        <VBox spacing="20.0">
                                             <children>
-                                                <Label text="SECURITY AUDIT LOGS" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <Button onAction="#refreshAuditLogs" style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-cursor: hand;" text="🔄 Refresh Logs" />
+                                                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                                    <children>
+                                                        <Label text="SECURITY AUDIT LOGS" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <Button onAction="#refreshAuditLogs" style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-cursor: hand;" text="🔄 Refresh Logs" />
+                                                    </children>
+                                                </HBox>
+                                                <ListView fx:id="listAuditLogs" prefHeight="500.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240; -fx-text-fill: white;" />
                                             </children>
-                                        </HBox>
-                                        <ListView fx:id="listAuditLogs" prefHeight="500.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240; -fx-text-fill: white;" />
+                                        </VBox>
+                                        <VBox fx:id="auditLogsLoading" alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;" visible="false">
+                                            <children>
+                                                <ProgressIndicator prefHeight="50.0" prefWidth="50.0" style="-fx-progress-color: #ffd700;" />
+                                                <Label text="Đang tải nhật ký hệ thống..." textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                            </children>
+                                        </VBox>
                                     </children>
-                                </VBox>
+                                </StackPane>
 
                             </children>
                         </StackPane>
