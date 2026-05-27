@@ -21,6 +21,12 @@ public class DatabaseConnection {
     private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "sql12828332");
     private static final String DB_PASS = System.getenv().getOrDefault("DB_PASS", "lBL6xIvN17");
 
+//    private static final String DB_URL = System.getenv().getOrDefault(
+//            "DB_URL",
+//            "jdbc:mysql://localhost:3306/auction_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Ho_Chi_Minh");
+//    private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "root");
+//    private static final String DB_PASS = System.getenv().getOrDefault("DB_PASS", "ngtien123@@@");
+
     private static DatabaseConnection instance;
 
     private DatabaseConnection() {}

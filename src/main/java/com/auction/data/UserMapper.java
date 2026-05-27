@@ -27,8 +27,10 @@ public class UserMapper {
         String password = rs.getString("password");
         String email = rs.getString("email");
         String role = rs.getString("role");
+        String status = rs.getString("status");
+        String banReason = rs.getString("ban_reason");
 
-        return switch (role) {
+        User user = switch (role) {
             case "ADMIN" -> new Admin(id, username, password, email);
 
             case "SELLER" -> {
@@ -57,6 +59,12 @@ public class UserMapper {
                 yield b;
             }
         };
+
+        if (user != null) {
+            user.setActive(!"BANNED".equalsIgnoreCase(status));
+            user.setBanReason(banReason != null ? banReason : "");
+        }
+        return user;
     }
 
     // private helpers

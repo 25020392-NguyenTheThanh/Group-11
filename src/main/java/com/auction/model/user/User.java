@@ -10,6 +10,7 @@ public abstract class User extends Entity {
     private String email ;
     private boolean active; // trạng thái tài khoản
     private boolean authenticated; // trạng thái đăng nhập
+    private String banReason; // lý do khóa tài khoản
 
     public User(int id , String username , String password , String email){
         super(id);
@@ -18,6 +19,7 @@ public abstract class User extends Entity {
         this.email = email ;
         this.active = true;
         this.authenticated = false;
+        this.banReason = "";
     }
 
     public String getUsername() { return username; }
@@ -25,6 +27,8 @@ public abstract class User extends Entity {
     public String getEmail() { return email; }
     public boolean isActive() { return active; }
     public boolean isAuthenticated() { return authenticated; }
+    public String getBanReason() { return banReason; }
+    public void setBanReason(String banReason) { this.banReason = banReason; }
     public void setAuthenticated(boolean state){ this.authenticated = state ;}
     public void setEmail(String email) { this.email = email ; }
     public void setPassWord(String password) { this.password = password ;}

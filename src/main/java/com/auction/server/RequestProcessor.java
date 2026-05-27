@@ -48,6 +48,7 @@ public class RequestProcessor {
                 case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
                 case TOP_UP -> handleTopUp(request, handler);
                 case CONFIRM_PAYMENT -> handleConfirmPayment(request, handler);
+                case DECLINE_PAYMENT -> handleDeclinePayment(request, handler);
                 case SET_AUTO_BID -> handleSetAutoBid(request, handler);
                 case CANCEL_AUTO_BID -> handleCancelAutoBid(request, handler);
                 case CHANGE_PASSWORD -> handleChangePassword(request, handler);
@@ -97,6 +98,9 @@ public class RequestProcessor {
             User user = UserManager.getInstance().login(payload.username, payload.password);
             if (user == null) {
                 return Response.error("Tên đăng nhập hoặc mật khẩu không đúng!");
+            }
+            if (!user.isActive()) {
+                return Response.error("Tài khoản của bạn đã bị khóa! Lý do: " + user.getBanReason());
             }
             // lưu User vào handler để biết ai đang gửi request
             handler.setLoggedInUser(user);
@@ -615,6 +619,56 @@ public class RequestProcessor {
         }
     }
 
+    private static Response handleDeclinePayment(Request request, ClientHandler handler) {
+        User user = handler.getLoggedInUser();
+        if (user == null) {
+            return Response.error("Bạn cần đăng nhập để từ chối thanh toán!");
+        }
+        if (!(user instanceof Bidder)) {
+            return Response.error("Chỉ người mua (Bidder) mới có thể thực hiện từ chối thanh toán!");
+        }
+        if (!(request.getPayload() instanceof Integer auctionId)) {
+            return Response.error("Dữ liệu không hợp lệ!");
+        }
+
+        Auction auction = AuctionManager.getInstance().findAuctionById(auctionId);
+        if (auction == null) {
+            return Response.error("Phiên đấu giá không tồn tại!");
+        }
+        if (auction.getStatus() != com.auction.model.auction.AuctionStatus.FINISHED) {
+            return Response.error("Chỉ có thể từ chối thanh toán khi phiên ở trạng thái FINISHED!");
+        }
+        if (auction.getCurrentWinner() == null || auction.getCurrentWinner().getId() != user.getId()) {
+            return Response.error("Bạn không phải người thắng cuộc của phiên này!");
+        }
+
+        try {
+            // Hủy phiên đấu giá do người mua từ chối thanh toán
+            boolean ok = AuctionManager.getInstance().cancelAuctionByAdmin(auctionId, "Người mua từ chối thanh toán.");
+            if (ok) {
+                // Gửi thông báo đến Seller (nếu online)
+                int sellerId = auction.getItem().getOwnerId();
+                if (com.auction.server.AuctionServer.getInstance() != null) {
+                    String sellerMsg = String.format(
+                            "❌ Người thắng [%s] đã từ chối thanh toán cho sản phẩm [%s] — Phiên #%d. Phiên đấu giá bị hủy.",
+                            user.getUsername(), auction.getItem().getName(), auctionId);
+                    for (ClientHandler client : com.auction.server.AuctionServer.getInstance().getConnectedClients()) {
+                        User u = client.getLoggedInUser();
+                        if (u != null && u.getId() == sellerId) {
+                            client.sendNotification(new Notification("PAYMENT_DECLINED", sellerMsg));
+                            break;
+                        }
+                    }
+                }
+                return Response.ok("Đã từ chối thanh toán và hủy phiên thành công!");
+            } else {
+                return Response.error("Không thể xử lý từ chối thanh toán.");
+            }
+        } catch (Exception e) {
+            return Response.error("Lỗi: " + e.getMessage());
+        }
+    }
+
     private static Response handleVerifyEmail(Request request) {
         if (request.getPayload() == null || !(request.getPayload() instanceof String)) {
             return Response.error("Email không hợp lệ!");
@@ -682,9 +736,13 @@ public class RequestProcessor {
         if (!isAdmin(handler.getLoggedInUser())) return Response.error("Từ chối truy cập: Quyền Admin là bắt buộc!");
         if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Dữ liệu Admin không hợp lệ!");
 
-        boolean ok = UserManager.getInstance().deleteUserPermanently(p.targetId);
-        if (ok) return Response.ok("Đã xóa vĩnh viễn tài khoản khỏi hệ thống!");
-        return Response.error("Xóa tài khoản thất bại.");
+        try {
+            boolean ok = UserManager.getInstance().deleteUserPermanently(p.targetId);
+            if (ok) return Response.ok("Đã xóa vĩnh viễn tài khoản khỏi hệ thống!");
+            return Response.error("Xóa tài khoản thất bại.");
+        } catch (RuntimeException e) {
+            return Response.error(e.getMessage());
+        }
     }
 
     private static Response handleAdminResetUserPassword(Request request, ClientHandler handler) {

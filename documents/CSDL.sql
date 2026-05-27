@@ -5,6 +5,8 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,        
     email VARCHAR(100) NOT NULL UNIQUE,
     role ENUM('BIDDER','SELLER','ADMIN') NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- Trạng thái tài khoản (ACTIVE, BANNED)
+    ban_reason VARCHAR(255) DEFAULT NULL, -- Lý do khóa tài khoản
     active TINYINT(1) NOT NULL DEFAULT 1, -- Trạng thái tài khoản (hoạt động trả giá trị 1)
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Tự lưu thời gian tạo tài khoản
 );
@@ -102,3 +104,30 @@ WHERE b1.auction_id = 8
   AND b1.amount = b2.amount
   AND b1.bid_time = b2.bid_time
   AND b1.id > b2.id; -- Xóa dòng có ID lớn hơn, giữ lại ID nhỏ nhất
+
+-- Bảng bidder_participated (Lưu danh sách các phiên đấu giá bidder đã tham gia)
+CREATE TABLE bidder_participated (
+    bidder_id INT NOT NULL,
+    auction_id INT NOT NULL,
+    PRIMARY KEY (bidder_id, auction_id),
+    CONSTRAINT fk_participated_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_participated_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Bảng bidder_won (Lưu danh sách các phiên đấu giá bidder đã thắng)
+CREATE TABLE bidder_won (
+    bidder_id INT NOT NULL,
+    auction_id INT NOT NULL,
+    PRIMARY KEY (bidder_id, auction_id),
+    CONSTRAINT fk_won_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_won_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- Bảng bid_watchlist (Danh sách theo dõi phiên đấu giá của bidder)
+CREATE TABLE bid_watchlist (
+    bidder_id INT NOT NULL,
+    auction_id INT NOT NULL,
+    PRIMARY KEY (bidder_id, auction_id),
+    CONSTRAINT fk_watchlist_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_watchlist_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE
+);

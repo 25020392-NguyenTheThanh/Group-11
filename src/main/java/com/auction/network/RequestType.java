@@ -33,6 +33,7 @@ public enum RequestType {
     ADMIN_GET_STATS,             // Thống kê hệ thống
     ADMIN_GET_AUDIT_LOG,         // Xem log bảo mật
     ADMIN_GET_ACTIVE_SESSIONS,   // Xem session đang hoạt động
-    ADMIN_KICK_USER              // Ngắt kết nối 1 user
+    ADMIN_KICK_USER,             // Ngắt kết nối 1 user
+    DECLINE_PAYMENT              // Từ chối thanh toán và hủy phiên
 }
 

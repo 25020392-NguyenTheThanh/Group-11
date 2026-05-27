@@ -141,11 +141,16 @@ public class LoginController implements Initializable {
 
         // BẮT BUỘC: Nếu chưa kết nối hoặc kết nối cũ đã đóng (do đăng xuất) -> Kết nối lại
         if (!connection.isConnected()) {
-            System.out.println("Đang kết nối lại tới Server...");
-            String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
-                    ? serverIpField.getText().trim()
-                    : ServerConnection.DEFAULT_HOST;
-            connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
+            try {
+                System.out.println("Đang kết nối lại tới Server...");
+                String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
+                        ? serverIpField.getText().trim()
+                        : ServerConnection.DEFAULT_HOST;
+                connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
+            } catch (IOException e) {
+                NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ! Vui lòng đảm bảo rằng Server đang chạy và địa chỉ IP chính xác.");
+                return;
+            }
         }
 
         Response response = connection.send(RequestType.LOGIN, payload);
@@ -165,6 +170,11 @@ public class LoginController implements Initializable {
                 case "SELLER":
                     loader = GenerationSupport.changeScene(event, "sellerAuctionList-view.fxml", "Auction floor of Seller");
                     break;
+
+                case "ADMIN":
+                    loader = GenerationSupport.changeScene(event, "adminAuctionList-view.fxml", "Admin Control Panel");
+                    break;
+
                 default:
                     throw new AuthenticationException("Role " + role + " is not recognized.");
             }
@@ -174,6 +184,8 @@ public class LoginController implements Initializable {
                 if (controller instanceof BidderAuctionListController c) {
                     c.setUser(loggedInUser);
                 } else if (controller instanceof SellerAuctionListController c) {
+                    c.setUser(loggedInUser);
+                } else if (controller instanceof AdminAuctionListController c) {
                     c.setUser(loggedInUser);
                 } else {
                     NotificationController.showAlert("Lỗi khởi tạo", "Lỗi tải giao diện hệ thống!");

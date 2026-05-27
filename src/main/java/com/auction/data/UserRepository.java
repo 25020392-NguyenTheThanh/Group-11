@@ -9,27 +9,94 @@ import java.util.List;
 
 public class UserRepository {
 
+    private static boolean tableExists(DatabaseMetaData meta, String tableName) throws SQLException {
+        try (ResultSet rs = meta.getTables(null, null, tableName, null)) {
+            if (rs.next()) return true;
+        }
+        try (ResultSet rs = meta.getTables(null, null, tableName.toUpperCase(), null)) {
+            if (rs.next()) return true;
+        }
+        try (ResultSet rs = meta.getTables(null, null, tableName.toLowerCase(), null)) {
+            if (rs.next()) return true;
+        }
+        return false;
+    }
+
+    private static boolean columnExists(DatabaseMetaData meta, String tableName, String columnName) throws SQLException {
+        try (ResultSet rs = meta.getColumns(null, null, tableName, columnName)) {
+            if (rs.next()) return true;
+        }
+        try (ResultSet rs = meta.getColumns(null, null, tableName.toUpperCase(), columnName.toUpperCase())) {
+            if (rs.next()) return true;
+        }
+        try (ResultSet rs = meta.getColumns(null, null, tableName.toLowerCase(), columnName.toLowerCase())) {
+            if (rs.next()) return true;
+        }
+        return false;
+    }
+
     static {
         try (Connection con = DatabaseConnection.getConnection()) {
             DatabaseMetaData meta = con.getMetaData();
-            try (ResultSet rs = meta.getColumns(null, null, "bidders", "has_topped_up")) {
-                if (!rs.next()) {
-                    try (Statement st = con.createStatement()) {
-                        st.execute("ALTER TABLE bidders ADD COLUMN has_topped_up TINYINT NOT NULL DEFAULT 0");
-                        System.out.println("[Database Migration] Added has_topped_up column to bidders table.");
-                    }
+            try (Statement st = con.createStatement()) {
+                // 1. Kiểm tra/thêm các cột cho bảng users
+                if (!columnExists(meta, "users", "status")) {
+                    st.execute("ALTER TABLE users ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'");
+                    System.out.println("[Database Migration] Added status column to users table.");
                 }
-            }
-            try (ResultSet rs2 = meta.getColumns(null, null, "bidders", "last_top_up_time")) {
-                if (!rs2.next()) {
-                    try (Statement st = con.createStatement()) {
-                        st.execute("ALTER TABLE bidders ADD COLUMN last_top_up_time DATETIME DEFAULT NULL");
-                        System.out.println("[Database Migration] Added last_top_up_time column to bidders table.");
-                    }
+                if (!columnExists(meta, "users", "ban_reason")) {
+                    st.execute("ALTER TABLE users ADD COLUMN ban_reason VARCHAR(255) DEFAULT NULL");
+                    System.out.println("[Database Migration] Added ban_reason column to users table.");
+                }
+
+                // 2. Kiểm tra/thêm các cột cho bảng bidders
+                if (!columnExists(meta, "bidders", "has_topped_up")) {
+                    st.execute("ALTER TABLE bidders ADD COLUMN has_topped_up TINYINT NOT NULL DEFAULT 0");
+                    System.out.println("[Database Migration] Added has_topped_up column to bidders table.");
+                }
+                if (!columnExists(meta, "bidders", "last_top_up_time")) {
+                    st.execute("ALTER TABLE bidders ADD COLUMN last_top_up_time DATETIME DEFAULT NULL");
+                    System.out.println("[Database Migration] Added last_top_up_time column to bidders table.");
+                }
+
+                // 3. Kiểm tra và tạo bảng bidder_participated nếu chưa có
+                if (!tableExists(meta, "bidder_participated")) {
+                    st.execute("CREATE TABLE bidder_participated (" +
+                            "bidder_id INT NOT NULL," +
+                            "auction_id INT NOT NULL," +
+                            "PRIMARY KEY (bidder_id, auction_id)," +
+                            "CONSTRAINT fk_participated_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE," +
+                            "CONSTRAINT fk_participated_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                            ")");
+                    System.out.println("[Database Migration] Created table bidder_participated.");
+                }
+
+                // 4. Kiểm tra và tạo bảng bidder_won nếu chưa có
+                if (!tableExists(meta, "bidder_won")) {
+                    st.execute("CREATE TABLE bidder_won (" +
+                            "bidder_id INT NOT NULL," +
+                            "auction_id INT NOT NULL," +
+                            "PRIMARY KEY (bidder_id, auction_id)," +
+                            "CONSTRAINT fk_won_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE," +
+                            "CONSTRAINT fk_won_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                            ")");
+                    System.out.println("[Database Migration] Created table bidder_won.");
+                }
+
+                // 5. Kiểm tra và tạo bảng bid_watchlist nếu chưa có
+                if (!tableExists(meta, "bid_watchlist")) {
+                    st.execute("CREATE TABLE bid_watchlist (" +
+                            "bidder_id INT NOT NULL," +
+                            "auction_id INT NOT NULL," +
+                            "PRIMARY KEY (bidder_id, auction_id)," +
+                            "CONSTRAINT fk_watchlist_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE," +
+                            "CONSTRAINT fk_watchlist_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE" +
+                            ")");
+                    System.out.println("[Database Migration] Created table bid_watchlist.");
                 }
             }
         } catch (SQLException e) {
-            System.err.println("[Database Migration] Error check/add column: " + e.getMessage());
+            System.err.println("[Database Migration] Error: " + e.getMessage());
         }
     }
 
@@ -313,7 +380,11 @@ public class UserRepository {
             return ps.executeUpdate() > 0;
         } catch (java.sql.SQLException e) {
             e.printStackTrace();
-            return false;
+            String msg = e.getMessage().toLowerCase();
+            if (msg.contains("constraint") || msg.contains("foreign key")) {
+                throw new RuntimeException("Không thể xóa tài khoản này vì tài khoản đang có dữ liệu liên kết (sản phẩm, giao dịch hoặc phiên đấu giá). Vui lòng sử dụng chức năng Khóa tài khoản thay thế!");
+            }
+            throw new RuntimeException("Lỗi cơ sở dữ liệu: " + e.getMessage());
         }
     }
 

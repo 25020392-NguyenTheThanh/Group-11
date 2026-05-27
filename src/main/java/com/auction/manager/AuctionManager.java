@@ -208,13 +208,34 @@ public class AuctionManager {
      * Phục vụ: handleAdminCancelAuction
      */
     public boolean cancelAuctionByAdmin(int auctionId, String reason) {
+        Auction auction = auctions.get(auctionId);
+        if (auction == null) {
+            // fallback load if not in RAM
+            List<Auction> all = DataManager.getInstance().getAllAuctions();
+            auction = all.stream().filter(a -> a.getId() == auctionId).findFirst().orElse(null);
+        }
+        if (auction == null) return false;
+
         // Cập nhật trạng thái "CANCELED" xuống DB
         boolean ok = DataManager.getInstance().finishAuction(auctionId, "CANCELED");
         if (ok) {
-            Auction auction = auctions.get(auctionId);
-            if (auction != null) {
-                // Thay đổi trạng thái đối tượng đấu giá sang CANCELED ngay trên bộ nhớ tạm RAM
-                auction.restoreStatus(AuctionStatus.CANCELED);
+            // Thay đổi trạng thái đối tượng đấu giá sang CANCELED ngay trên bộ nhớ tạm RAM
+            auction.restoreStatus(AuctionStatus.CANCELED);
+
+            // Hoàn tiền cho người đang đứng đầu
+            Bidder winner = auction.getCurrentWinner();
+            if (winner != null) {
+                double amount = auction.getCurrentHighestBid();
+                DataManager.getInstance().addBidderBalance(winner.getId(), amount);
+                winner.setBalance(DataManager.getInstance().getBidderBalance(winner.getId()));
+                System.out.println("[AuctionManager] Hoàn trả tiền $" + amount + " cho Bidder: " + winner.getUsername());
+            }
+
+            // Đưa sản phẩm về trạng thái UNSOLD
+            if (auction.getItem() != null) {
+                auction.getItem().setStatus(ItemStatus.UNSOLD);
+                DataManager.getInstance().updateItemStatus(auction.getItem().getId(), ItemStatus.UNSOLD);
+                System.out.println("[AuctionManager] Đưa sản phẩm [" + auction.getItem().getName() + "] về trạng thái UNSOLD.");
             }
             System.out.println("[AuctionManager] Admin đã hủy phiên đấu giá #" + auctionId + " | Lý do: " + reason);
         }

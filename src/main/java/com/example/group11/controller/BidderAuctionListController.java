@@ -558,32 +558,65 @@ public class BidderAuctionListController implements Initializable {
     }
 
     private void handleConfirmPayment(Auction auction) {
-        boolean confirm = NotificationController.showConfirmation(
-                "Xác nhận thanh toán",
-                "Bạn có chắc chắn muốn thanh toán cho sản phẩm: " + auction.getItem().getName() + "?",
-                "Số tiền thanh toán: " + String.format("%,.2f $", auction.getCurrentHighestBid()),
-                "Thanh toán",
-                "Hủy"
-        );
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Xác nhận giao dịch");
+        alert.setHeaderText("Giao dịch cho sản phẩm: " + auction.getItem().getName());
+        alert.setContentText(String.format("Bạn đã thắng phiên này với giá: %,.2f $\nChọn hành động của bạn:", auction.getCurrentHighestBid()));
 
-        if (confirm) {
-            BidderActionService.confirmPayment(auction, new BidderActionService.ActionCallback() {
-                @Override
-                public void onSuccess(Response res) {
-                    if (res != null && res.isSuccess()) {
-                        NotificationController.showNotification("Thành công", "Đã xác nhận thanh toán thành công!");
-                        loadAuctions();
-                    } else {
-                        String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
-                        NotificationController.showError("Lỗi thanh toán", "Không thể thanh toán.\nChi tiết: " + errMsg);
+        ButtonType btnThanhToan = new ButtonType("Thanh toán");
+        ButtonType btnTuChoi = new ButtonType("Từ chối mua");
+        ButtonType btnHuy = new ButtonType("Đóng", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        alert.getButtonTypes().setAll(btnThanhToan, btnTuChoi, btnHuy);
+        NotificationController.applyDarkTheme(alert);
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent()) {
+            if (result.get() == btnThanhToan) {
+                BidderActionService.confirmPayment(auction, new BidderActionService.ActionCallback() {
+                    @Override
+                    public void onSuccess(Response res) {
+                        if (res != null && res.isSuccess()) {
+                            NotificationController.showNotification("Thành công", "Đã xác nhận thanh toán thành công!");
+                            loadAuctions();
+                        } else {
+                            String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                            NotificationController.showError("Lỗi thanh toán", "Không thể thanh toán.\nChi tiết: " + errMsg);
+                        }
                     }
-                }
 
-                @Override
-                public void onFailure(Throwable t) {
-                    NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu thanh toán.");
+                    @Override
+                    public void onFailure(Throwable t) {
+                        NotificationController.showError("Lỗi hệ thống", "Lỗi kết nối khi gửi yêu cầu thanh toán.");
+                    }
+                });
+            } else if (result.get() == btnTuChoi) {
+                Alert confirmDecline = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmDecline.setTitle("Xác nhận từ chối mua");
+                confirmDecline.setHeaderText("Bạn chắc chắn muốn từ chối mua sản phẩm này?");
+                confirmDecline.setContentText("Hành động này sẽ hủy giao dịch, hoàn trả tiền thầu của bạn và sản phẩm sẽ chuyển về trạng thái UNSOLD.");
+                NotificationController.applyDarkTheme(confirmDecline);
+                
+                if (confirmDecline.showAndWait().orElse(null) == ButtonType.OK) {
+                    Task<Response> declineTask = new Task<>() {
+                        @Override
+                        protected Response call() throws Exception {
+                            return ServerConnection.getInstance().send(RequestType.DECLINE_PAYMENT, auction.getId());
+                        }
+                    };
+                    declineTask.setOnSucceeded(evt -> {
+                        Response res = declineTask.getValue();
+                        if (res != null && res.isSuccess()) {
+                            NotificationController.showNotification("Thành công", "Đã từ chối thanh toán và hủy giao dịch.");
+                            loadAuctions();
+                        } else {
+                            NotificationController.showError("Lỗi", res != null ? res.getMessage() : "Không thể từ chối thanh toán.");
+                        }
+                    });
+                    declineTask.setOnFailed(evt -> NotificationController.showError("Lỗi", "Lỗi kết nối mạng."));
+                    new Thread(declineTask).start();
                 }
-            });
+            }
         }
     }
 
