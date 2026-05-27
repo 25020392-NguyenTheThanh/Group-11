@@ -4,6 +4,7 @@ import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -91,7 +92,7 @@ public class BidderFilterManager {
 
             return true;
         }).collect(Collectors.toList());
-        
+
         String sortUpper = sortFilter != null ? sortFilter.trim().toUpperCase() : "SẮP XẾP";
         if (sortUpper.equals("GIÁ: THẤP ĐẾN CAO")) {
             filtered.sort((a, b) -> Double.compare(a.getCurrentHighestBid(), b.getCurrentHighestBid()));

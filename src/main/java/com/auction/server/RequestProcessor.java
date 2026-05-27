@@ -525,15 +525,6 @@ public class RequestProcessor {
 
         try {
             Bidder bidder = (Bidder) user;
-            if (!bidder.canTopUp()) {
-                if (bidder.getLastTopUpTime() != null) {
-                    Duration diff = Duration.between(LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
-                    long hours = diff.toHours();
-                    long mins = diff.toMinutesPart();
-                    return Response.error(String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
-                }
-                return Response.error("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ.");
-            }
 
             // Cộng dồn trực tiếp vào cơ sở dữ liệu để tránh race condition
             boolean success = DataManager.getInstance().addBidderBalance(bidder.getId(), amount);

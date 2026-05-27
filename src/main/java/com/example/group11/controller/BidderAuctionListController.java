@@ -674,18 +674,24 @@ public class BidderAuctionListController implements Initializable {
 
     private void updateAuctionCardPrice(int auctionId, double newPrice,
                                         String winner, int totalBids) {
-        // Cập nhật object trong allAuctions list để filter không mất dữ liệu
-        boolean found = false;
+        Auction found = null;
         for (Auction a : allAuctions) {
             if (a.getId() == auctionId) {
-                // Cập nhật field trực tiếp (không gọi placeBid — tránh double-logic)
                 a.restoreHighestBid(newPrice);
-                found = true;
+                found = a;
                 break;
             }
         }
-        if (found) {
-            updateSingleCard(auctionId);
+
+        if (found != null) {
+            final Auction updated = found;
+            // Dùng data local — không gọi server, không delay
+            for (Node node : contentGrid.getChildren()) {
+                if (("auction-card-" + auctionId).equals(node.getId())) {
+                    AuctionCardFactory.updateCard((VBox) node, updated);
+                    break;
+                }
+            }
         } else {
             loadAuctions();
         }
@@ -854,18 +860,6 @@ public class BidderAuctionListController implements Initializable {
 
     @FXML
     private void handleAddFunds(ActionEvent event) {
-        if (!TopUpService.checkTopUpLimit(user)) {
-            if (user instanceof Bidder bidder && bidder.getLastTopUpTime() != null) {
-                java.time.Duration diff = java.time.Duration.between(java.time.LocalDateTime.now(), bidder.getLastTopUpTime().plusHours(24));
-                long hours = diff.toHours();
-                long mins = diff.toMinutesPart();
-                NotificationController.showAlert("Thông báo", String.format("Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ. Vui lòng thử lại sau %d giờ %d phút.", hours, mins));
-            } else {
-                NotificationController.showAlert("Thông báo", "Bạn chỉ được nạp tiền 1 lần mỗi 24 giờ.");
-            }
-            return;
-        }
-
         // Đặt lại trạng thái các gói nạp
         resetPackageStyles();
         selectedPackageNode = null;
@@ -913,7 +907,7 @@ public class BidderAuctionListController implements Initializable {
         boolean confirm = NotificationController.showConfirmation(
                 "Xác nhận nạp tiền",
                 "Xác nhận nạp gói " + packageLabel + " vào tài khoản?",
-                "Sau khi xác nhận, bạn sẽ không thể nạp thêm tiền nữa.",
+                "",
                 "Đồng ý",
                 "Hủy"
         );
@@ -923,12 +917,8 @@ public class BidderAuctionListController implements Initializable {
                 @Override
                 public void onSuccess(double newBalance) {
                     walletBalance.setText(String.format("%,.2f", newBalance));
-                    if (user instanceof Bidder bidder) {
-                        toppedUpBidders.add(bidder.getId());
-                    }
-                    addFundsBtn.setDisable(true);
                     NotificationController.showNotification("Thành công",
-                            String.format("Đã nạp thành công %s vào ví. Cổng nạp tiền hiện tại đã được khóa.", finalPackageLabel));
+                            String.format("Đã nạp thành công %s vào ví.", finalPackageLabel));
                     addFundsOverlay.setVisible(false);
                     addFundsOverlay.setManaged(false);
                 }
