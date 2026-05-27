@@ -62,6 +62,7 @@ public class ProductCardFactory {
         }
         // Container chính (mainCardContainer trong FXML)
         VBox card = new VBox();
+        card.setId("product-card-" + item.getId());
         card.setPrefWidth(260.0);
         card.setMaxWidth(260.0);
         card.setStyle("-fx-background-color: #1A1A1A; -fx-border-color: #262626; -fx-border-width: 1; -fx-background-radius: 15; -fx-border-radius: 15;");
@@ -197,6 +198,18 @@ public class ProductCardFactory {
         startPriceBox.getChildren().addAll(tStart, vStart);
 
         priceContainer.getChildren().addAll(startPriceBox);
+
+        if (auction != null) {
+            VBox currentPriceBox = new VBox();
+            Label lblCurrentTitle = new Label("GIÁ HIỆN TẠI CAO NHẤT");
+            lblCurrentTitle.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
+            lblCurrentTitle.setFont(new Font(8.0));
+            Label currentPriceLabel = new Label(String.format("%,.2f $", auction.getCurrentHighestBid()));
+            currentPriceLabel.setStyle("-fx-text-fill: #ffd700; -fx-font-weight: bold;");
+            currentPriceLabel.setFont(new Font(14.0));
+            currentPriceBox.getChildren().addAll(lblCurrentTitle, currentPriceLabel);
+            priceContainer.getChildren().add(currentPriceBox);
+        }
         // Tạo nút CHI TIẾT dùng chung cho cả 2 vai trò
         HBox actions = new HBox(8.0);
         actions.setAlignment(Pos.CENTER);

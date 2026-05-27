@@ -777,17 +777,22 @@ public class LiveAuctionController implements Initializable {
             t.start();
         }
 
+        Stage currentStage = ownerStage;
+        if (currentStage == null && backButton != null && backButton.getScene() != null) {
+            currentStage = (Stage) backButton.getScene().getWindow();
+        }
+
         // Swap root về màn hình danh sách — KHÔNG đóng Stage
-        if (previousRoot != null && ownerStage != null) {
-            ownerStage.getScene().setRoot(previousRoot);
-            ownerStage.setTitle("Danh sách đấu giá");
+        if (previousRoot != null && currentStage != null) {
+            currentStage.getScene().setRoot(previousRoot);
+            currentStage.setTitle("Danh sách đấu giá");
 
             // Khôi phục notification handler về list controller
             if (listController != null) {
                 listController.setupRealtimeNotificationsPublic();
             }
-        } else if (ownerStage != null) {
-            ownerStage.close();
+        } else if (currentStage != null) {
+            currentStage.close();
         }
     }
 
