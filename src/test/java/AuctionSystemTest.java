@@ -236,4 +236,5 @@ public class AuctionSystemTest {
         assertEquals(1450.0, auction.getCurrentHighestBid());
         assertEquals("AutoBidder", auction.getCurrentWinner().getUsername());
     }
+
 }

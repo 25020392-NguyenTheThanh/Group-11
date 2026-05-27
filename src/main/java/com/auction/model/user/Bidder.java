@@ -51,8 +51,14 @@ public class Bidder extends User implements Observer {
         this.lastTopUpTime = lastTopUpTime;
     }
 
+    /**
+     * Kiểm tra xem Bidder đã đủ điều kiện nạp tiền (cách 24h) chưa.
+     */
     public boolean canTopUp() {
-        return true;
+        if (lastTopUpTime == null) {
+            return true;
+        }
+        return java.time.LocalDateTime.now().isAfter(lastTopUpTime.plusMinutes(3));
     }
 
     public BidderProfile getProfile() { return profile; }
