@@ -82,8 +82,10 @@ public class AuctionCardFactory {
         statusContainer.setSpacing(5.0);
 
         Circle statusDot = new Circle(3.0);
+        statusDot.setId("statusDot");
         statusDot.setStroke(Color.TRANSPARENT);
         Label statusLabel = new Label();
+        statusLabel.setId("statusText");
         statusLabel.setFont(Font.font("System", 10.0));
 
         // Cấu hình màu sắc theo trạng thái
@@ -107,6 +109,7 @@ public class AuctionCardFactory {
 
         // Nhãn đếm ngược thời gian còn lại (timerLabel)
         Label timerLabel = new Label();
+        timerLabel.setId("timer");
         timerLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
         timerLabel.setFont(Font.font("System", 12.0));
         if (auction.getStatus() == AuctionStatus.RUNNING) {
@@ -249,6 +252,7 @@ public class AuctionCardFactory {
         }
 
         Label currentPriceLabel = new Label(String.format("%,.2f $", auction.getCurrentHighestBid()));
+        currentPriceLabel.setId("currentPrice");
         if (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID) {
             currentPriceLabel.setStyle("-fx-text-fill: #10B981; -fx-font-weight: bold;");
         } else if (auction.getStatus() == AuctionStatus.CANCELED) {
@@ -321,6 +325,7 @@ public class AuctionCardFactory {
 
         // Nút ĐẶT GIÁ
         Button bidButton = new Button("ĐẶT GIÁ");
+        bidButton.setId("bidButton");
         bidButton.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(bidButton, Priority.ALWAYS);
 
@@ -400,6 +405,73 @@ public class AuctionCardFactory {
         cardContainer.getChildren().addAll(headerBar, imgStack, bodyContainer);
 
         return cardContainer;
+    }
+
+    /**
+     * Cập nhật thông tin động của card (giá, trạng thái, timer) mà không rebuild lại toàn bộ UI.
+     * Gọi method này thay vì tạo card mới khi nhận được giá cập nhật.
+     */
+    public static void updateCard(VBox card, Auction auction) {
+        Label currentPriceLabel = (Label) card.lookup("#currentPrice");
+        Label timerLabel        = (Label) card.lookup("#timer");
+        Label statusLabel       = (Label) card.lookup("#statusText");
+        Circle statusDot        = (Circle) card.lookup("#statusDot");
+        Button bidButton        = (Button) card.lookup("#bidButton");
+
+        if (currentPriceLabel == null) return; // Card chưa gán ID, bỏ qua
+
+        // 1. Cập nhật giá
+        currentPriceLabel.setText(String.format("%,.2f $", auction.getCurrentHighestBid()));
+
+        // 2. Cập nhật timer
+        if (auction.getStatus() == AuctionStatus.RUNNING) {
+            java.time.Duration d = java.time.Duration.between(java.time.LocalDateTime.now(), auction.getEndTime());
+            if (!d.isNegative()) {
+                timerLabel.setText(String.format("%02d:%02d:%02d", d.toHours(), d.toMinutesPart(), d.toSecondsPart()));
+            } else {
+                timerLabel.setText("00:00:00");
+            }
+        } else if (auction.getStatus() == AuctionStatus.OPEN) {
+            timerLabel.setText("WAITING");
+        } else {
+            timerLabel.setText("ENDED");
+        }
+
+        // 3. Cập nhật trạng thái (nếu thay đổi)
+        String color = getStatusColor(auction.getStatus());
+        statusLabel.setText(auction.getStatus().toString());
+        statusLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold;");
+        statusDot.setFill(Color.valueOf(color));
+
+        // 4. Cập nhật nút ĐẶT GIÁ
+        if (bidButton != null) {
+            if (auction.getStatus() == AuctionStatus.RUNNING) {
+                bidButton.setText("ĐẶT GIÁ");
+                bidButton.setDisable(false);
+                bidButton.setStyle("-fx-background-color: #ffd700; -fx-text-fill: #3a3000; -fx-font-weight: bold; -fx-padding: 6; -fx-background-radius: 2; -fx-cursor: hand;");
+            } else {
+                bidButton.setDisable(true);
+                if (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID) {
+                    bidButton.setText("ĐÃ KẾT THÚC");
+                } else if (auction.getStatus() == AuctionStatus.CANCELED) {
+                    bidButton.setText("ĐÃ HỦY");
+                } else {
+                    bidButton.setText("CHỜ BẮT ĐẦU");
+                }
+                bidButton.setStyle("-fx-background-color: #262626; -fx-text-fill: #777777; -fx-font-weight: bold; -fx-padding: 6; -fx-background-radius: 2;");
+            }
+        }
+    }
+
+    private static String getStatusColor(AuctionStatus status) {
+        return switch (status) {
+            case RUNNING  -> "#00e475";
+            case OPEN     -> "#3B82F6";
+            case FINISHED -> "#F59E0B";
+            case PAID     -> "#10B981";
+            case CANCELED -> "#EF4444";
+            default       -> "#94A3B8";
+        };
     }
 }
 

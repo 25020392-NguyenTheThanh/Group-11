@@ -56,6 +56,15 @@
                                     </items>
                                     <font><Font name="System Bold" size="12.0" /></font>
                                 </MenuButton>
+                                <MenuButton fx:id="auctionSort" mnemonicParsing="false" style="-fx-background-color: transparent;" text="SẮP XẾP" textFill="#94a3b8">
+                                    <items>
+                                        <MenuItem mnemonicParsing="false" text="Mới nhất" />
+                                        <MenuItem mnemonicParsing="false" text="Giá: Thấp đến Cao" />
+                                        <MenuItem mnemonicParsing="false" text="Giá: Cao đến Thấp" />
+                                        <MenuItem mnemonicParsing="false" text="Kết thúc sớm nhất" />
+                                    </items>
+                                    <font><Font name="System Bold" size="12.0" /></font>
+                                </MenuButton>
                             </children>
                         </HBox>
 

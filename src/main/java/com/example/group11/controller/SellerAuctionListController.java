@@ -16,6 +16,7 @@ import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
@@ -254,13 +255,48 @@ public class SellerAuctionListController implements Initializable {
             addNotificationToUI(notification);
 
             String type = notification.getType();
-            if ("AUCTION_ENDED".equals(type) || "ITEM_STATUS_CHANGED".equals(type)) {
-                System.out.println("[REALTIME] Nhận thông báo thay đổi trạng thái, đang tự động tải lại danh sách sản phẩm...");
-                loadMyListingView();
+            if ("BID_UPDATE".equals(type)) {
+                Object data = notification.getData();
+                if (data instanceof BidUpdateData upd) {
+                    int itemId = findItemIdByAuctionId(upd.auctionId);
+                    if (itemId != -1) {
+                        updateSingleCardByItemId(itemId);
+                    } else {
+                        loadMyListingView();
+                    }
+                }
+            } else if ("AUCTION_ENDED".equals(type)) {
+                int aId = parseAuctionId(notification.getData());
+                if (aId != -1) {
+                    int itemId = findItemIdByAuctionId(aId);
+                    if (itemId != -1) {
+                        updateSingleCardByItemId(itemId);
+                    } else {
+                        loadMyListingView();
+                    }
+                } else {
+                    loadMyListingView();
+                }
+            } else if ("ITEM_STATUS_CHANGED".equals(type)) {
+                try {
+                    int itemId = Integer.parseInt(notification.getData().toString());
+                    updateSingleCardByItemId(itemId);
+                } catch (Exception e) {
+                    loadMyListingView();
+                }
             } else if ("PAYMENT_RECEIVED".equals(type)) {
-                // Seller nhận thông báo thanh toán thành công → reload danh sách
-                loadMyListingView();
                 String text = notification.getData() != null ? notification.getData().toString() : "";
+                int aId = parseAuctionId(text);
+                if (aId != -1) {
+                    int itemId = findItemIdByAuctionId(aId);
+                    if (itemId != -1) {
+                        updateSingleCardByItemId(itemId);
+                    } else {
+                        loadMyListingView();
+                    }
+                } else {
+                    loadMyListingView();
+                }
                 NotificationController.showNotification("💰 Đã nhận thanh toán!", text);
             }
 
@@ -479,6 +515,11 @@ public class SellerAuctionListController implements Initializable {
 
         // Đưa thông báo mới lên đầu danh sách
         notificationListContainer.getChildren().add(0, notifBox);
+
+        // Chỉ giữ 20 thông báo gần nhất
+        if (notificationListContainer.getChildren().size() > 20) {
+            notificationListContainer.getChildren().remove(20, notificationListContainer.getChildren().size());
+        }
     }
 
     private void setupNotificationBadge() {
@@ -566,108 +607,216 @@ public class SellerAuctionListController implements Initializable {
 
         for (int i = 0; i < items.size(); i++) {
             Item item = items.get(i);
-            VBox productCard = ProductCardFactory.createProductCard(item, itemAuctionMap.get(item.getId()),
-                    (itemData, cardNode) -> {
-                        Auction auction = itemAuctionMap.get(itemData.getId());
-                        if (auction != null) {
-                            try {
-                                Stage existingStage = LiveAuctionController.getOpenStage(auction.getId());
-                                if (existingStage != null) {
-                                    existingStage.toFront();
-                                    existingStage.requestFocus();
-                                    return;
-                                }
-
-                                FXMLLoader loader = GenerationSupport.openNewStage("liveAuction-view.fxml", "Phòng đấu giá #" + auction.getId() + " - " + auction.getItem().getName());
-                                if (loader != null) {
-                                    LiveAuctionController controller = loader.getController();
-                                    controller.setAuctionAndUser(auction, user);
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                NotificationController.showError("Lỗi mở cửa sổ", "Không thể mở trang đấu giá trực tiếp.");
-                            }
-                        } else {
-                            NotificationController.showError("Thông báo", "Sản phẩm chưa đăng ký hoặc không có phiên đấu giá.");
-                        }
-                    },
-                    (itemData, cardNode) -> {
-                        handleStartEditProduct(itemData);
-                    },
-                    (itemData, cardNode) -> {
-                        if (cardNode != null) {
-                            javafx.concurrent.Task<Response> deleteTask = new javafx.concurrent.Task<>() {
-                                @Override
-                                protected Response call() throws Exception {
-                                    return ServerConnection.getInstance().send(RequestType.DELETE_ITEM, itemData.getId());
-                                }
-                            };
-
-                            deleteTask.setOnSucceeded(evt -> {
-                                Response res = deleteTask.getValue();
-                                if (res != null && res.isSuccess()) {
-                                    // 1. Giải phóng Image ở ImageView trong cardNode để tránh file lock trên Windows
-                                    ImageView imgView = (ImageView) cardNode.lookup("#productCardImageView");
-                                    if (imgView != null) {
-                                        imgView.setImage(null);
-                                    }
-
-                                    // 2. Nếu sản phẩm bị xóa trùng với sản phẩm đang hiển thị trong form sửa, giải phóng nó
-                                    if (editingItem != null && editingItem.getId() == itemData.getId()) {
-                                        productImageView.setImage(null);
-                                        productImageView.setVisible(false);
-                                        uploadPrompt.setVisible(true);
-                                        selectedImageFile = null;
-                                        linkImageUrl = null;
-                                        editingItem = null;
-                                    }
-
-                                    // Ép Garbage Collector chạy để giải phóng tài nguyên hệ thống (file lock) lập tức
-                                    System.gc();
-
-                                    // 3. Thực hiện xóa file ảnh vật lý
-                                    String imageUrl = itemData.getImageUrl();
-                                    if (imageUrl != null && !imageUrl.isEmpty() && imageUrl.startsWith("/")) {
-                                        try {
-                                            java.io.File file = new java.io.File("src/main/resources" + imageUrl);
-                                            if (file.exists()) {
-                                                boolean isDeleted = file.delete();
-                                                if (isDeleted) {
-                                                    System.out.println("Đã xóa file ảnh vật lý thành công tại: " + file.getAbsolutePath());
-                                                } else {
-                                                    System.err.println("Không thể xóa file vật lý! Tệp tin vẫn đang bị lock hoặc không có quyền: " + file.getAbsolutePath());
-                                                }
-                                            }
-                                        } catch (Exception ex) {
-                                            System.err.println("Lỗi khi xóa file ảnh: " + ex.getMessage());
-                                        }
-                                    }
-
-                                    NotificationController.showNotification("Thành công", "Đã xóa sản phẩm thành công!");
-                                    this.contentGrid.getChildren().remove(cardNode);
-                                    auctionItems.remove(itemData);
-                                    applyFiltersAndSort();
-                                } else {
-                                    String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
-                                    NotificationController.showError("Lỗi xóa sản phẩm", "Không thể xóa sản phẩm.\nChi tiết: " + errMsg);
-                                }
-                            });
-
-                            deleteTask.setOnFailed(evt -> {
-                                NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi kết nối khi gửi yêu cầu xóa.");
-                            });
-
-                            Thread t = new Thread(deleteTask);
-                            t.setDaemon(true);
-                            t.start();
-                        }
-                    }
-            );
-
+            VBox productCard = createSingleProductCard(item);
             int column = i % 3;
             int row = i / 3;
             contentGrid.add(productCard, column, row);
         }
+    }
+
+    private VBox createSingleProductCard(Item item) {
+        return ProductCardFactory.createProductCard(item, itemAuctionMap.get(item.getId()),
+                (itemData, cardNode) -> {
+                    Auction auction = itemAuctionMap.get(itemData.getId());
+                    if (auction != null) {
+                        try {
+                            Stage existingStage = LiveAuctionController.getOpenStage(auction.getId());
+                            if (existingStage != null) {
+                                existingStage.toFront();
+                                existingStage.requestFocus();
+                                return;
+                            }
+
+                            FXMLLoader loader = GenerationSupport.openNewStage("liveAuction-view.fxml", "Phòng đấu giá #" + auction.getId() + " - " + auction.getItem().getName());
+                            if (loader != null) {
+                                LiveAuctionController controller = loader.getController();
+                                controller.setAuctionAndUser(auction, user);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            NotificationController.showError("Lỗi mở cửa sổ", "Không thể mở trang đấu giá trực tiếp.");
+                        }
+                    } else {
+                        NotificationController.showError("Thông báo", "Sản phẩm chưa đăng ký hoặc không có phiên đấu giá.");
+                    }
+                },
+                (itemData, cardNode) -> {
+                    handleStartEditProduct(itemData);
+                },
+                (itemData, cardNode) -> {
+                    if (cardNode != null) {
+                        javafx.concurrent.Task<Response> deleteTask = new javafx.concurrent.Task<>() {
+                            @Override
+                            protected Response call() throws Exception {
+                                return ServerConnection.getInstance().send(RequestType.DELETE_ITEM, itemData.getId());
+                            }
+                        };
+
+                        deleteTask.setOnSucceeded(evt -> {
+                            Response res = deleteTask.getValue();
+                            if (res != null && res.isSuccess()) {
+                                // 1. Giải phóng Image ở ImageView trong cardNode để tránh file lock trên Windows
+                                ImageView imgView = (ImageView) cardNode.lookup("#productCardImageView");
+                                if (imgView != null) {
+                                    imgView.setImage(null);
+                                }
+
+                                // 2. Nếu sản phẩm bị xóa trùng với sản phẩm đang hiển thị trong form sửa, giải phóng nó
+                                if (editingItem != null && editingItem.getId() == itemData.getId()) {
+                                    productImageView.setImage(null);
+                                    productImageView.setVisible(false);
+                                    uploadPrompt.setVisible(true);
+                                    selectedImageFile = null;
+                                    linkImageUrl = null;
+                                    editingItem = null;
+                                }
+
+                                // Ép Garbage Collector chạy để giải phóng tài nguyên hệ thống (file lock) lập tức
+                                System.gc();
+
+                                // 3. Thực hiện xóa file ảnh vật lý
+                                String imageUrl = itemData.getImageUrl();
+                                if (imageUrl != null && !imageUrl.isEmpty() && imageUrl.startsWith("/")) {
+                                    try {
+                                        java.io.File file = new java.io.File("src/main/resources" + imageUrl);
+                                        if (file.exists()) {
+                                            boolean isDeleted = file.delete();
+                                            if (isDeleted) {
+                                                System.out.println("Đã xóa file ảnh vật lý thành công tại: " + file.getAbsolutePath());
+                                            } else {
+                                                System.err.println("Không thể xóa file vật lý! Tệp tin vẫn đang bị lock hoặc không có quyền: " + file.getAbsolutePath());
+                                            }
+                                        }
+                                    } catch (Exception ex) {
+                                        System.err.println("Lỗi khi xóa file ảnh: " + ex.getMessage());
+                                    }
+                                }
+
+                                NotificationController.showNotification("Thành công", "Đã xóa sản phẩm thành công!");
+                                this.contentGrid.getChildren().remove(cardNode);
+                                auctionItems.remove(itemData);
+                                applyFiltersAndSort();
+                            } else {
+                                String errMsg = (res != null) ? res.getMessage() : "Lỗi không xác định";
+                                NotificationController.showError("Lỗi xóa sản phẩm", "Không thể xóa sản phẩm.\nChi tiết: " + errMsg);
+                            }
+                        });
+
+                        deleteTask.setOnFailed(evt -> {
+                            NotificationController.showError("Lỗi hệ thống", "Đã xảy ra lỗi kết nối khi gửi yêu cầu xóa.");
+                        });
+
+                        Thread t = new Thread(deleteTask);
+                        t.setDaemon(true);
+                        t.start();
+                    }
+                }
+        );
+    }
+
+    private int findItemIdByAuctionId(int auctionId) {
+        for (Map.Entry<Integer, Auction> entry : itemAuctionMap.entrySet()) {
+            if (entry.getValue().getId() == auctionId) {
+                return entry.getKey();
+            }
+        }
+        return -1;
+    }
+
+    private int parseAuctionId(Object data) {
+        if (data == null) return -1;
+        String text = data.toString();
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("Phiên #(\\d+)");
+        java.util.regex.Matcher m = p.matcher(text);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (NumberFormatException e) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    private void updateSingleCardByItemId(int itemId) {
+        Task<Map<String, Object>> task = new Task<>() {
+            @Override
+            protected Map<String, Object> call() throws Exception {
+                Map<String, Object> result = new HashMap<>();
+                Response itemsRes = ServerConnection.getInstance().send(RequestType.GET_MY_ITEMS, null);
+                Response auctionsRes = ServerConnection.getInstance().send(RequestType.GET_AUCTIONS, null);
+                result.put("items", itemsRes);
+                result.put("auctions", auctionsRes);
+                return result;
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Map<String, Object> results = task.getValue();
+            Response itemsResponse = (Response) results.get("items");
+            Response auctionsResponse = (Response) results.get("auctions");
+
+            if (itemsResponse != null && itemsResponse.isSuccess()) {
+                List<Item> fetchedItems = (List<Item>) itemsResponse.getData();
+                if (fetchedItems != null) {
+                    this.auctionItems = fetchedItems;
+                }
+
+                this.itemAuctionMap.clear();
+                if (auctionsResponse != null && auctionsResponse.isSuccess()) {
+                    List<Auction> auctions = (List<Auction>) auctionsResponse.getData();
+                    if (auctions != null) {
+                        for (Auction a : auctions) {
+                            if (a.getItem() != null) {
+                                this.itemAuctionMap.put(a.getItem().getId(), a);
+                            }
+                        }
+                    }
+                }
+
+                Platform.runLater(() -> {
+                    Item updatedItem = null;
+                    for (Item it : auctionItems) {
+                        if (it.getId() == itemId) {
+                            updatedItem = it;
+                            break;
+                        }
+                    }
+
+                    if (updatedItem != null) {
+                        Node oldCard = null;
+                        for (Node node : contentGrid.getChildren()) {
+                            if (("product-card-" + itemId).equals(node.getId())) {
+                                oldCard = node;
+                                break;
+                            }
+                        }
+
+                        if (oldCard != null) {
+                            Integer col = GridPane.getColumnIndex(oldCard);
+                            Integer row = GridPane.getRowIndex(oldCard);
+
+                            VBox newCard = createSingleProductCard(updatedItem);
+                            // ✅ Thay thế trực tiếp trong list — GridPane không bị re-layout
+                            int idx = contentGrid.getChildren().indexOf(oldCard);
+                            contentGrid.getChildren().set(idx, newCard);
+
+                            // Giữ nguyên vị trí col/row
+                            GridPane.setColumnIndex(newCard, col != null ? col : 0);
+                            GridPane.setRowIndex(newCard, row != null ? row : 0);
+                            System.out.println("Đã cập nhật riêng biệt card sản phẩm ID: " + itemId);
+                        } else {
+                            applyFiltersAndSort();
+                        }
+                    }
+                    updateHeaderRevenue();
+                });
+            }
+        });
+
+        Thread th = new Thread(task);
+        th.setDaemon(true);
+        th.start();
     }
 
     /**
@@ -1064,10 +1213,11 @@ public class SellerAuctionListController implements Initializable {
                 System.out.println("[DATABASE] Đã cập nhật sản phẩm thành công!");
                 NotificationController.showNotification("Thành công", "Cập nhật sản phẩm thành công!");
                 AuctionUIHelper.setNeedsRefresh(true);
+                int updatedItemId = editingItem.getId();
                 clearRegistrationForm();
                 editingItem = null;
                 handleBackToListings(null);
-                loadMyListingView();
+                updateSingleCardByItemId(updatedItemId);
             } else {
                 String errorMsg = (response != null) ? response.getMessage() : "Không có kết nối với Server!";
                 NotificationController.showError("Lỗi cập nhật", errorMsg);

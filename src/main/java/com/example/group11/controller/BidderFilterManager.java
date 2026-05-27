@@ -11,14 +11,14 @@ import java.util.stream.Collectors;
 public class BidderFilterManager {
 
     public static List<Auction> filter(List<Auction> allAuctions, User user, String currentTab,
-                                       String searchBarText, String statusFilter, String categoryFilter) {
+                                       String searchBarText, String statusFilter, String categoryFilter, String sortFilter) {
         if (allAuctions == null) return List.of();
 
         String query = (searchBarText != null) ? searchBarText.trim().toLowerCase() : "";
         String statusUpper = statusFilter != null ? statusFilter.trim().toUpperCase() : "TRẠNG THÁI";
         String categoryUpper = categoryFilter != null ? categoryFilter.trim().toUpperCase() : "SẢN PHẨM";
 
-        return allAuctions.stream().filter(auction -> {
+        List<Auction> filtered = allAuctions.stream().filter(auction -> {
             if (currentTab.equals("DASHBOARD")) {
                 if (auction.getStatus() != AuctionStatus.RUNNING
                         && auction.getStatus() != AuctionStatus.OPEN
@@ -91,5 +91,22 @@ public class BidderFilterManager {
 
             return true;
         }).collect(Collectors.toList());
+        
+        String sortUpper = sortFilter != null ? sortFilter.trim().toUpperCase() : "SẮP XẾP";
+        if (sortUpper.equals("GIÁ: THẤP ĐẾN CAO")) {
+            filtered.sort((a, b) -> Double.compare(a.getCurrentHighestBid(), b.getCurrentHighestBid()));
+        } else if (sortUpper.equals("GIÁ: CAO ĐẾN THẤP")) {
+            filtered.sort((a, b) -> Double.compare(b.getCurrentHighestBid(), a.getCurrentHighestBid()));
+        } else if (sortUpper.equals("KẾT THÚC SỚM NHẤT")) {
+            filtered.sort((a, b) -> {
+                LocalDateTime timeA = a.getEndTime() != null ? a.getEndTime() : LocalDateTime.MAX;
+                LocalDateTime timeB = b.getEndTime() != null ? b.getEndTime() : LocalDateTime.MAX;
+                return timeA.compareTo(timeB);
+            });
+        } else {
+            // Mới nhất (default)
+            filtered.sort((a, b) -> Integer.compare(b.getId(), a.getId()));
+        }
+        return filtered;
     }
 }

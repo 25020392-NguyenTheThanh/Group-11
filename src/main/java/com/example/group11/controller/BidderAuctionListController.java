@@ -61,6 +61,9 @@ public class BidderAuctionListController implements Initializable {
     private MenuButton auctionStatus;
 
     @FXML
+    private MenuButton auctionSort;
+
+    @FXML
     private Button avatarBtn;
 
     @FXML
@@ -275,11 +278,17 @@ public class BidderAuctionListController implements Initializable {
         // Xử lý cho MenuButton Sản phẩm
         setupMenuButtonUpdate(auctionProduct);
 
+        // Xử lý cho MenuButton Sắp xếp
+        setupMenuButtonUpdate(auctionSort);
+
         // Đăng ký sự kiện nút TẤT CẢ
         allList.setOnAction(event -> {
             searchBar.clear();
             auctionStatus.setText("TRẠNG THÁI");
             auctionProduct.setText("SẢN PHẨM");
+            if (auctionSort != null) {
+                auctionSort.setText("SẮP XẾP");
+            }
             applyFilters();
         });
 
@@ -444,7 +453,8 @@ public class BidderAuctionListController implements Initializable {
         if (allAuctions == null) return;
         String statusFilter = auctionStatus.getText().trim().toUpperCase();
         String categoryFilter = auctionProduct.getText().trim().toUpperCase();
-        List<Auction> filtered = BidderFilterManager.filter(allAuctions, user, currentTab, searchBar.getText(), statusFilter, categoryFilter);
+        String sortFilter = auctionSort != null ? auctionSort.getText().trim().toUpperCase() : "SẮP XẾP";
+        List<Auction> filtered = BidderFilterManager.filter(allAuctions, user, currentTab, searchBar.getText(), statusFilter, categoryFilter, sortFilter);
         renderAuctionCards(filtered);
     }
 
@@ -702,40 +712,12 @@ public class BidderAuctionListController implements Initializable {
                         }
                     }
 
-                    // Tìm card trên giao diện để thay thế trực tiếp
-                    Node oldCard = null;
-                    for (Node node : contentGrid.getChildren()) {
+                    // C. Tìm card và update tại chỗ — KHÔNG tạo lại card mới
+                    for (javafx.scene.Node node : contentGrid.getChildren()) {
                         if (("auction-card-" + auctionId).equals(node.getId())) {
-                            oldCard = node;
+                            AuctionCardFactory.updateCard((VBox) node, detailed);
                             break;
                         }
-                    }
-                    
-                    if (oldCard != null) {
-                        Integer col = javafx.scene.layout.GridPane.getColumnIndex(oldCard);
-                        Integer row = javafx.scene.layout.GridPane.getRowIndex(oldCard);
-                        
-                        boolean isWatched = false;
-                        if (user instanceof Bidder bidder) {
-                            isWatched = bidder.getProfile().getWatchlist().contains(auctionId);
-                        }
-
-                        VBox newCard = AuctionCardFactory.createAuctionCard(
-                                detailed,
-                                this::handleBid,
-                                this::openLiveAuction,
-                                isWatched,
-                                this::handleToggleWatchlist,
-                                this.user
-                        );
-                        newCard.setId("auction-card-" + auctionId);
-
-                        contentGrid.getChildren().remove(oldCard);
-                        contentGrid.add(newCard, col != null ? col : 0, row != null ? row : 0);
-                        System.out.println("Đã cập nhật riêng biệt card của phiên #" + auctionId);
-                    } else {
-                        // Card is not currently displayed (e.g. filtered out), no need to reload the whole screen
-                        System.out.println("Card #" + auctionId + " không hiển thị, bỏ qua cập nhật UI.");
                     }
                 });
             }
@@ -856,6 +838,11 @@ public class BidderAuctionListController implements Initializable {
             }
 
             notificationListContainer.getChildren().add(0, notifItemBox);
+
+            // Chỉ giữ 20 thông báo gần nhất
+            if (notificationListContainer.getChildren().size() > 20) {
+                notificationListContainer.getChildren().remove(20, notificationListContainer.getChildren().size());
+            }
         }
     }
 
