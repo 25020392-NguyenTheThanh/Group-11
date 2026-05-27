@@ -88,8 +88,6 @@ public class LoginController implements Initializable {
     @FXML
     private Text togglePasswordIcon;
 
-    @FXML
-    private TextField serverIpField ;
 
     private boolean isPasswordVisible = false;
 
@@ -141,11 +139,7 @@ public class LoginController implements Initializable {
 
         // BẮT BUỘC: Nếu chưa kết nối hoặc kết nối cũ đã đóng (do đăng xuất) -> Kết nối lại
         if (!connection.isConnected()) {
-            System.out.println("Đang kết nối lại tới Server...");
-            String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
-                    ? serverIpField.getText().trim()
-                    : ServerConnection.DEFAULT_HOST;
-            connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
+            connection.connectAuto();
         }
 
         Response response = connection.send(RequestType.LOGIN, payload);
@@ -298,11 +292,7 @@ public class LoginController implements Initializable {
             ServerConnection connection = ServerConnection.getInstance();
             if (!connection.isConnected()) {
                 try {
-                    System.out.println("Đang kết nối tới Server...");
-                    String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
-                            ? serverIpField.getText().trim()
-                            : ServerConnection.DEFAULT_HOST;
-                    connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
+                    connection.connectAuto();
                 } catch (Exception ex) {
                     NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ: " + ex.getMessage());
                     return;

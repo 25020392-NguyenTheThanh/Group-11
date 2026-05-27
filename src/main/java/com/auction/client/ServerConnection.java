@@ -67,6 +67,14 @@ public class ServerConnection {
         return instance;
     }
 
+    public synchronized void connectAuto() throws IOException {
+        String[] server = ServerDiscoveryClient.discover();
+        if (server != null){
+            connect(server[0] , Integer.parseInt(server[1]));
+        } else {
+            throw new IOException("Không tìm thấy server trong mạng LAN");
+        }
+    }
     public synchronized void connect() throws IOException {
         connect(DEFAULT_HOST , DEFAULT_PORT);
     }
