@@ -48,23 +48,16 @@ public class UserManager {
     public List<User> getUsers() { return DataManager.getInstance().getAllUsers(); }
 
     public User findUser(String username) {
-        return getUsers().stream()
-                .filter(u -> u.getUsername().equals(username))
-                .findFirst().orElse(null);
+        return DataManager.getInstance().findUserByUsername(username);
     }
 
     public User findUserByEmail(String email) {
-        return getUsers().stream()
-                .filter(u -> email.equalsIgnoreCase(u.getEmail()))
-                .findFirst().orElse(null);
+        return DataManager.getInstance().findUserByEmail(email);
     }
 
     // Tìm user theo id.
     public User findUserById(int id) {
-        return getUsers().stream()
-                .filter(u -> u.getId() == id)
-                .findFirst()
-                .orElse(null);
+        return DataManager.getInstance().findUserById(id);
     }
 
     @Deprecated
