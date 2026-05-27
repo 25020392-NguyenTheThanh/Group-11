@@ -141,17 +141,29 @@ public class LoginController implements Initializable {
 
         // BẮT BUỘC: Nếu chưa kết nối hoặc kết nối cũ đã đóng (do đăng xuất) -> Kết nối lại
         if (!connection.isConnected()) {
+            boolean connected = false;
+            // Thử tự động tìm server trong LAN trước
             try {
-                System.out.println("Đang kết nối lại tới Server...");
-                String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
-                        ? serverIpField.getText().trim()
-                        : ServerConnection.DEFAULT_HOST;
-                connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
-            } catch (IOException e) {
-                NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ! Vui lòng đảm bảo rằng Server đang chạy và địa chỉ IP chính xác.");
-                return;
+                System.out.println("Đang tự động tìm server trong LAN...");
+                connection.connectAuto();
+                connected = true;
+                System.out.println("Kết nối tự động thành công.");
+            } catch (IOException autoEx) {
+                System.out.println("Không tìm thấy server tự động: " + autoEx.getMessage());
             }
-            connection.connectAuto();
+            // Nếu auto discovery thất bại, thử kết nối thủ công với IP nhập tay / localhost
+            if (!connected) {
+                try {
+                    System.out.println("Đang kết nối thủ công tới Server...");
+                    String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
+                            ? serverIpField.getText().trim()
+                            : ServerConnection.DEFAULT_HOST;
+                    connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
+                } catch (IOException e) {
+                    NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ! Vui lòng đảm bảo rằng Server đang chạy và địa chỉ IP chính xác.");
+                    return;
+                }
+            }
         }
 
         Response response = connection.send(RequestType.LOGIN, payload);
@@ -310,15 +322,25 @@ public class LoginController implements Initializable {
             // BẮT BUỘC: Kết nối tới server nếu chưa kết nối (giống handleLogin)
             ServerConnection connection = ServerConnection.getInstance();
             if (!connection.isConnected()) {
+                boolean connected = false;
                 try {
-                    System.out.println("Đang kết nối tới Server...");
-                    String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
-                            ? serverIpField.getText().trim()
-                            : ServerConnection.DEFAULT_HOST;
-                    connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
-                } catch (Exception ex) {
-                    NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ: " + ex.getMessage());
-                    return;
+                    System.out.println("Đang tự động tìm server trong LAN...");
+                    connection.connectAuto();
+                    connected = true;
+                } catch (IOException autoEx) {
+                    System.out.println("Không tìm thấy server tự động: " + autoEx.getMessage());
+                }
+                if (!connected) {
+                    try {
+                        System.out.println("Đang kết nối tới Server...");
+                        String serverIp = (serverIpField != null && !serverIpField.getText().trim().isEmpty())
+                                ? serverIpField.getText().trim()
+                                : ServerConnection.DEFAULT_HOST;
+                        connection.connect(serverIp, ServerConnection.DEFAULT_PORT);
+                    } catch (Exception ex) {
+                        NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ: " + ex.getMessage());
+                        return;
+                    }
                 }
             }
 
@@ -452,4 +474,3 @@ public class LoginController implements Initializable {
         LoginEffectHelper.openFile("documents/privacy.pdf");
     }
 }
-
