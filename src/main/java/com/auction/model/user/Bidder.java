@@ -58,7 +58,7 @@ public class Bidder extends User implements Observer {
         if (lastTopUpTime == null) {
             return true;
         }
-        return java.time.LocalDateTime.now().isAfter(lastTopUpTime.plusHours(24));
+        return java.time.LocalDateTime.now().isAfter(lastTopUpTime.plusMinutes(3));
     }
 
     public BidderProfile getProfile() { return profile; }
