@@ -36,7 +36,6 @@ public class RequestProcessor {
     private static final long BID_THROTTLE_MS = 500;
     private static final AuditLogger  audit       = AuditLogger.getInstance();
     private static final RateLimiter rateLimiter = RateLimiter.getInstance();
-
     // hàm trung tâm
     public static Response process(Request request, ClientHandler handler) {
         try {
@@ -186,7 +185,7 @@ public class RequestProcessor {
 
         try {
             User user = UserManager.getInstance().register(p.username, p.password, p.email, p.role);
-            if (user == null) return Response.error("Đăng ký thất bại, vui lòng thử lại.");
+            if (user == null && InputValidator.isValidEmail(p.email)) return Response.error("Đăng ký thất bại, vui lòng thử lại.");
             audit.logRegister(ip, p.username);
             return Response.ok(user);
         } catch (IllegalArgumentException e) {

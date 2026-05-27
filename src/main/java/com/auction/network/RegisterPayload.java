@@ -14,4 +14,8 @@ public class RegisterPayload implements Serializable {
     public RegisterPayload() {
 
     }
+
+    public String getEmail() {
+        return email;
+    }
 }
