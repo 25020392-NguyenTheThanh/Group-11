@@ -151,6 +151,7 @@ public class LoginController implements Initializable {
                 NotificationController.showAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ! Vui lòng đảm bảo rằng Server đang chạy và địa chỉ IP chính xác.");
                 return;
             }
+            connection.connectAuto();
         }
 
         Response response = connection.send(RequestType.LOGIN, payload);

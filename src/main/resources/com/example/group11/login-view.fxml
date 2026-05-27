@@ -103,16 +103,6 @@
                     </children>
                 </VBox>
 
-                <VBox spacing="8.0">
-                    <Label style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #374151;" text="Server IP" />
-                    <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
-                        <Text fill="#94a3b8" style="-fx-font-size: 16px;" text="🌐" />
-                        <TextField fx:id="serverIpField" promptText="localhost (hoặc nhập IP server)"
-                                   style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;"
-                                   HBox.hgrow="ALWAYS" />
-                    </HBox>
-                </VBox>
-
                 <VBox spacing="20.0">
                     <children>
                         <!-- Khung Nhập Username -->

@@ -201,6 +201,51 @@ public class UserRepository {
         return list;
     }
 
+    // Tìm user theo username — query trực tiếp, không load toàn bảng
+    public User findByUsername(String username) {
+        String sql = "SELECT * FROM users WHERE username = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, username);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapper.map(con, rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] findByUsername lỗi: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // Tìm user theo email — query trực tiếp, không load toàn bảng
+    public User findByEmail(String email) {
+        String sql = "SELECT * FROM users WHERE email = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapper.map(con, rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] findByEmail lỗi: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // Tìm user theo id — query trực tiếp, không load toàn bảng
+    public User findById(int id) {
+        String sql = "SELECT * FROM users WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapper.map(con, rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserRepository] findById lỗi: " + e.getMessage());
+        }
+        return null;
+    }
+
     // ─── LỖI 4 FIX: implement đầy đủ, không còn stub trả false ──────────────
     public boolean addSellerRevenue(int sellerId, double amount) {
         String sql = "UPDATE sellers SET revenue = revenue + ? WHERE user_id = ?";

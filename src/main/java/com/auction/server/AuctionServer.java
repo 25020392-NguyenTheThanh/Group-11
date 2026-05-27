@@ -50,6 +50,10 @@ public class AuctionServer {
 
         new AuctionTimer(this).start();
 
+        Thread discoveryThread = new Thread(new ServerDiscovery());
+        discoveryThread.setDaemon(true);
+        discoveryThread.start();
+        System.out.println("Discovery service đã hoạt động");
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();

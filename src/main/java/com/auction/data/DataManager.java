@@ -54,6 +54,12 @@ public class DataManager {
 
     public List<User> getAllUsers() { return userRepo.findAll(); }
 
+    public User findUserByUsername(String username) { return userRepo.findByUsername(username); }
+
+    public User findUserByEmail(String email) { return userRepo.findByEmail(email); }
+
+    public User findUserById(int id) { return userRepo.findById(id); }
+
     public boolean deleteItem(int id) {
         return itemRepo.delete(id);
     }

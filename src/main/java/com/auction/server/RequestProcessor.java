@@ -99,6 +99,18 @@ public class RequestProcessor {
             if (user == null) {
                 return Response.error("Tên đăng nhập hoặc mật khẩu không đúng!");
             }
+
+            // Kiểm tra xem tài khoản này đã đăng nhập ở một kết nối khác chưa
+            if (AuctionServer.getInstance() != null) {
+                for (ClientHandler existingClient : AuctionServer.getInstance().getConnectedClients()) {
+                    if (existingClient == handler) continue; // bỏ qua chính handler này
+                    User loggedUser = existingClient.getLoggedInUser();
+                    if (loggedUser != null && loggedUser.getId() == user.getId()) {
+                        return Response.error("Tài khoản đang hoạt động trên một thiết bị khác. Vui lòng đăng xuất thiết bị đó trước!");
+                    }
+                }
+            }
+
             if (!user.isActive()) {
                 return Response.error("Tài khoản của bạn đã bị khóa! Lý do: " + user.getBanReason());
             }
