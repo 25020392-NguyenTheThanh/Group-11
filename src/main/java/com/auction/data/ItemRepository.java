@@ -25,8 +25,8 @@ public class ItemRepository {
      */
     public int add(Item item) {
         String sql = "INSERT INTO items "
-                + "(owner_id, name, description, starting_price, category, image_url, artist, brand, manufacture_year) "
-                + "VALUES (?,?,?,?,?,?,?,?,?)";
+                + "(owner_id, name, description, starting_price, category, image_url, status, artist, brand, manufacture_year) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?)";
         try (Connection con = db.getConnection();
              PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -36,6 +36,7 @@ public class ItemRepository {
             ps.setDouble(4, item.getStartingPrice());
             ps.setString(5, item.getCategory());
             ps.setString(6, item.getImageUrl());
+            ps.setString(7, item.getStatus().name());
             bindCategoryFields(ps, item);
             ps.executeUpdate();
 
@@ -131,24 +132,23 @@ public class ItemRepository {
 
     // Private helpers
 
-    // Gán các tham số đặc thù của từng category (artist / brand / manufacture_year).
     private void bindCategoryFields(PreparedStatement ps, Item item) throws SQLException {
         if (item instanceof Art art) {
-            ps.setString(7, art.getArtist());
-            ps.setNull  (8, Types.VARCHAR);
-            ps.setNull  (9, Types.SMALLINT);
+            ps.setString(8, art.getArtist());
+            ps.setNull  (9, Types.VARCHAR);
+            ps.setNull  (10, Types.SMALLINT);
         } else if (item instanceof Electronics elec) {
-            ps.setNull  (7, Types.VARCHAR);
-            ps.setString(8, elec.getBrand());
-            ps.setNull  (9, Types.SMALLINT);
+            ps.setNull  (8, Types.VARCHAR);
+            ps.setString(9, elec.getBrand());
+            ps.setNull  (10, Types.SMALLINT);
         } else if (item instanceof Vehicle veh) {
-            ps.setNull(7, Types.VARCHAR);
             ps.setNull(8, Types.VARCHAR);
-            ps.setInt (9, veh.getYear());
+            ps.setNull(9, Types.VARCHAR);
+            ps.setInt (10, veh.getYear());
         } else {
-            ps.setNull(7, Types.VARCHAR);
             ps.setNull(8, Types.VARCHAR);
-            ps.setNull(9, Types.SMALLINT);
+            ps.setNull(9, Types.VARCHAR);
+            ps.setNull(10, Types.SMALLINT);
         }
     }
 

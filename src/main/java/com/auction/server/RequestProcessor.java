@@ -74,6 +74,7 @@ public class RequestProcessor {
                 case ADMIN_CANCEL_AUCTION       -> handleAdminCancelAuction(request, handler);
                 case ADMIN_GET_ALL_ITEMS        -> handleAdminGetAllItems(handler);
                 case ADMIN_FORCE_DELETE_ITEM    -> handleAdminForceDeleteItem(request, handler);
+                case ADMIN_APPROVE_ITEM         -> handleAdminApproveItem(request, handler);
                 case ADMIN_GET_STATS            -> handleAdminGetStats(handler);
                 case ADMIN_GET_AUDIT_LOG        -> handleAdminGetAuditLog(handler);
                 case ADMIN_GET_ACTIVE_SESSIONS  -> handleAdminGetActiveSessions(handler);
@@ -138,6 +139,9 @@ public class RequestProcessor {
 
 
             if (!user.isActive()) {
+                if ("PENDING".equalsIgnoreCase(user.getStatus())) {
+                    return Response.error("Tài khoản của bạn đang chờ duyệt từ Admin. Vui lòng quay lại sau!");
+                }
                 return Response.error("Tài khoản của bạn đã bị khóa! Lý do: " + user.getBanReason());
             }
             rateLimiter.recordSuccess(ip);
@@ -862,6 +866,28 @@ public class RequestProcessor {
         boolean ok = ItemManager.getInstance().forceDeleteItemByAdmin(p.targetId);
         if (ok) return Response.ok("Admin đã xóa cưỡng chế sản phẩm thành công!");
         return Response.error("Không thể xóa sản phẩm.");
+    }
+
+    private static Response handleAdminApproveItem(Request request, ClientHandler handler) {
+        if (!isAdmin(handler.getLoggedInUser())) return Response.error("Từ chối truy cập: Quyền Admin là bắt buộc!");
+        if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Dữ liệu Admin không hợp lệ!");
+
+        boolean ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.AVAILABLE);
+        if (ok) {
+            Item item = ItemManager.getInstance().findItem(p.targetId);
+            if (item != null && AuctionServer.getInstance() != null) {
+                String msg = String.format("Sản phẩm [%s] của bạn đã được Admin phê duyệt!", item.getName());
+                for (ClientHandler client : AuctionServer.getInstance().getConnectedClients()) {
+                    User u = client.getLoggedInUser();
+                    if (u != null && u.getId() == item.getOwnerId()) {
+                        client.sendNotification(new Notification("PRODUCT_APPROVED", msg));
+                        break;
+                    }
+                }
+            }
+            return Response.ok("Duyệt sản phẩm thành công!");
+        }
+        return Response.error("Không thể duyệt sản phẩm.");
     }
 
     private static Response handleAdminGetStats(ClientHandler handler) {

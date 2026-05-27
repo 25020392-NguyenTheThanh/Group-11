@@ -152,7 +152,7 @@ public class UserRepository {
             // Bước 1: INSERT vào bảng users
             int newId;
             String hashedPassword = PasswordUtil.hash(password);
-            String sqlUser = "INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)";
+            String sqlUser = "INSERT INTO users (username, password, email, role, status, ban_reason) VALUES (?,?,?,?,'PENDING','Tài khoản đang chờ duyệt từ Admin.')";
             try (PreparedStatement ps = con.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, username);
                 ps.setString(2, hashedPassword); // lưu hash, không lưu plaintext

@@ -17,7 +17,7 @@ public abstract class Item extends Entity {
         this.name = name;
         this.description = description;
         this.startingPrice = startingPrice;
-        this.status = ItemStatus.AVAILABLE;
+        this.status = ItemStatus.PENDING;
         this.imageUrl = imageUrl;
     }
 

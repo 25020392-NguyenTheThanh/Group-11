@@ -33,6 +33,7 @@ public enum RequestType {
     ADMIN_CANCEL_AUCTION,        // Hủy phiên đấu giá
     ADMIN_GET_ALL_ITEMS,         // Xem toàn bộ sản phẩm
     ADMIN_FORCE_DELETE_ITEM,     // Xóa sản phẩm bất kỳ (kể cả IN_AUCTION)
+    ADMIN_APPROVE_ITEM,          // Duyệt sản phẩm
     ADMIN_GET_STATS,             // Thống kê hệ thống
     ADMIN_GET_AUDIT_LOG,         // Xem log bảo mật
     ADMIN_GET_ACTIVE_SESSIONS,   // Xem session đang hoạt động

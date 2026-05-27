@@ -61,7 +61,8 @@ public class UserMapper {
         };
 
         if (user != null) {
-            user.setActive(!"BANNED".equalsIgnoreCase(status));
+            user.setStatus(status != null ? status : "ACTIVE");
+            user.setActive("ACTIVE".equalsIgnoreCase(status));
             user.setBanReason(banReason != null ? banReason : "");
         }
         return user;

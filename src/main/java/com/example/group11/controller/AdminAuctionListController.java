@@ -249,7 +249,7 @@ public class AdminAuctionListController implements Initializable {
         colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
         colRole.setCellValueFactory(new PropertyValueFactory<>("role"));
         colStatus.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
-                cellData.getValue().isActive() ? "ACTIVE" : "BANNED"
+                cellData.getValue().getStatus()
         ));
         colBanReason.setCellValueFactory(new PropertyValueFactory<>("banReason"));
 
@@ -266,11 +266,35 @@ public class AdminAuctionListController implements Initializable {
     }
 
     private void loadUsers() {
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_USERS, null);
-        if (res != null && res.isSuccess()) {
-            List<User> list = (List<User>) res.getData();
-            usersList.setAll(list);
-        }
+        Label loadingLabel = new Label("Đang tải dữ liệu người dùng từ database...");
+        loadingLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-style: italic;");
+        tableUsers.setPlaceholder(loadingLabel);
+        usersList.clear();
+
+        javafx.concurrent.Task<Response> task = new javafx.concurrent.Task<>() {
+            @Override
+            protected Response call() {
+                return ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_USERS, null);
+            }
+        };
+
+        task.setOnSucceeded(evt -> {
+            Response res = task.getValue();
+            if (res != null && res.isSuccess()) {
+                List<User> list = (List<User>) res.getData();
+                if (list != null) {
+                    usersList.setAll(list);
+                }
+            } else {
+                tableUsers.setPlaceholder(new Label("Không thể tải danh sách người dùng."));
+            }
+        });
+
+        task.setOnFailed(evt -> {
+            tableUsers.setPlaceholder(new Label("Lỗi kết nối khi tải danh sách người dùng."));
+        });
+
+        new Thread(task).start();
     }
 
     @FXML
@@ -309,12 +333,14 @@ public class AdminAuctionListController implements Initializable {
     private void handleUnbanUser() {
         User selected = tableUsers.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            NotificationController.showAlert("Thông báo", "Vui lòng chọn người dùng muốn mở khóa.");
+            NotificationController.showAlert("Thông báo", "Vui lòng chọn người dùng muốn duyệt hoặc mở khóa.");
             return;
         }
+        boolean isPending = "PENDING".equalsIgnoreCase(selected.getStatus());
         Response res = ServerConnection.getInstance().send(RequestType.ADMIN_UNBAN_USER, new AdminPayload(selected.getId()));
         if (res != null && res.isSuccess()) {
-            NotificationController.showNotification("Thành công", "Đã mở khóa tài khoản thành công!");
+            String msg = isPending ? "Đã duyệt tài khoản thành công!" : "Đã mở khóa tài khoản thành công!";
+            NotificationController.showNotification("Thành công", msg);
             loadUsers();
         } else {
             NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");
@@ -466,6 +492,35 @@ public class AdminAuctionListController implements Initializable {
         if (res != null && res.isSuccess()) {
             List<Item> list = (List<Item>) res.getData();
             itemsList.setAll(list);
+        }
+    }
+
+    @FXML
+    private void handleApproveItem() {
+        Item selected = tableItems.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            NotificationController.showAlert("Thông báo", "Vui lòng chọn sản phẩm muốn duyệt.");
+            return;
+        }
+
+        if (selected.getStatus() != com.auction.model.item.ItemStatus.PENDING) {
+            NotificationController.showAlert("Thông báo", "Chỉ có thể duyệt sản phẩm ở trạng thái PENDING.");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận duyệt sản phẩm");
+        confirm.setHeaderText("Bạn có chắc chắn muốn duyệt sản phẩm '" + selected.getName() + "'?");
+        confirm.setContentText("Sau khi duyệt, sản phẩm sẽ ở trạng thái AVAILABLE và có thể đem đấu giá.");
+        NotificationController.applyDarkTheme(confirm);
+        if (confirm.showAndWait().orElse(null) == ButtonType.OK) {
+            Response res = ServerConnection.getInstance().send(RequestType.ADMIN_APPROVE_ITEM, new AdminPayload(selected.getId()));
+            if (res != null && res.isSuccess()) {
+                NotificationController.showNotification("Thành công", "Đã duyệt sản phẩm thành công!");
+                loadItems();
+            } else {
+                NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");
+            }
         }
     }
 

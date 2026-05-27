@@ -182,7 +182,7 @@
                                         <HBox spacing="15.0" alignment="CENTER_LEFT">
                                             <children>
                                                 <Button onAction="#handleBanUser" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🚫 Ban User" />
-                                                <Button onAction="#handleUnbanUser" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Unban User" />
+                                                <Button onAction="#handleUnbanUser" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Approve / Unban User" />
                                                 <Button onAction="#handleResetUserPassword" style="-fx-background-color: #38BDF8; -fx-text-fill: #0A192F; -fx-font-weight: bold; -fx-cursor: hand;" text="🔑 Reset Password" />
                                                 <Button onAction="#handleDeleteUser" style="-fx-background-color: #7F1D1D; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🗑 Delete Permanently" />
                                             </children>
@@ -239,6 +239,7 @@
                                         </TableView>
                                         <HBox spacing="15.0" alignment="CENTER_LEFT">
                                             <children>
+                                                <Button onAction="#handleApproveItem" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="✅ Approve Item" />
                                                 <Button onAction="#handleForceDeleteItem" style="-fx-background-color: #EF4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🗑 Force Delete Item" />
                                             </children>
                                         </HBox>

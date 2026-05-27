@@ -11,6 +11,7 @@ public abstract class User extends Entity {
     private boolean active; // trạng thái tài khoản
     private boolean authenticated; // trạng thái đăng nhập
     private String banReason; // lý do khóa tài khoản
+    private String status; // trạng thái phê duyệt/hoạt động: ACTIVE, PENDING, BANNED
 
     public User(int id , String username , String password , String email){
         super(id);
@@ -20,7 +21,11 @@ public abstract class User extends Entity {
         this.active = true;
         this.authenticated = false;
         this.banReason = "";
+        this.status = "ACTIVE";
     }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
     public String getUsername() { return username; }
     public String getPassword() { return password; }
