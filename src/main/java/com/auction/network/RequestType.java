@@ -21,6 +21,9 @@ public enum RequestType {
     CHANGE_PASSWORD, // đổi mật khẩu
     VERIFY_EMAIL, // xác thực email quên mật khẩu
     RESET_PASSWORD ,// khôi phục mật khẩu mới
+
+//admin
+
     ADMIN_GET_ALL_USERS,          // Xem danh sách toàn bộ user
     ADMIN_BAN_USER,              // Khóa tài khoản
     ADMIN_UNBAN_USER,            // Mở khóa tài khoản

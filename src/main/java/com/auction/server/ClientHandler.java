@@ -10,6 +10,8 @@ import com.auction.network.Notification;
 import com.auction.network.Request;
 import com.auction.network.Response;
 import com.auction.pattern.observer.Observer;
+import com.auction.security.AuditLogger;
+import com.auction.security.SessionManager;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -23,6 +25,7 @@ public class ClientHandler implements Runnable , Observer {
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private User loggedInUser; // user đang đăng nhập qua kết nối này
+    private String sessionToken; // ← token session hiện tại
 
     public ClientHandler(Socket socket, AuctionServer server) {
         this.socket = socket;
@@ -67,15 +70,25 @@ public class ClientHandler implements Runnable , Observer {
         }
     }
 
-    private void cleanup() {
+    public void cleanup() {
+        // Hủy session khi disconnect
+        if (sessionToken != null) {
+            SessionManager.getInstance().invalidate(sessionToken);
+            sessionToken = null;
+        }
+        // Log logout
+        if (loggedInUser != null) {
+            AuditLogger.getInstance().logLogout(getClientIp(), loggedInUser.getId());
+            try { loggedInUser.logout(); } catch (Exception ignored) {}
+        }
         try {
             if (in != null) in.close();
             if (out != null) out.close();
             if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException ignored) {}
         AuctionManager.getInstance().removeObserverFromAllAuctions(this);
-        server.removeClient(this); // xóa khỏi danh sách connectedClients
-        System.out.println("Đã dọn dẹp kết nối: " + socket.getInetAddress());
+        server.removeClient(this);
+        System.out.println("[Server] Đã dọn dẹp kết nối: " + getClientIp());
     }
 
     @Override
@@ -159,8 +172,16 @@ public class ClientHandler implements Runnable , Observer {
     public AuctionServer getServer() {
         return server;
     }
-//    cho ClientHandler truy cập object server
+    public String getClientIp() {
+        if (socket == null) return "unknown";
+        return socket.getInetAddress().getHostAddress();
+    }
+
+    public String getSessionToken()              { return sessionToken; }
+    public void setSessionToken(String token)    { this.sessionToken = token; }
 }
+
+//    cho ClientHandler truy cập object server
 // out.reset(): khi gửi cùng một object nhiều lần ,
 // Java ObjectOutputStream cache lại object đó.
 // Nếu không reset(), lần gửi sau nó sẽ gửi một reference đến object cũ thay vì object mới
