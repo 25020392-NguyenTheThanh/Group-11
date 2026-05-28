@@ -57,6 +57,12 @@ public class AdminAuctionListController implements Initializable {
     @FXML private ListView<String> listSessions;
     @FXML private Button btnKick;
 
+    // Pending Approvals on Dashboard
+    @FXML private ListView<String> listPendingUsers;
+    @FXML private ListView<String> listPendingItems;
+    private final List<User> pendingUsersData = new java.util.ArrayList<>();
+    private final List<Item> pendingItemsData = new java.util.ArrayList<>();
+
     // User Management
     @FXML private TextField txtSearchUser;
     @FXML private TableView<User> tableUsers;
@@ -173,6 +179,9 @@ public class AdminAuctionListController implements Initializable {
                 // Fetch auctions to compute detailed auction status stats and system revenue
                 Response resAuctions = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_AUCTIONS, null);
 
+                // Fetch items for pending approvals list on dashboard
+                Response resItems = ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_ITEMS, null);
+
                 // Update UI elements in JavaFX Application Thread
                 Platform.runLater(() -> {
                     if (statsRes != null && statsRes.isSuccess()) {
@@ -200,6 +209,19 @@ public class AdminAuctionListController implements Initializable {
                         long sellers = list.stream().filter(u -> "SELLER".equalsIgnoreCase(u.getRole())).count();
                         long banned = list.stream().filter(u -> !u.isActive()).count();
                         lblUsersSub.setText(String.format("Bidders: %d | Sellers: %d | Banned: %d", bidders, sellers, banned));
+
+                        // Populate Pending Users list
+                        pendingUsersData.clear();
+                        List<String> pendingDisplay = new java.util.ArrayList<>();
+                        if (list != null) {
+                            for (User u : list) {
+                                if ("PENDING".equalsIgnoreCase(u.getStatus())) {
+                                    pendingUsersData.add(u);
+                                    pendingDisplay.add(u.getUsername() + " (" + u.getRole() + ") - " + u.getEmail());
+                                }
+                            }
+                        }
+                        listPendingUsers.setItems(FXCollections.observableArrayList(pendingDisplay));
                     }
 
                     if (resAuctions != null && resAuctions.isSuccess()) {
@@ -214,6 +236,21 @@ public class AdminAuctionListController implements Initializable {
                             .mapToDouble(Auction::getCurrentHighestBid)
                             .sum();
                         lblTotalRevenue.setText(String.format("$%,.2f", revenue));
+                    }
+
+                    if (resItems != null && resItems.isSuccess()) {
+                        List<Item> list = (List<Item>) resItems.getData();
+                        pendingItemsData.clear();
+                        List<String> pendingDisplay = new java.util.ArrayList<>();
+                        if (list != null) {
+                            for (Item it : list) {
+                                if (it.getStatus() == com.auction.model.item.ItemStatus.PENDING) {
+                                    pendingItemsData.add(it);
+                                    pendingDisplay.add(it.getName() + " - Giá khởi điểm: $" + it.getStartingPrice());
+                                }
+                            }
+                        }
+                        listPendingItems.setItems(FXCollections.observableArrayList(pendingDisplay));
                     }
                 });
             } catch (Exception e) {
@@ -269,6 +306,40 @@ public class AdminAuctionListController implements Initializable {
                     }
                 }
             }
+        }
+    }
+
+    @FXML
+    private void handleApproveUserFromDashboard() {
+        int idx = listPendingUsers.getSelectionModel().getSelectedIndex();
+        if (idx == -1 || idx >= pendingUsersData.size()) {
+            NotificationController.showAlert("Thông báo", "Vui lòng chọn tài khoản muốn duyệt.");
+            return;
+        }
+        User selected = pendingUsersData.get(idx);
+        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_UNBAN_USER, new AdminPayload(selected.getId()));
+        if (res != null && res.isSuccess()) {
+            NotificationController.showNotification("Thành công", "Đã duyệt tài khoản thành công!");
+            refreshStats();
+        } else {
+            NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");
+        }
+    }
+
+    @FXML
+    private void handleApproveItemFromDashboard() {
+        int idx = listPendingItems.getSelectionModel().getSelectedIndex();
+        if (idx == -1 || idx >= pendingItemsData.size()) {
+            NotificationController.showAlert("Thông báo", "Vui lòng chọn sản phẩm muốn duyệt.");
+            return;
+        }
+        Item selected = pendingItemsData.get(idx);
+        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_APPROVE_ITEM, new AdminPayload(selected.getId()));
+        if (res != null && res.isSuccess()) {
+            NotificationController.showNotification("Thành công", "Đã duyệt sản phẩm thành công!");
+            refreshStats();
+        } else {
+            NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");
         }
     }
 

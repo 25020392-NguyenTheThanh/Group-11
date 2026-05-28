@@ -39,8 +39,8 @@ public class AuctionServer {
         // Cập nhật Database Schema để hỗ trợ trạng thái UNSOLD
         try (Connection con = DatabaseConnection.getConnection();
              Statement st = con.createStatement()) {
-            st.executeUpdate("ALTER TABLE items MODIFY COLUMN status ENUM('AVAILABLE','IN_AUCTION','SOLD','UNSOLD') NOT NULL DEFAULT 'AVAILABLE'");
-            System.out.println("[DATABASE] Đã đồng bộ cấu trúc bảng items (thêm trạng thái UNSOLD nếu chưa có).");
+            st.executeUpdate("ALTER TABLE items MODIFY COLUMN status ENUM('PENDING','AVAILABLE','IN_AUCTION','SOLD','UNSOLD') NOT NULL DEFAULT 'PENDING'");
+            System.out.println("[DATABASE] Đã đồng bộ cấu trúc bảng items (thêm trạng thái PENDING và UNSOLD nếu chưa có).");
         } catch (SQLException e) {
             System.err.println("[DATABASE] Không thể thay đổi cấu trúc bảng items (có thể đã có hoặc lỗi quyền): " + e.getMessage());
         }

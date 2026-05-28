@@ -159,6 +159,40 @@
                                                         </HBox>
                                                     </children>
                                                 </VBox>
+                                                
+                                                <!-- Pending Approvals Section -->
+                                                <GridPane hgap="20.0" vgap="20.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" percentWidth="50.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" percentWidth="50.0" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <!-- Pending Users -->
+                                                        <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                                            <children>
+                                                                <Label text="TÀI KHOẢN CHỜ DUYỆT" textFill="WHITE"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                                                <ListView fx:id="listPendingUsers" prefHeight="200.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240; -fx-text-fill: white;" />
+                                                                <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                                                                    <children>
+                                                                        <Button onAction="#handleApproveUserFromDashboard" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="Duyệt Tài Khoản" />
+                                                                    </children>
+                                                                </HBox>
+                                                            </children>
+                                                        </VBox>
+                                                        <!-- Pending Items -->
+                                                        <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                                            <children>
+                                                                <Label text="SẢN PHẨM CHỜ DUYỆT" textFill="WHITE"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                                                <ListView fx:id="listPendingItems" prefHeight="200.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240; -fx-text-fill: white;" />
+                                                                <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                                                                    <children>
+                                                                        <Button onAction="#handleApproveItemFromDashboard" style="-fx-background-color: #22C55E; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="Duyệt Sản Phẩm" />
+                                                                    </children>
+                                                                </HBox>
+                                                            </children>
+                                                        </VBox>
+                                                    </children>
+                                                </GridPane>
                                             </children>
                                         </VBox>
                                         <VBox fx:id="dashboardLoading" alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;" visible="false">

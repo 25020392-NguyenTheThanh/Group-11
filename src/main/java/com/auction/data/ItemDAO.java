@@ -116,8 +116,8 @@ public class ItemDAO {
         String status   = rs.getString("status");
         Item item = switch (category){
             case "ART" -> new Art(id , ownerId , name , desc , price , imageUrl , rs.getString("artist"));
-            case "ELECTRONICS" -> new Electronics(id , ownerId , desc , name , price , imageUrl , rs.getString("brand"));
-            case "VEHICLE" -> new Vehicle(id , ownerId , name , desc , price , imageUrl , rs.getInt("year"));
+            case "ELECTRONICS" -> new Electronics(id , ownerId , name , desc , price , imageUrl , rs.getString("brand"));
+            case "VEHICLE" -> new Vehicle(id , ownerId , name , desc , price , imageUrl , rs.getInt("manufacture_year"));
             default -> throw new SQLException("Không rõ loại hàng : " + category);
         };
         item.setStatus(ItemStatus.valueOf(status));

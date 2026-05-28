@@ -24,6 +24,8 @@ public class ItemRepository {
      * return id được sinh ra, hoặc {-1} nếu lỗi.
      */
     public int add(Item item) {
+        System.out.println(">>> STATUS: " + item.getStatus());
+        System.out.println(">>> STATUS name(): " + item.getStatus().name());
         String sql = "INSERT INTO items "
                 + "(owner_id, name, description, starting_price, category, image_url, status, artist, brand, manufacture_year) "
                 + "VALUES (?,?,?,?,?,?,?,?,?,?)";
@@ -105,7 +107,7 @@ public class ItemRepository {
             ps.setDouble(4, item.getStartingPrice());
             ps.setString(5, item.getCategory());
             ps.setString(6, item.getImageUrl());
-            bindCategoryFields(ps, item);
+            bindCategoryFields(ps, item, 7);
             ps.setInt(10, item.getId());
 
             return ps.executeUpdate() > 0;
@@ -133,22 +135,26 @@ public class ItemRepository {
     // Private helpers
 
     private void bindCategoryFields(PreparedStatement ps, Item item) throws SQLException {
+        bindCategoryFields(ps, item, 8);
+    }
+
+    private void bindCategoryFields(PreparedStatement ps, Item item, int startIndex) throws SQLException {
         if (item instanceof Art art) {
-            ps.setString(8, art.getArtist());
-            ps.setNull  (9, Types.VARCHAR);
-            ps.setNull  (10, Types.SMALLINT);
+            ps.setString(startIndex, art.getArtist());
+            ps.setNull  (startIndex + 1, Types.VARCHAR);
+            ps.setNull  (startIndex + 2, Types.SMALLINT);
         } else if (item instanceof Electronics elec) {
-            ps.setNull  (8, Types.VARCHAR);
-            ps.setString(9, elec.getBrand());
-            ps.setNull  (10, Types.SMALLINT);
+            ps.setNull  (startIndex, Types.VARCHAR);
+            ps.setString(startIndex + 1, elec.getBrand());
+            ps.setNull  (startIndex + 2, Types.SMALLINT);
         } else if (item instanceof Vehicle veh) {
-            ps.setNull(8, Types.VARCHAR);
-            ps.setNull(9, Types.VARCHAR);
-            ps.setInt (10, veh.getYear());
+            ps.setNull(startIndex, Types.VARCHAR);
+            ps.setNull(startIndex + 1, Types.VARCHAR);
+            ps.setInt (startIndex + 2, veh.getYear());
         } else {
-            ps.setNull(8, Types.VARCHAR);
-            ps.setNull(9, Types.VARCHAR);
-            ps.setNull(10, Types.SMALLINT);
+            ps.setNull(startIndex, Types.VARCHAR);
+            ps.setNull(startIndex + 1, Types.VARCHAR);
+            ps.setNull(startIndex + 2, Types.SMALLINT);
         }
     }
 

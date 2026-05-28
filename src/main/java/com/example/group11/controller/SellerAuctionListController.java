@@ -1296,13 +1296,13 @@ public class SellerAuctionListController implements Initializable {
                     Response auctionResponse = ServerConnection.getInstance().send(RequestType.CREATE_AUCTION, createAuctionPayload);
                     if (auctionResponse != null && auctionResponse.isSuccess()) {
                         System.out.println("[DATABASE] Đã tạo phiên đấu giá thành công!");
-                        NotificationController.showNotification("Thành công", "Đăng ký sản phẩm và tạo phiên đấu giá thành công!");
+                        NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công! Đang chờ Admin duyệt phiên đấu giá.");
                     } else {
                         String auctionError = (auctionResponse != null) ? auctionResponse.getMessage() : "Lỗi kết nối khi tạo phiên đấu giá";
-                        NotificationController.showError("Lỗi tạo phiên đấu giá", "Đã đăng ký sản phẩm nhưng không thể tạo phiên đấu giá.\nChi tiết: " + auctionError);
+                        NotificationController.showError("Lỗi tạo phiên đấu giá", "Đã gửi yêu cầu đăng ký sản phẩm nhưng không thể tạo phiên đấu giá.\nChi tiết: " + auctionError);
                     }
                 } else {
-                    NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công!");
+                    NotificationController.showNotification("Thành công", "Đăng ký sản phẩm thành công! Đang chờ Admin duyệt sản phẩm.");
                 }
 
                 AuctionUIHelper.setNeedsRefresh(true);

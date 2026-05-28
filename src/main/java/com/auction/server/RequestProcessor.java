@@ -883,8 +883,10 @@ public class RequestProcessor {
         if (auction != null) {
             LocalDateTime now = LocalDateTime.now();
             if (auction.getStartTime() == null || !auction.getStartTime().isAfter(now)) {
-                auction.start();
-                DataManager.getInstance().startAuction(auction.getId());
+                if (auction.getStatus() == AuctionStatus.OPEN) {
+                    auction.start();
+                    DataManager.getInstance().startAuction(auction.getId());
+                }
                 ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.IN_AUCTION);
             } else {
                 auction.restoreStatus(com.auction.model.auction.AuctionStatus.OPEN);

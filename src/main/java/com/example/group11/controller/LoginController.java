@@ -347,9 +347,9 @@ public class LoginController implements Initializable {
             Response response = connection.send(RequestType.REGISTER, signUpPayload);
 
             if (response != null && response.isSuccess()) {
-                NotificationController.showNotification("Đăng ký thành công", "Tài khoản của bạn đã được khởi tạo thành công trên hệ thống!");
+                NotificationController.showNotification("Đăng ký thành công", "Đăng ký thành công! Yêu cầu của bạn đang chờ Admin duyệt.");
 
-                System.out.println("Đăng ký thành công!");
+                System.out.println("Đăng ký thành công! Đang chờ Admin duyệt.");
 
                 LoginEffectHelper.playSwitchAnimation(signUp, door, () -> {
                     rootHBox.getChildren().setAll(door, loginDialog);
