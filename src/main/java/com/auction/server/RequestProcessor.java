@@ -79,7 +79,7 @@ public class RequestProcessor {
                 case ADMIN_GET_AUDIT_LOG        -> handleAdminGetAuditLog(handler);
                 case ADMIN_GET_ACTIVE_SESSIONS  -> handleAdminGetActiveSessions(handler);
                 case ADMIN_KICK_USER            -> handleAdminKickUser(request, handler);
-                case DECLINE_PAYMENT -> null;
+                case DECLINE_PAYMENT -> handleDeclinePayment(request, handler);
             };
         } catch (Exception e) {
             System.err.println("[RequestProcessor] Unhandled: " + request.getType() + " → " + e.getMessage());
