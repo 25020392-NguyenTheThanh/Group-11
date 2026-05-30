@@ -57,10 +57,6 @@ public class AuctionManager {
             return null;
         }
 
-        if (item.getStatus() == ItemStatus.AVAILABLE) {
-            item.setStatus(ItemStatus.IN_AUCTION);
-        }
-
         Auction auction = new Auction(dbId, item, startTime, endTime, minBidStep);
         auctions.put(dbId, auction);
 
@@ -135,8 +131,11 @@ public class AuctionManager {
                 DataManager.getInstance().updateAuctionBid(a.getId(), highestBidTx.getBidderId(), highestBidTx.getAmount());
             }
 
-            // Tự động kích hoạt nếu phiên OPEN đã đến giờ bắt đầu lúc khởi động server
-            if (a.getStatus() == AuctionStatus.OPEN && (a.getStartTime() == null || !a.getStartTime().isAfter(now))) {
+            // Tự động kích hoạt nếu phiên OPEN đã đến giờ bắt đầu lúc khởi động server và sản phẩm không ở trạng thái PENDING
+            if (a.getStatus() == AuctionStatus.OPEN 
+                    && a.getItem() != null 
+                    && a.getItem().getStatus() != com.auction.model.item.ItemStatus.PENDING 
+                    && (a.getStartTime() == null || !a.getStartTime().isAfter(now))) {
                 try {
                     a.start();
                     DataManager.getInstance().startAuction(a.getId());

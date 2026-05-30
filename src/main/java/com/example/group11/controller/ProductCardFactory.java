@@ -90,6 +90,10 @@ public class ProductCardFactory {
         
         if (item.getStatus() != null) {
             switch (item.getStatus()) {
+                case PENDING -> {
+                    statusText = "PENDING";
+                    statusColor = "#ffb300"; // Yellow-orange
+                }
                 case IN_AUCTION -> {
                     statusText = "IN AUCTION";
                     statusColor = "#ff5722"; // Red-orange
@@ -230,7 +234,7 @@ public class ProductCardFactory {
         HBox.setHgrow(btnEdit, javafx.scene.layout.Priority.ALWAYS);
         
         boolean canEdit = false;
-        if (item.getStatus() == com.auction.model.item.ItemStatus.AVAILABLE) {
+        if (item.getStatus() == com.auction.model.item.ItemStatus.AVAILABLE || item.getStatus() == com.auction.model.item.ItemStatus.PENDING) {
             canEdit = true;
         } else if (item.getStatus() == com.auction.model.item.ItemStatus.IN_AUCTION) {
             if (auction != null && auction.getStatus() == com.auction.model.auction.AuctionStatus.OPEN) {
@@ -253,7 +257,15 @@ public class ProductCardFactory {
         Button btnDelete = new Button("XÓA");
         btnDelete.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(btnDelete, javafx.scene.layout.Priority.ALWAYS);
+        
+        boolean canDelete = true;
         if (item.getStatus() == com.auction.model.item.ItemStatus.IN_AUCTION) {
+            if (auction == null || auction.getStatus() != com.auction.model.auction.AuctionStatus.OPEN) {
+                canDelete = false;
+            }
+        }
+        
+        if (!canDelete) {
             btnDelete.setDisable(true);
             btnDelete.setStyle("-fx-background-color: #475569; -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-padding: 8; -fx-background-radius: 4; -fx-opacity: 0.5;");
         } else {

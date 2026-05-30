@@ -34,6 +34,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.scene.control.cell.PropertyValueFactory;
+
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -1276,7 +1278,11 @@ public class SellerAuctionListController implements Initializable {
                     createAuctionPayload.itemId = createdItem.getId();
 
                     if (startDatePicker.getValue() != null) {
-                        createAuctionPayload.startTime = startDatePicker.getValue().atStartOfDay();
+                        if (startDatePicker.getValue().equals(LocalDate.now())) {
+                            createAuctionPayload.startTime = LocalDateTime.now();
+                        } else {
+                            createAuctionPayload.startTime = startDatePicker.getValue().atStartOfDay();
+                        }
                     } else {
                         createAuctionPayload.startTime = LocalDateTime.now();
                     }

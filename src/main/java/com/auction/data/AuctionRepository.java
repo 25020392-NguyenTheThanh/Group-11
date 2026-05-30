@@ -2,6 +2,9 @@ package com.auction.data;
 
 import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
+import com.auction.model.auction.AuctionStatus;
+import com.auction.model.item.Item;
+import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 
 import java.sql.*;
@@ -17,8 +20,8 @@ public class AuctionRepository {
         this.db = DatabaseConnection.getInstance();
     }
 
-    public List<com.auction.model.auction.Auction> findAll() {
-        List<com.auction.model.auction.Auction> list = new ArrayList<>();
+    public List<Auction> findAll() {
+        List<Auction> list = new ArrayList<>();
         String sql = "SELECT * FROM auctions";
         try (Connection con = db.getConnection();
              Statement st = con.createStatement();
@@ -35,16 +38,16 @@ public class AuctionRepository {
                 LocalDateTime endTime = rs.getTimestamp("end_time").toLocalDateTime();
                 double minBidStep = rs.getDouble("min_bid_step");
 
-                com.auction.model.item.Item item = com.auction.manager.ItemManager.getInstance().findItem(itemId);
+                Item item = com.auction.manager.ItemManager.getInstance().findItem(itemId);
                 if (item == null) continue;
 
                 Auction auction = new Auction(id, item, startTime, endTime, minBidStep);
-                auction.restoreStatus(com.auction.model.auction.AuctionStatus.valueOf(statusStr));
+                auction.restoreStatus(AuctionStatus.valueOf(statusStr));
                 auction.restoreHighestBid(currentHighestBid);
 
                 if (!winnerIsNull && winnerId > 0) {
                     User winner = UserManager.getInstance().findUserById(winnerId);
-                    if (winner instanceof com.auction.model.user.Bidder b) {
+                    if (winner instanceof Bidder b) {
                         auction.restoreCurrentWinner(b);
                     }
                 }

@@ -46,9 +46,9 @@ public class AuctionSystemTest {
     @Test
     void invalidBidShouldThrowException(){
         Item item = new Vehicle(1, 123, "Tesla Model Y", "Electric SUV", 2000, "", 2023);
-        // Chọn thời gian kiểm thử tường minh cố định tương lai
-        LocalDateTime startTime = LocalDateTime.of(2026, 5, 25, 10, 30);
-        LocalDateTime endTime = LocalDateTime.of(2026, 5, 30, 10, 30);
+        // Bắt đầu từ hôm qua, kết thúc vào ngày mai để đảm bảo phiên đang chạy
+        LocalDateTime startTime = LocalDateTime.now().minusDays(1);
+        LocalDateTime endTime = LocalDateTime.now().plusDays(1);
 
         Auction auction = new Auction(1, item , startTime , endTime , 20);
         Bidder bidder = new Bidder(1,"Tuan","123","123@gmail",2000, null);

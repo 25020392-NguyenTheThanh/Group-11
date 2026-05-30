@@ -358,9 +358,9 @@ public class RequestProcessor {
         Auction auction = AuctionManager.getInstance().createAuction(item, p.startTime, p.endTime, p.minBidStep);
         if (auction == null) return Response.error("Không thể tạo phiên — sản phẩm không ở trạng thái AVAILABLE");
 
-        // Chỉ kích hoạt (start) phiên đấu giá nếu thời gian bắt đầu đã đến hoặc ở quá khứ
+        // Chỉ kích hoạt (start) phiên đấu giá nếu thời gian bắt đầu đã đến hoặc ở quá khứ và vật phẩm đã được duyệt
         LocalDateTime now = LocalDateTime.now();
-        if (p.startTime == null || !p.startTime.isAfter(now)) {
+        if (item.getStatus() != ItemStatus.PENDING && (p.startTime == null || !p.startTime.isAfter(now))) {
             auction.start();
             DataManager.getInstance().startAuction(auction.getId());
         }
@@ -404,7 +404,12 @@ public class RequestProcessor {
         }
 
         if (item.getStatus() == ItemStatus.IN_AUCTION) {
-            return Response.error("Không thể xóa sản phẩm đang ở trạng thái IN_AUCTION");
+            Auction auction = AuctionManager.getInstance().getAuctions().stream()
+                    .filter(a -> a.getItem() != null && a.getItem().getId() == item.getId())
+                    .findFirst().orElse(null);
+            if (auction == null || auction.getStatus() != AuctionStatus.OPEN) {
+                return Response.error("Không thể xóa sản phẩm đang ở trạng thái IN_AUCTION");
+            }
         }
 
         boolean success = ItemManager.getInstance().deleteItem(itemId);
@@ -445,8 +450,8 @@ public class RequestProcessor {
             if (auction != null && auction.getStatus() != AuctionStatus.OPEN) {
                 return Response.error("Chỉ có thể sửa sản phẩm khi phiên đấu giá chưa bắt đầu (OPEN).");
             }
-        } else if (existingItem.getStatus() != ItemStatus.AVAILABLE) {
-            return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE hoặc phiên chưa bắt đầu.");
+        } else if (existingItem.getStatus() != ItemStatus.AVAILABLE && existingItem.getStatus() != ItemStatus.PENDING) {
+            return Response.error("Chỉ có thể sửa sản phẩm ở trạng thái AVAILABLE, PENDING hoặc phiên chưa bắt đầu.");
         }
 
         ItemFactory factory = switch (p.type.toUpperCase()) {
@@ -890,7 +895,7 @@ public class RequestProcessor {
                 ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.IN_AUCTION);
             } else {
                 auction.restoreStatus(com.auction.model.auction.AuctionStatus.OPEN);
-                ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.IN_AUCTION);
+                ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.AVAILABLE);
             }
         } else {
             ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.AVAILABLE);

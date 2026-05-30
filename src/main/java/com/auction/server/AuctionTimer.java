@@ -35,7 +35,7 @@ public class AuctionTimer {
         List<Auction> auctions = AuctionManager.getInstance().getAuctions();
         for (Auction auction : auctions){
             // Tự động kích hoạt phiên OPEN đã đến giờ bắt đầu
-            if (auction.getStatus() == AuctionStatus.OPEN) {
+            if (auction.getStatus() == AuctionStatus.OPEN && auction.getItem() != null && auction.getItem().getStatus() != com.auction.model.item.ItemStatus.PENDING) {
                 LocalDateTime now = LocalDateTime.now();
                 if (auction.getStartTime() == null || !auction.getStartTime().isAfter(now)) {
                     try {

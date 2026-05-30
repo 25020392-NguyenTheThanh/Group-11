@@ -136,11 +136,17 @@ public class Auction implements Subject, Serializable {
         String msg;
         if (currentWinner == null) {
             status = AuctionStatus.CANCELED;
+            if (item != null) {
+                item.setStatus(com.auction.model.item.ItemStatus.UNSOLD);
+            }
             msg = String.format(
                     "■ Phiên #%d [%s] kết thúc — Không có người đặt giá. Trạng thái: CANCELED.",
                     id, item.getName());
         } else {
             status = AuctionStatus.FINISHED;
+            if (item != null) {
+                item.setStatus(com.auction.model.item.ItemStatus.SOLD);
+            }
             msg = String.format(
                     "■ Phiên #%d [%s] kết thúc — Người thắng: %s với giá $%,.0f",
                     id, item.getName(), currentWinner.getUsername(), currentHighestBid);

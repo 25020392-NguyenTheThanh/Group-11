@@ -14,6 +14,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import java.io.*;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
@@ -204,7 +205,7 @@ public class AuctionAdvancedTest {
         assertTrue(auction.getEndTime().isAfter(endBefore));
         assertEquals(1, auction.getExtensionCount());
         // Kiểm tra gia hạn ít nhất 55s (buffer do thời gian chạy test)
-        long diff = java.time.Duration.between(endBefore, auction.getEndTime()).toSeconds();
+        long diff = Duration.between(endBefore, auction.getEndTime()).toSeconds();
         assertTrue(diff >= 55 && diff <= 65, "Gia hạn phải ~60s, thực tế: " + diff + "s");
     }
 
