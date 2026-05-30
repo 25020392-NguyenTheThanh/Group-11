@@ -16,14 +16,14 @@ class AutoBidEngine {
     }
 
     void triggerForConfig(AutoBidConfig config) {
-        Bidder bidder = resolveBidder(config.getBidderId());
+        // Chỉ tìm trong observer list — KHÔNG gọi UserManager (tránh DB call khi test/offline)
+        Bidder bidder = resolveBidderFromObservers(config.getBidderId());
         if (bidder != null) trigger(bidder);
     }
 
     synchronized void trigger(Bidder justBidder) {
         if (auction.getStatus() != AuctionStatus.RUNNING) return;
 
-        // Tìm config tốt nhất
         AutoBidConfig best = null;
         double bestNextBid = 0;
         for (AutoBidConfig cfg : auction.getAutoBidConfigs().values()) {
@@ -37,6 +37,7 @@ class AutoBidEngine {
         }
         if (best == null) return;
 
+        // trigger() được gọi từ manual bid path → có thể dùng UserManager làm fallback
         Bidder bidder = resolveBidder(best.getBidderId());
         if (bidder == null) return;
 
@@ -64,7 +65,16 @@ class AutoBidEngine {
         }
     }
 
+    // Tìm trong observer list + UserManager fallback (dùng cho manual bid path)
     private Bidder resolveBidder(int bidderId) {
+        Bidder b = resolveBidderFromObservers(bidderId);
+        if (b != null) return b;
+        User u = UserManager.getInstance().findUserById(bidderId);
+        return (u instanceof Bidder bidder) ? bidder : null;
+    }
+
+    // Chỉ tìm trong observer list, không chạm DB
+    private Bidder resolveBidderFromObservers(int bidderId) {
         for (Observer obs : auction.getObservers()) {
             if (obs instanceof Bidder b && b.getId() == bidderId) return b;
             if (obs instanceof ClientHandler handler) {
@@ -72,7 +82,6 @@ class AutoBidEngine {
                 if (u instanceof Bidder b && b.getId() == bidderId) return b;
             }
         }
-        User u = UserManager.getInstance().findUserById(bidderId);
-        return (u instanceof Bidder b) ? b : null;
+        return null;
     }
 }
