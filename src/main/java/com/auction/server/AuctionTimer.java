@@ -2,14 +2,16 @@ package com.auction.server;
 
 import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
+import com.auction.manager.ItemManager;
 import com.auction.model.auction.Auction;
-import com.auction.model.auction.AuctionStatus;
+import com.auction.model.auction.BidTransaction;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 import com.auction.network.Notification;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -31,132 +33,163 @@ public class AuctionTimer {
         System.out.println("AuctionTimer đã khởi động - quét mỗi 10 giây");
     }
 
+    public void stop(){
+        scheduler.shutdown();
+    }
+
+    // Xử lý từng phiên theo trạng thái
     private void checkExpiredAuctions(){
-        List<Auction> auctions = AuctionManager.getInstance().getAuctions();
-        for (Auction auction : auctions){
-            // Tự động kích hoạt phiên OPEN đã đến giờ bắt đầu
-            if (auction.getStatus() == AuctionStatus.OPEN) {
-                LocalDateTime now = LocalDateTime.now();
-                if (auction.getStartTime() == null || !auction.getStartTime().isAfter(now)) {
-                    try {
-                        auction.start();
-                        DataManager.getInstance().startAuction(auction.getId());
-
-                        // Phát thông báo realtime cho tất cả client
-                        String msg = "Phiên #" + auction.getId() + " [" + auction.getItem().getName() + "] đã bắt đầu!";
-                        server.broadcast(new Notification("AUCTION_ENDED", msg));
-                        server.broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
-                        System.out.println("Timer kích hoạt phiên #" + auction.getId() + " sang RUNNING.");
-
-                        // Gửi thông báo đến những người đã watchlist phiên này
-                        for (ClientHandler client : server.getConnectedClients()) {
-                            User u = client.getLoggedInUser();
-                            if (u instanceof Bidder bidder) {
-                                if (bidder.getProfile().getWatchlist().contains(auction.getId())) {
-                                    client.sendNotification(new Notification("WATCHLIST_STARTED", String.format("Sản phẩm [%s] trong danh sách quan tâm của bạn đã lên sàn đấu giá!", auction.getItem().getName())));
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Lỗi khi tự động kích hoạt phiên #" + auction.getId() + ": " + e.getMessage());
-                    }
-                }
-            }
-
-            // Kiểm tra phiên sắp kết thúc (dưới 5 phút, dưới 1 phút)
-            if (auction.getStatus() == AuctionStatus.RUNNING) {
-                LocalDateTime now = LocalDateTime.now();
-                if (now.isBefore(auction.getEndTime())) {
-                    long secondsRemaining = java.time.Duration.between(now, auction.getEndTime()).toSeconds();
-                    if (secondsRemaining > 0 && secondsRemaining < 60) { // dưới 1 phút
-                        if (!warned1MinAuctions.contains(auction.getId())) {
-                            warned1MinAuctions.add(auction.getId());
-                            sendEndingSoonNotification(auction, 1);
-                        }
-                    } else if (secondsRemaining > 0 && secondsRemaining < 300) { // dưới 5 phút
-                        if (!warned5MinAuctions.contains(auction.getId())) {
-                            warned5MinAuctions.add(auction.getId());
-                            sendEndingSoonNotification(auction, 5);
-                        }
-                    }
-                }
-            }
-
-            // Chỉ xử lý phiên đang RUNNING và đã hết giờ
-            if (auction.getStatus() == AuctionStatus.RUNNING && LocalDateTime.now().isAfter(auction.getEndTime())){
-                try {
-                    auction.finish(); // chuyển sang FINISHED hoặc CANCELLED
-                    AuctionManager.getInstance().finishAuction(auction.getId());
-                    
-                    com.auction.model.item.ItemStatus newStatus = (auction.getCurrentWinner() != null)
-                             ? com.auction.model.item.ItemStatus.SOLD
-                             : com.auction.model.item.ItemStatus.UNSOLD;
-                    com.auction.manager.ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
-
-                    if (auction.getCurrentWinner() != null) {
-                        // Persist bidder won auction
-                        DataManager.getInstance().saveBidderWon(
-                                auction.getCurrentWinner().getId(),
-                                auction.getId()
-                        );
-                        // Update in-memory profile of the winner on the server
-                        auction.getCurrentWinner().getProfile().addWonAuction(auction.getId());
-                    }
-
-                    // Gửi thông báo kết quả đấu giá
-                    if (auction.getCurrentWinner() != null) {
-                        Bidder winner = auction.getCurrentWinner();
-                        for (ClientHandler client : server.getConnectedClients()) {
-                            User u = client.getLoggedInUser();
-                            if (u != null) {
-                                if (u.getId() == winner.getId()) {
-                                    client.sendNotification(new Notification("AUCTION_WON", String.format("Chúc mừng! Bạn đã thắng phiên đấu giá #%d [%s] với số tiền $%,.2f. Vui lòng nhấn vào thông báo này hoặc chuyển tới Lịch sử để thanh toán!", auction.getId(), auction.getItem().getName(), auction.getCurrentHighestBid())));
-                                } else if (u instanceof Bidder bidder) {
-                                    // Kiểm tra xem bidder này có tham gia đấu giá phiên này không
-                                    boolean hasBid = false;
-                                    for (com.auction.model.auction.BidTransaction tx : auction.getBidHistory()) {
-                                        if (tx.getBidderId() == bidder.getId()) {
-                                            hasBid = true;
-                                            break;
-                                        }
-                                    }
-                                    if (hasBid) {
-                                        client.sendNotification(new Notification("AUCTION_LOST", String.format("Phiên đấu giá #%d [%s] đã kết thúc. Rất tiếc, bạn đã không phải người trả giá cao nhất (giá thắng cuộc: $%,.2f).", auction.getId(), auction.getItem().getName(), auction.getCurrentHighestBid())));
-                                    }
-                                } else if (u.getId() == auction.getItem().getOwnerId()) {
-                                    // Thông báo cho Seller
-                                    client.sendNotification(new Notification("SELLER_AUCTION_SUCCESS", String.format("Phiên đấu giá sản phẩm [%s] của bạn đã kết thúc thành công! Giá thắng cuộc: $%,.2f. Người thắng: @%s.", auction.getItem().getName(), auction.getCurrentHighestBid(), winner.getUsername())));
-                                }
-                            }
-                        }
-                    } else {
-                        // Thất bại
-                        for (ClientHandler client : server.getConnectedClients()) {
-                            User u = client.getLoggedInUser();
-                            if (u != null) {
-                                if (u.getId() == auction.getItem().getOwnerId()) {
-                                    client.sendNotification(new Notification("SELLER_AUCTION_FAILED", String.format("Phiên đấu giá sản phẩm [%s] của bạn đã kết thúc nhưng không có người trả giá.", auction.getItem().getName())));
-                                } else if (u instanceof Bidder bidder) {
-                                    if (bidder.getProfile().getWatchlist().contains(auction.getId())) {
-                                        client.sendNotification(new Notification("AUCTION_LOST", String.format("Phiên đấu giá #%d [%s] đã kết thúc mà không có người đặt giá.", auction.getId(), auction.getItem().getName())));
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // thông báo cho tất cả client
-                    String msg = "Phiên " + auction.getId() + " [" + auction.getItem().getName() + "] đã kết thúc" ;
-                    server.broadcast(new Notification("AUCTION_ENDED" , msg));
-                    server.broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
-                    System.out.println("Timer kết thúc phiên " + auction.getId() + ", cập nhật trạng thái sản phẩm thành " + newStatus);
-                } catch(Exception e){
-                    System.err.println("Lỗi khi kết thúc ở phiên " + auction.getId() + ": " + e.getMessage());
-                }
+        LocalDateTime now = LocalDateTime.now();
+        for (Auction auction : AuctionManager.getInstance().getAuctions()){
+            switch (auction.getStatus()){
+                case OPEN -> tryActivateAuction(auction , now);
+                case RUNNING -> checkRunningAuction(auction , now);
+                default -> {}
             }
         }
     }
 
+    // OPEN : kích hoạt phiên khi đến giờ bắt đầu
+    private void tryActivateAuction(Auction auction, LocalDateTime now) {
+        if (auction.getStartTime() != null && auction.getStartTime().isAfter(now)) return;
+        try {
+            auction.start();
+            DataManager.getInstance().startAuction(auction.getId());
+
+            server.broadcast(new Notification("AUCTION_STARTED",
+                    "Phiên #" + auction.getId() + " [" + auction.getItem().getName() + "] đã bắt đầu!"));
+            server.broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId())));
+
+            notifyWatchlistBidders(auction,
+                    "WATCHLIST_STARTED",
+                    String.format("Sản phẩm [%s] trong danh sách quan tâm của bạn đã lên sàn đấu giá!",
+                            auction.getItem().getName()));
+
+            System.out.println("Timer kích hoạt phiên #" + auction.getId() + " sang RUNNING.");
+        } catch (Exception e) {
+            System.err.println("Lỗi khi kích hoạt phiên #" + auction.getId() + ": " + e.getMessage());
+        }
+    }
+
+    // RUNNING : cảnh báo sắp hết giờ , kết thúc khi đã đến giờ
+    private void checkRunningAuction(Auction auction, LocalDateTime now) {
+        if (now.isAfter(auction.getEndTime())) {
+            tryFinishAuction(auction);
+        } else {
+            checkEndingSoonWarnings(auction, now);
+        }
+    }
+
+    // cảnh báo nếu thời gian còn dưới 5 phút hoặc 1 phút
+    private void checkEndingSoonWarnings(Auction auction, LocalDateTime now) {
+        long secondsLeft = Duration.between(now, auction.getEndTime()).toSeconds();
+        if (secondsLeft <= 0) return;
+
+        if (secondsLeft < 60 && warned1MinAuctions.add(auction.getId())) {
+            sendEndingSoonNotification(auction, 1);
+        } else if (secondsLeft < 300 && warned5MinAuctions.add(auction.getId())) {
+            sendEndingSoonNotification(auction, 5);
+        }
+    }
+
+    // kết thúc phiên , cập nhật dữ liệu , gửi thông báo cho client
+    private void tryFinishAuction(Auction auction) {
+        try {
+            auction.finish();
+            AuctionManager.getInstance().finishAuction(auction.getId());
+
+            ItemStatus newStatus = (auction.getCurrentWinner() != null) ? ItemStatus.SOLD : ItemStatus.UNSOLD;
+            ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
+
+            persistWinnerIfPresent(auction);
+            notifyAuctionResult(auction);
+
+            server.broadcast(new Notification("AUCTION_ENDED",
+                    "Phiên " + auction.getId() + " [" + auction.getItem().getName() + "] đã kết thúc"));
+            server.broadcast(new Notification("ITEM_STATUS_CHANGED",
+                    String.valueOf(auction.getItem().getId())));
+
+            System.out.println("Timer kết thúc phiên #" + auction.getId() + ", item → " + newStatus);
+        } catch (Exception e) {
+            System.err.println("Lỗi khi kết thúc phiên #" + auction.getId() + ": " + e.getMessage());
+        }
+    }
+    // xác định phiên đấu giá thành công hay thất bại
+    private void notifyAuctionResult(Auction auction) {
+        if (auction.getCurrentWinner() != null) {
+            notifyAuctionSuccess(auction);
+        } else {
+            notifyAuctionFailed(auction);
+        }
+    }
+    // gủi thông báo cho người thắng , người bán , người tham gia khi kết phiên thành công
+    private void notifyAuctionSuccess(Auction auction) {
+        Bidder winner = auction.getCurrentWinner();
+        for (ClientHandler client : server.getConnectedClients()) {
+            User u = client.getLoggedInUser();
+            if (u == null) continue;
+
+            if (u.getId() == winner.getId()) {
+                client.sendNotification(new Notification("AUCTION_WON", String.format(
+                        "Chúc mừng! Bạn đã thắng phiên #%d [%s] với $%,.2f. Vui lòng chuyển tới Lịch sử để thanh toán!",
+                        auction.getId(), auction.getItem().getName(), auction.getCurrentHighestBid())));
+
+            } else if (u.getId() == auction.getItem().getOwnerId()) {
+                client.sendNotification(new Notification("SELLER_AUCTION_SUCCESS", String.format(
+                        "Phiên [%s] kết thúc thành công! Giá thắng: $%,.2f. Người thắng: @%s.",
+                        auction.getItem().getName(), auction.getCurrentHighestBid(), winner.getUsername())));
+
+            } else if (u instanceof Bidder bidder && hasParticipated(bidder, auction)) {
+                client.sendNotification(new Notification("AUCTION_LOST", String.format(
+                        "Phiên #%d [%s] đã kết thúc. Rất tiếc, bạn không phải người trả giá cao nhất ($%,.2f).",
+                        auction.getId(), auction.getItem().getName(), auction.getCurrentHighestBid())));
+            }
+        }
+    }
+    // gửi thông báo cho người theo dõi , người bán nếu phiên thất bại
+    private void notifyAuctionFailed(Auction auction) {
+        for (ClientHandler client : server.getConnectedClients()) {
+            User u = client.getLoggedInUser();
+            if (u == null) continue;
+
+            if (u.getId() == auction.getItem().getOwnerId()) {
+                client.sendNotification(new Notification("SELLER_AUCTION_FAILED", String.format(
+                        "Phiên [%s] kết thúc nhưng không có người trả giá.",
+                        auction.getItem().getName())));
+
+            } else if (u instanceof Bidder bidder
+                    && bidder.getProfile().getWatchlist().contains(auction.getId())) {
+                client.sendNotification(new Notification("AUCTION_LOST", String.format(
+                        "Phiên #%d [%s] kết thúc mà không có người đặt giá.",
+                        auction.getId(), auction.getItem().getName())));
+            }
+        }
+    }
+    // gửi thông báo tới tất cả bidder đang theo dõi phiên đấu trong watchlist
+    private void notifyWatchlistBidders(Auction auction, String type, String message) {
+        for (ClientHandler client : server.getConnectedClients()) {
+            if (client.getLoggedInUser() instanceof Bidder bidder
+                    && bidder.getProfile().getWatchlist().contains(auction.getId())) {
+                client.sendNotification(new Notification(type, message));
+            }
+        }
+    }
+    // kiểm tra bidder từng đặt giá trong phiên hay chưa
+    private boolean hasParticipated(Bidder bidder, Auction auction) {
+        for (BidTransaction tx : auction.getBidHistory()) {
+            if (tx.getBidderId() == bidder.getId()) return true;
+        }
+        return false;
+    }
+    // lưu thông tin người thắng đấu giá vào cơ sở dữ liệu
+    private void persistWinnerIfPresent(Auction auction) {
+        Bidder winner = auction.getCurrentWinner();
+        if (winner == null) return;
+        DataManager.getInstance().saveBidderWon(winner.getId(), auction.getId());
+        winner.getProfile().addWonAuction(auction.getId());
+    }
+
+    // gửi cảnh báo sắp kết thúc phiên cho người theo dõi hoặc đã tham gia đặt giá
     private void sendEndingSoonNotification(Auction auction, int minutes) {
         String msg = String.format("Phiên đấu giá #%d [%s] sắp kết thúc (còn dưới %d phút)!", auction.getId(), auction.getItem().getName(), minutes);
         Notification notification = new Notification("ENDING_SOON", msg);
@@ -177,9 +210,5 @@ public class AuctionTimer {
                 }
             }
         }
-    }
-
-    public void stop(){
-        scheduler.shutdown();
     }
 }
