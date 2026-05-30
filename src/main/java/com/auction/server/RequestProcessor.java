@@ -252,7 +252,7 @@ public class RequestProcessor {
 
             BidUpdateData upd = new BidUpdateData(
                     payload.auctionId, auction.getCurrentHighestBid(),
-                    bidder.getUsername(), auction.getBidHistory().size());
+                    bidder.getUsername(), auction.getBidHistory().size(), auction.getEndTime());
             handler.getServer().broadcast(new Notification("BID_UPDATE", upd));
             audit.logBid(handler.getClientIp(), user.getId(), payload.auctionId, payload.amount);
             return Response.ok(bidder.getBalance());

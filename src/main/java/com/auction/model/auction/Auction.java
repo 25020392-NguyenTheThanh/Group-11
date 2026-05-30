@@ -5,6 +5,7 @@ import com.auction.exception.AuctionClosedException;
 import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
 import com.auction.model.item.Item;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 import com.auction.network.BidUpdateData;
@@ -22,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+
 import com.auction.server.AuctionServer;
 import com.auction.server.ClientHandler;
 import com.auction.manager.UserManager;
@@ -89,15 +92,15 @@ public class Auction implements Subject, Serializable {
         if (observers != null) {
             this.viewCount = (int) observers.stream()
                     .map(obs -> {
-                        if (obs instanceof com.auction.server.ClientHandler ch) {
+                        if (obs instanceof ClientHandler ch) {
                             return ch.getLoggedInUser();
-                        } else if (obs instanceof com.auction.model.user.User u) {
+                        } else if (obs instanceof User u) {
                             return u;
                         }
                         return null;
                     })
                     .filter(java.util.Objects::nonNull)
-                    .map(com.auction.model.user.User::getId)
+                    .map(User::getId)
                     .distinct()
                     .count();
         }
@@ -118,7 +121,7 @@ public class Auction implements Subject, Serializable {
 
         status = AuctionStatus.RUNNING;
         if (item != null) {
-            item.setStatus(com.auction.model.item.ItemStatus.IN_AUCTION);
+            item.setStatus(ItemStatus.IN_AUCTION);
         }
 
         String msg = String.format(
@@ -137,7 +140,7 @@ public class Auction implements Subject, Serializable {
         if (currentWinner == null) {
             status = AuctionStatus.CANCELED;
             if (item != null) {
-                item.setStatus(com.auction.model.item.ItemStatus.UNSOLD);
+                item.setStatus(ItemStatus.UNSOLD);
             }
             msg = String.format(
                     "■ Phiên #%d [%s] kết thúc — Không có người đặt giá. Trạng thái: CANCELED.",
@@ -145,7 +148,7 @@ public class Auction implements Subject, Serializable {
         } else {
             status = AuctionStatus.FINISHED;
             if (item != null) {
-                item.setStatus(com.auction.model.item.ItemStatus.SOLD);
+                item.setStatus(ItemStatus.SOLD);
             }
             msg = String.format(
                     "■ Phiên #%d [%s] kết thúc — Người thắng: %s với giá $%,.0f",
@@ -192,14 +195,14 @@ public class Auction implements Subject, Serializable {
         }
         placeBidInternal(bidder, amount, isAutoBid);
         
-        // Chạy auto-bid bất đồng bộ sau 3 giây delay để tạo cảm giác thực tế và tránh trùng timestamp
+        // Chạy auto-bid bất đồng bộ sau 500 mili-giây delay để tạo cảm giác thực tế và tránh trùng timestamp
         if (!isAutoBid) {
             if (DataManager.isTestMode()) {
                 triggerAutoBid(bidder);
             } else {
                 autoBidExecutor.schedule(() -> {
                     triggerAutoBid(bidder);
-                }, 3, java.util.concurrent.TimeUnit.SECONDS);
+                }, 500, TimeUnit.MILLISECONDS);
             }
         }
     }
@@ -298,7 +301,7 @@ public class Auction implements Subject, Serializable {
         }
         System.out.println(msg);
         BidUpdateData upd = new BidUpdateData(id, currentHighestBid,
-                bidder.getUsername(), bidHistory.size());
+                bidder.getUsername(), bidHistory.size(), endTime);
         for (Observer o : observers) {
             if (o instanceof com.auction.server.ClientHandler ch) {
                 ch.sendNotification(new Notification("BID_UPDATE", upd));
@@ -360,7 +363,7 @@ public class Auction implements Subject, Serializable {
         // Broadcast BID_UPDATE với BidUpdateData cho tất cả clients online
         if (AuctionServer.getInstance() != null) {
             AuctionServer.getInstance().broadcast(new Notification("BID_UPDATE",
-                new BidUpdateData(id, currentHighestBid, bidder.getUsername(), bidHistory.size())));
+                new BidUpdateData(id, currentHighestBid, bidder.getUsername(), bidHistory.size(), endTime)));
         }
     }
 
@@ -569,10 +572,10 @@ public class Auction implements Subject, Serializable {
             if (DataManager.isTestMode()) {
                 triggerAutoBid(activeBidder);
             } else {
-                // Lập lịch kích hoạt lượt thầu tự động tiếp theo sau 3 giây để đảm bảo giãn cách
+                // Lập lịch kích hoạt lượt thầu tự động tiếp theo sau 500ms để đảm bảo giãn cách và tốc độ nhanh
                 autoBidExecutor.schedule(() -> {
                     triggerAutoBid(activeBidder);
-                }, 3, java.util.concurrent.TimeUnit.SECONDS);
+                }, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
             }
 
         } catch (Exception e) {

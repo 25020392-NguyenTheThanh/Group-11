@@ -190,7 +190,7 @@ public class BidderAuctionListController implements Initializable {
                 if (data instanceof BidUpdateData upd) {
                     // Cập nhật đúng card mà không reload toàn bộ
                     updateAuctionCardPrice(upd.auctionId, upd.newHighestBid,
-                            upd.winnerUsername, upd.totalBids);
+                            upd.winnerUsername, upd.totalBids, upd.endTime);
                 } else {
                     // fallback nếu server cũ
                     loadAuctions();
@@ -264,6 +264,7 @@ public class BidderAuctionListController implements Initializable {
         }
         loadAuctions();
         setupRealtimeNotifications();
+        startCountdownTimeline();
     }
 
     /**
@@ -540,7 +541,7 @@ public class BidderAuctionListController implements Initializable {
         );
         cardContainer.setId("auction-card-slot-" + slotNumber);
 
-        Label slotLabel = new Label("VỊ TRÍ CỐ ĐỊNH #" + slotNumber);
+        Label slotLabel = new Label("VỊ TRÍ #" + slotNumber);
         slotLabel.setStyle("-fx-text-fill: #64748B; -fx-font-weight: bold; -fx-font-size: 14px;");
 
         Label statusLabel = new Label("Trống / Chưa có sản phẩm");
@@ -724,7 +725,7 @@ public class BidderAuctionListController implements Initializable {
      */
 
     private void updateAuctionCardPrice(int auctionId, double newPrice,
-                                        String winner, int totalBids) {
+                                        String winner, int totalBids, java.time.LocalDateTime newEndTime) {
         Integer slotKey = null;
         Auction found = null;
         for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
@@ -737,6 +738,9 @@ public class BidderAuctionListController implements Initializable {
 
         if (found != null && slotKey != null) {
             found.restoreHighestBid(newPrice);
+            if (newEndTime != null) {
+                found.setEndTime(newEndTime);
+            }
             VBox cardNode = slotCards.get(slotKey);
             if (cardNode != null) {
                 AuctionCardFactory.updateCard(cardNode, found);
@@ -745,6 +749,9 @@ public class BidderAuctionListController implements Initializable {
                 for (Auction a : allAuctions) {
                     if (a.getId() == auctionId) {
                         a.restoreHighestBid(newPrice);
+                        if (newEndTime != null) {
+                            a.setEndTime(newEndTime);
+                        }
                         break;
                     }
                 }
@@ -813,13 +820,16 @@ public class BidderAuctionListController implements Initializable {
                                 }
                             }
 
+                            int column = (slotKey - 1) % 3;
+                            int row = (slotKey - 1) / 3;
+                            GridPane.setColumnIndex(newCardNode, column);
+                            GridPane.setRowIndex(newCardNode, row);
+
                             int index = contentGrid.getChildren().indexOf(oldCardNode);
                             if (index != -1) {
                                 contentGrid.getChildren().set(index, newCardNode);
                             } else {
                                 contentGrid.getChildren().remove(oldCardNode);
-                                int column = (slotKey - 1) % 3;
-                                int row = (slotKey - 1) / 3;
                                 contentGrid.add(newCardNode, column, row);
                             }
                             slotCards.put(slotKey, newCardNode);
@@ -1186,5 +1196,40 @@ public class BidderAuctionListController implements Initializable {
 
     public void setupRealtimeNotificationsPublic() {
         setupRealtimeNotifications();
+    }
+
+    private javafx.animation.Timeline countdownTimeline;
+
+    private void startCountdownTimeline() {
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
+        }
+        countdownTimeline = new javafx.animation.Timeline(new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1), event -> {
+            updateAllCardTimers();
+        }));
+        countdownTimeline.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+        countdownTimeline.play();
+    }
+
+    private void updateAllCardTimers() {
+        if (slotAuctions == null || slotCards == null) return;
+        for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
+            Auction auction = entry.getValue();
+            if (auction != null && auction.getStatus() == AuctionStatus.RUNNING) {
+                VBox cardNode = slotCards.get(entry.getKey());
+                if (cardNode != null) {
+                    Label timerLabel = (Label) cardNode.lookup("#timer");
+                    if (timerLabel != null) {
+                        java.time.Duration d = java.time.Duration.between(java.time.LocalDateTime.now(), auction.getEndTime());
+                        if (!d.isNegative()) {
+                            timerLabel.setText(String.format("%02d:%02d:%02d", d.toHours(), d.toMinutesPart(), d.toSecondsPart()));
+                        } else {
+                            timerLabel.setText("00:00:00");
+                            updateSingleCard(auction.getId());
+                        }
+                    }
+                }
+            }
+        }
     }
 }

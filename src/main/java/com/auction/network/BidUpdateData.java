@@ -10,11 +10,13 @@ public class BidUpdateData implements Serializable {
     public double newHighestBid ;
     public String winnerUsername ;
     public int totalBids ; // tổng số lượt bid
+    public java.time.LocalDateTime endTime;
 
-    public BidUpdateData(int auctionId , double newHighestBid , String winnerUsername , int totalBids){
+    public BidUpdateData(int auctionId , double newHighestBid , String winnerUsername , int totalBids, java.time.LocalDateTime endTime){
         this.auctionId = auctionId ;
         this.newHighestBid = newHighestBid ;
         this.winnerUsername = winnerUsername ;
         this.totalBids = totalBids ;
+        this.endTime = endTime;
     }
 }

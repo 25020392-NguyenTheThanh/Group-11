@@ -2,14 +2,20 @@ package com.auction.server;
 
 import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
+import com.auction.manager.ItemManager;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
+import com.auction.model.auction.BidTransaction;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 import com.auction.network.Notification;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -17,8 +23,8 @@ import java.util.concurrent.TimeUnit;
 public class AuctionTimer {
     private final AuctionServer server ;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private final java.util.Set<Integer> warned5MinAuctions = new java.util.HashSet<>();
-    private final java.util.Set<Integer> warned1MinAuctions = new java.util.HashSet<>();
+    private final Set<Integer> warned5MinAuctions = new HashSet<>();
+    private final Set<Integer> warned1MinAuctions = new HashSet<>();
 
     // threadpool chạy task theo thời gian
     public AuctionTimer(AuctionServer server){
@@ -26,9 +32,9 @@ public class AuctionTimer {
     }
 
     public void start(){
-        // Cứ 10 giây quét 1 lần — kiểm tra phiên nào đã hết giờ
-        scheduler.scheduleAtFixedRate(() -> checkExpiredAuctions() , 0 , 10 , TimeUnit.SECONDS);
-        System.out.println("AuctionTimer đã khởi động - quét mỗi 10 giây");
+        // Cứ 5 giây quét 1 lần — kiểm tra phiên nào đã hết giờ hoặc bắt đầu
+        scheduler.scheduleAtFixedRate(() -> checkExpiredAuctions() , 0 , 5 , TimeUnit.SECONDS);
+        System.out.println("AuctionTimer đã khởi động - quét mỗi 5 giây");
     }
 
     private void checkExpiredAuctions(){
@@ -67,7 +73,7 @@ public class AuctionTimer {
             if (auction.getStatus() == AuctionStatus.RUNNING) {
                 LocalDateTime now = LocalDateTime.now();
                 if (now.isBefore(auction.getEndTime())) {
-                    long secondsRemaining = java.time.Duration.between(now, auction.getEndTime()).toSeconds();
+                    long secondsRemaining = Duration.between(now, auction.getEndTime()).toSeconds();
                     if (secondsRemaining > 0 && secondsRemaining < 60) { // dưới 1 phút
                         if (!warned1MinAuctions.contains(auction.getId())) {
                             warned1MinAuctions.add(auction.getId());
@@ -88,10 +94,10 @@ public class AuctionTimer {
                     auction.finish(); // chuyển sang FINISHED hoặc CANCELLED
                     AuctionManager.getInstance().finishAuction(auction.getId());
                     
-                    com.auction.model.item.ItemStatus newStatus = (auction.getCurrentWinner() != null)
+                    ItemStatus newStatus = (auction.getCurrentWinner() != null)
                              ? com.auction.model.item.ItemStatus.SOLD
                              : com.auction.model.item.ItemStatus.UNSOLD;
-                    com.auction.manager.ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
+                    ItemManager.getInstance().updateItemStatus(auction.getItem().getId(), newStatus);
 
                     if (auction.getCurrentWinner() != null) {
                         // Persist bidder won auction
@@ -114,7 +120,7 @@ public class AuctionTimer {
                                 } else if (u instanceof Bidder bidder) {
                                     // Kiểm tra xem bidder này có tham gia đấu giá phiên này không
                                     boolean hasBid = false;
-                                    for (com.auction.model.auction.BidTransaction tx : auction.getBidHistory()) {
+                                    for (BidTransaction tx : auction.getBidHistory()) {
                                         if (tx.getBidderId() == bidder.getId()) {
                                             hasBid = true;
                                             break;
@@ -166,7 +172,7 @@ public class AuctionTimer {
             if (u instanceof Bidder bidder) {
                 boolean isWatched = bidder.getProfile().getWatchlist().contains(auction.getId());
                 boolean isParticipant = false;
-                for (com.auction.model.auction.BidTransaction tx : auction.getBidHistory()) {
+                for (BidTransaction tx : auction.getBidHistory()) {
                     if (tx.getBidderId() == bidder.getId()) {
                         isParticipant = true;
                         break;

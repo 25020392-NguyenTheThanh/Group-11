@@ -108,11 +108,12 @@ public class ClientHandler implements Runnable , Observer {
                             try {
                                 a.placeBid(bidder, nextBid, true);
                                 AuctionManager.getInstance().recordBid(a.getId(), bidderId, bidder.getUsername(), nextBid, "AUTO");
-                                server.broadcast(new Notification("BID_UPDATE",
-                                        new BidUpdateData(
-                                                a.getId(), nextBid,
-                                                bidder.getUsername(),
-                                                a.getBidHistory().size())));
+                                 server.broadcast(new Notification("BID_UPDATE",
+                                         new BidUpdateData(
+                                                 a.getId(), nextBid,
+                                                 bidder.getUsername(),
+                                                 a.getBidHistory().size(),
+                                                 a.getEndTime())));
                             } catch (Exception ex) {
                                 System.err.println("[AutoBid handler] " + ex.getMessage());
                             }

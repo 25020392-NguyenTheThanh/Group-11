@@ -8,7 +8,9 @@ import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
+import com.auction.network.Notification;
 import com.auction.pattern.observer.Observer;
+import com.auction.server.AuctionServer;
 import com.auction.server.ClientHandler;
 
 import java.time.LocalDateTime;
@@ -238,6 +240,19 @@ public class AuctionManager {
                 DataManager.getInstance().updateItemStatus(auction.getItem().getId(), ItemStatus.UNSOLD);
                 System.out.println("[AuctionManager] Đưa sản phẩm [" + auction.getItem().getName() + "] về trạng thái UNSOLD.");
             }
+            
+            // Phát thông báo realtime cho tất cả client để cập nhật lại màn hình (Live Room, Dashboard, v.v...)
+            if (AuctionServer.getInstance() != null) {
+                AuctionServer.getInstance().broadcast(
+                    new Notification("AUCTION_ENDED", "Phiên #" + auctionId + " đã bị hủy bởi Admin.")
+                );
+                if (auction.getItem() != null) {
+                    AuctionServer.getInstance().broadcast(
+                        new Notification("ITEM_STATUS_CHANGED", String.valueOf(auction.getItem().getId()))
+                    );
+                }
+            }
+            
             System.out.println("[AuctionManager] Admin đã hủy phiên đấu giá #" + auctionId + " | Lý do: " + reason);
         }
         return ok;

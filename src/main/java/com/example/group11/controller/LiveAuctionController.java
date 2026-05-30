@@ -90,6 +90,20 @@ public class LiveAuctionController implements Initializable {
                 Object data = notification.getData();
                 if (data instanceof BidUpdateData upd) {
                     if (auction != null && upd.auctionId == auction.getId()) {
+                        // Cập nhật ngay lập tức các nhãn giá hiển thị trên giao diện (tránh trễ mạng)
+                        auction.restoreHighestBid(upd.newHighestBid);
+                        if (upd.endTime != null) {
+                            auction.setEndTime(upd.endTime);
+                        }
+                        currentBidLabel.setText(String.format("$%,.2f", upd.newHighestBid));
+                        highestBidderLabel.setText("Đấu thầu: @" + upd.winnerUsername);
+                        bidCountLabel.setText("🔨 " + upd.totalBids);
+                        
+                        // Tự động gợi ý giá trị đặt tiếp theo ở ô nhập liệu
+                        double minAccepted = upd.newHighestBid + auction.getMinBidStep();
+                        bidAmountField.setText(String.format("%.2f", minAccepted));
+                        
+                        // Đồng thời tải chi tiết dưới nền để cập nhật lịch sử và biểu đồ thầu
                         refreshAuctionDetails(false);
                     }
                 } else {
