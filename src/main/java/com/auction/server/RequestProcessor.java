@@ -1,6 +1,5 @@
 package com.auction.server;
 
-import com.auction.client.ServerConnection;
 import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
@@ -8,7 +7,6 @@ import com.auction.manager.UserManager;
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
 import com.auction.model.auction.AutoBidConfig;
-import com.auction.model.auction.BidTransaction;
 import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
@@ -20,66 +18,69 @@ import com.auction.pattern.factory.ElectronicsFactory;
 import com.auction.pattern.factory.ItemFactory;
 import com.auction.pattern.factory.VehicleFactory;
 import com.auction.pattern.observer.Observer;
-import com.auction.security.*;
-import com.example.group11.controller.NotificationController;
-import javafx.concurrent.Task;
+import com.auction.security.AuditLogger;
+import com.auction.security.InputValidator;
+import com.auction.security.PasswordUtil;
+import com.auction.security.SessionManager;
+import com.auction.server.handler.*;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 
+import static com.auction.server.handler.AdminHandler.audit;
+import static com.auction.server.handler.AuctionHandler.BID_THROTTLE_MS;
+import static com.auction.server.handler.AuctionHandler.lastBidTime;
+import static com.auction.server.handler.AuthHandler.rateLimiter;
 
-// điều phối request từ client gửi lên server
 public class RequestProcessor {
-    private static final ConcurrentHashMap<Integer, Long> lastBidTime = new ConcurrentHashMap<>();
-    private static final long BID_THROTTLE_MS = 500;
-    private static final AuditLogger  audit       = AuditLogger.getInstance();
-    private static final RateLimiter rateLimiter = RateLimiter.getInstance();
-    // hàm trung tâm
+
     public static Response process(Request request, ClientHandler handler) {
         try {
             return switch (request.getType()) {
                 // Auth
-                case LOGIN          -> handleLogin(request, handler);
-                case REGISTER       -> handleRegister(request, handler);
-                case LOGOUT         -> handleLogout(handler);
-                case VERIFY_EMAIL   -> handleVerifyEmail(request);
-                case RESET_PASSWORD -> handleResetPassword(request);
-                case CHANGE_PASSWORD -> handleChangePassword(request, handler);
+                case LOGIN           -> AuthHandler.handleLogin(request, handler);
+                case REGISTER        -> AuthHandler.handleRegister(request, handler);
+                case LOGOUT          -> AuthHandler.handleLogout(handler);
+                case VERIFY_EMAIL    -> AuthHandler.handleVerifyEmail(request);
+                case RESET_PASSWORD  -> AuthHandler.handleResetPassword(request);
+                case CHANGE_PASSWORD -> AuthHandler.handleChangePassword(request, handler);
+
                 // Auction
-                case GET_AUCTIONS        -> handleGetAuctions();
-                case GET_AUCTION_DETAIL  -> handleGetAuctionDetail(request, handler);
-                case PLACE_BID           -> handlePlaceBid(request, handler);
-                case CREATE_AUCTION      -> handleCreateAuction(request, handler);
-                case SET_AUTO_BID        -> handleSetAutoBid(request, handler);
-                case CANCEL_AUTO_BID     -> handleCancelAutoBid(request, handler);
+                case GET_AUCTIONS       -> AuctionHandler.handleGetAuctions();
+                case GET_AUCTION_DETAIL -> AuctionHandler.handleGetAuctionDetail(request, handler);
+                case PLACE_BID          -> AuctionHandler.handlePlaceBid(request, handler);
+                case CREATE_AUCTION     -> AuctionHandler.handleCreateAuction(request, handler);
+                case SET_AUTO_BID       -> AuctionHandler.handleSetAutoBid(request, handler);
+                case CANCEL_AUTO_BID    -> AuctionHandler.handleCancelAutoBid(request, handler);
+
                 // Item
-                case CREATE_ITEM  -> handleCreateItem(request, handler);
-                case GET_MY_ITEMS -> handleGetMyItems(handler);
-                case DELETE_ITEM  -> handleDeleteItem(request, handler);
-                case UPDATE_ITEM  -> handleUpdateItem(request, handler);
+                case CREATE_ITEM  -> ItemHandler.handleCreateItem(request, handler);
+                case GET_MY_ITEMS -> ItemHandler.handleGetMyItems(handler);
+                case DELETE_ITEM  -> ItemHandler.handleDeleteItem(request, handler);
+                case UPDATE_ITEM  -> ItemHandler.handleUpdateItem(request, handler);
+
                 // Bidder
-                case ADD_TO_WATCHLIST    -> handleAddToWatchlist(request, handler);
-                case REMOVE_FROM_WATCHLIST -> handleRemoveFromWatchlist(request, handler);
-                case TOP_UP              -> handleTopUp(request, handler);
-                case CONFIRM_PAYMENT     -> handleConfirmPayment(request, handler);
+                case ADD_TO_WATCHLIST      -> BidderHandler.handleAddToWatchlist(request, handler);
+                case REMOVE_FROM_WATCHLIST -> BidderHandler.handleRemoveFromWatchlist(request, handler);
+                case TOP_UP                -> BidderHandler.handleTopUp(request, handler);
+                case CONFIRM_PAYMENT       -> BidderHandler.handleConfirmPayment(request, handler);
+                case DECLINE_PAYMENT       -> BidderHandler.handleDeclinePayment(request, handler);
+
                 // Admin
-                case ADMIN_GET_ALL_USERS        -> handleAdminGetAllUsers(handler);
-                case ADMIN_BAN_USER             -> handleAdminBanUser(request, handler);
-                case ADMIN_UNBAN_USER           -> handleAdminUnbanUser(request, handler);
-                case ADMIN_DELETE_USER          -> handleAdminDeleteUser(request, handler);
-                case ADMIN_RESET_USER_PASSWORD  -> handleAdminResetUserPassword(request, handler);
-                case ADMIN_GET_ALL_AUCTIONS     -> handleAdminGetAllAuctions(handler);
-                case ADMIN_CANCEL_AUCTION       -> handleAdminCancelAuction(request, handler);
-                case ADMIN_GET_ALL_ITEMS        -> handleAdminGetAllItems(handler);
-                case ADMIN_FORCE_DELETE_ITEM    -> handleAdminForceDeleteItem(request, handler);
-                case ADMIN_APPROVE_ITEM         -> handleAdminApproveItem(request, handler);
-                case ADMIN_GET_STATS            -> handleAdminGetStats(handler);
-                case ADMIN_GET_AUDIT_LOG        -> handleAdminGetAuditLog(handler);
-                case ADMIN_GET_ACTIVE_SESSIONS  -> handleAdminGetActiveSessions(handler);
-                case ADMIN_KICK_USER            -> handleAdminKickUser(request, handler);
-                case DECLINE_PAYMENT -> handleDeclinePayment(request, handler);
+                case ADMIN_GET_ALL_USERS       -> AdminHandler.handleGetAllUsers(handler);
+                case ADMIN_BAN_USER            -> AdminHandler.handleBanUser(request, handler);
+                case ADMIN_UNBAN_USER          -> AdminHandler.handleUnbanUser(request, handler);
+                case ADMIN_DELETE_USER         -> AdminHandler.handleDeleteUser(request, handler);
+                case ADMIN_RESET_USER_PASSWORD -> AdminHandler.handleResetUserPassword(request, handler);
+                case ADMIN_GET_ALL_AUCTIONS    -> AdminHandler.handleGetAllAuctions(handler);
+                case ADMIN_CANCEL_AUCTION      -> AdminHandler.handleCancelAuction(request, handler);
+                case ADMIN_GET_ALL_ITEMS       -> AdminHandler.handleGetAllItems(handler);
+                case ADMIN_FORCE_DELETE_ITEM   -> AdminHandler.handleForceDeleteItem(request, handler);
+                case ADMIN_APPROVE_ITEM        -> AdminHandler.handleApproveItem(request, handler);
+                case ADMIN_GET_STATS           -> AdminHandler.handleGetStats(handler);
+                case ADMIN_GET_AUDIT_LOG       -> AdminHandler.handleGetAuditLog(handler);
+                case ADMIN_GET_ACTIVE_SESSIONS -> AdminHandler.handleGetActiveSessions(handler);
+                case ADMIN_KICK_USER           -> AdminHandler.handleKickUser(request, handler);
             };
         } catch (Exception e) {
             System.err.println("[RequestProcessor] Unhandled: " + request.getType() + " → " + e.getMessage());
@@ -911,7 +912,7 @@ public class RequestProcessor {
                         break;
                     }
                 }
-                
+
                 AuctionServer.getInstance().broadcast(new Notification("ITEM_STATUS_CHANGED", String.valueOf(p.targetId)));
 
                 if (auction != null) {

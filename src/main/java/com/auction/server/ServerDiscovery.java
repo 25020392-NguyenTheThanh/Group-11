@@ -40,6 +40,4 @@ public class ServerDiscovery implements Runnable {
             System.err.println("Discovery error: " + e.getMessage());
         }
     }
-
-    public void stop() { running = false; }
 }
