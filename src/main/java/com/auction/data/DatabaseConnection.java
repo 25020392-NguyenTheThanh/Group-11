@@ -4,29 +4,44 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+import java.io.InputStream;
+import java.util.Properties;
+
 /**
  * Quản lý kết nối tới database.
  * Singleton — chỉ giữ cấu hình, mỗi lần gọi getConnection() mở một kết nối mới.
  */
+
 public class DatabaseConnection {
+    private static String DB_URL;
+    private static String DB_USER;
+    private static String DB_PASS;
 
-    private static final String DB_URL = System.getenv().getOrDefault(
-            "DB_URL", "jdbc:mysql://sql12.freesqldatabase.com:3306/sql12828332"
-                    + "?useUnicode=true"
-                    + "&characterEncoding=utf8"
-                    + "&serverTimezone=Asia/Ho_Chi_Minh"
-                    + "&useSSL=false"
-                    + "&allowPublicKeyRetrieval=true"
-    );
-    private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "sql12828332");
-    private static final String DB_PASS = System.getenv().getOrDefault("DB_PASS", "lBL6xIvN17");
+    // Khối static này sẽ chạy ngay khi class được gọi lần đầu tiên
+    static {
+        try (InputStream input = DatabaseConnection.class.getClassLoader().getResourceAsStream("config.properties")) {
 
-//    private static final String DB_URL = System.getenv().getOrDefault(
-//            "DB_URL",
-//            "jdbc:mysql://localhost:3306/auction_system?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Ho_Chi_Minh");
-//    private static final String DB_USER = System.getenv().getOrDefault("DB_USER", "root");
-//    private static final String DB_PASS = System.getenv().getOrDefault("DB_PASS", "ngtien123@@@");
+            Properties prop = new Properties();
 
+            if (input == null) {
+                System.err.println("Lỗi: Không tìm thấy file config.properties trong thư mục resources!");
+                // ném ra Exception ở đây để server dừng lại nếu không có cấu hình
+            } else {
+                // Tải các thuộc tính từ file
+                prop.load(input);
+
+                // Gán giá trị vào các biến
+                DB_URL = prop.getProperty("db.url");
+                DB_USER = prop.getProperty("db.user");
+                DB_PASS = prop.getProperty("db.pass");
+
+                System.out.println("Đã tải cấu hình Database thành công.");
+            }
+        } catch (Exception ex) {
+            System.err.println("Lỗi khi đọc file config.properties:");
+            ex.printStackTrace();
+        }
+    }
     private static DatabaseConnection instance;
     private static final java.util.List<Connection> connectionPool = new java.util.ArrayList<>();
     private static final int POOL_SIZE = 10;
