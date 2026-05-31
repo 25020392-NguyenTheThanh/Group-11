@@ -104,6 +104,7 @@ public class LiveAuctionController implements Initializable {
     private Stage ownerStage;
     private Parent previousRoot;
     private BidderAuctionListController listController;
+    private String currentLoadedImageUrl = null;
 
     private final Consumer<Notification> realtimeListener = notification -> {
         Platform.runLater(() -> {
@@ -495,23 +496,26 @@ public class LiveAuctionController implements Initializable {
 
         // Load ảnh sản phẩm
         String imageUrl = item.getImageUrl();
-        try {
-            if (imageUrl != null && !imageUrl.isEmpty()) {
-                if (imageUrl.startsWith("/")) {
-                    File imageFile = new File("src/main/resources" + imageUrl);
-                    if (imageFile.exists()) {
-                        productImageView.setImage(new Image(imageFile.toURI().toString(), true));
+        if (currentLoadedImageUrl == null || !currentLoadedImageUrl.equals(imageUrl)) {
+            currentLoadedImageUrl = imageUrl;
+            try {
+                if (imageUrl != null && !imageUrl.isEmpty()) {
+                    if (imageUrl.startsWith("/")) {
+                        File imageFile = new File("src/main/resources" + imageUrl);
+                        if (imageFile.exists()) {
+                            productImageView.setImage(new Image(imageFile.toURI().toString(), true));
+                        } else {
+                            productImageView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
+                        }
                     } else {
-                        productImageView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
+                        productImageView.setImage(new Image(imageUrl, true));
                     }
                 } else {
-                    productImageView.setImage(new Image(imageUrl, true));
+                    productImageView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
                 }
-            } else {
+            } catch (Exception e) {
                 productImageView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
             }
-        } catch (Exception e) {
-            productImageView.setImage(new Image("https://placehold.co/260x120/000000/FFFFFF/png?text=No+Image"));
         }
 
         renderBidHistory();
