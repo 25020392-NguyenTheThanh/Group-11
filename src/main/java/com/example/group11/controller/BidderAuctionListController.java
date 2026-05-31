@@ -439,6 +439,10 @@ public class BidderAuctionListController implements Initializable {
                 } else {
                     allAuctions = new ArrayList<>();
                 }
+                System.out.println("[DEBUG] Bidder nhận được " + allAuctions.size() + " phiên đấu giá từ Server.");
+                for (Auction a : allAuctions) {
+                    System.out.println("  - Phiên #" + a.getId() + " [" + a.getItem().getName() + "]: Status=" + a.getStatus() + ", ItemStatus=" + a.getItem().getStatus());
+                }
                 applyFilters();
             } else {
                 String errMsg = (response != null) ? response.getMessage() : "Lỗi kết nối máy chủ";
@@ -462,6 +466,7 @@ public class BidderAuctionListController implements Initializable {
         String categoryFilter = auctionProduct.getText().trim().toUpperCase();
         String sortFilter = auctionSort != null ? auctionSort.getText().trim().toUpperCase() : "SẮP XẾP";
         List<Auction> filtered = BidderFilterManager.filter(allAuctions, user, currentTab, searchBar.getText(), statusFilter, categoryFilter, sortFilter);
+        System.out.println("[DEBUG] Sau khi lọc (Tab=" + currentTab + ", StatusFilter=" + statusFilter + ", CategoryFilter=" + categoryFilter + "): còn " + filtered.size() + " phiên.");
         renderAuctionCards(filtered);
     }
 
