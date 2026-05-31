@@ -131,3 +131,14 @@ CREATE TABLE bid_watchlist (
     CONSTRAINT fk_watchlist_bidder FOREIGN KEY (bidder_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_watchlist_auction FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+-- Bảng audit_log
+CREATE TABLE `audit_logs` (
+  `id`       int(11)       NOT NULL AUTO_INCREMENT,
+  `log_time` datetime      NOT NULL,
+  `level`    varchar(10)   NOT NULL,
+  `event`    varchar(50)   NOT NULL,
+  `ip`       varchar(45)   DEFAULT NULL,
+  `detail`   varchar(255)  DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
