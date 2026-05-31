@@ -196,7 +196,7 @@ public class Auction implements Subject, Serializable {
             if (DataManager.isTestMode()) {
                 new AutoBidEngine(this).trigger(bidder);
             } else {
-                autoBidExecutor.schedule(() -> new AutoBidEngine(this).trigger(bidder), 3, java.util.concurrent.TimeUnit.SECONDS);
+                autoBidExecutor.schedule(() -> new AutoBidEngine(this).trigger(bidder), 500, TimeUnit.MICROSECONDS);
             }
         }
     }

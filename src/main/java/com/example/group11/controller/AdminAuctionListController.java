@@ -1,14 +1,18 @@
 package com.example.group11.controller;
 
 import com.auction.client.ServerConnection;
+import com.auction.model.auction.AuctionStatus;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.user.User;
 import com.auction.model.auction.Auction;
 import com.auction.model.item.Item;
 import com.auction.network.*;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -19,9 +23,7 @@ import javafx.scene.layout.StackPane;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import java.util.*;
 
 public class AdminAuctionListController implements Initializable {
 
@@ -185,7 +187,7 @@ public class AdminAuctionListController implements Initializable {
                 // Update UI elements in JavaFX Application Thread
                 Platform.runLater(() -> {
                     if (statsRes != null && statsRes.isSuccess()) {
-                        java.util.Map<String, Object> status = (java.util.Map<String, Object>) statsRes.getData();
+                        Map<String, Object> status = (Map<String, Object>) statsRes.getData();
                         if (status != null) {
                             int totalUsers = ((Number) status.getOrDefault("totalUsers", 0)).intValue();
                             int totalItems = ((Number) status.getOrDefault("totalItems", 0)).intValue();
@@ -226,13 +228,13 @@ public class AdminAuctionListController implements Initializable {
 
                     if (resAuctions != null && resAuctions.isSuccess()) {
                         List<Auction> list = (List<Auction>) resAuctions.getData();
-                        long running = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.RUNNING == a.getStatus()).count();
-                        long finished = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.FINISHED == a.getStatus() || com.auction.model.auction.AuctionStatus.PAID == a.getStatus()).count();
-                        long canceled = list.stream().filter(a -> com.auction.model.auction.AuctionStatus.CANCELED == a.getStatus()).count();
+                        long running = list.stream().filter(a -> AuctionStatus.RUNNING == a.getStatus()).count();
+                        long finished = list.stream().filter(a -> AuctionStatus.FINISHED == a.getStatus() || AuctionStatus.PAID == a.getStatus()).count();
+                        long canceled = list.stream().filter(a -> AuctionStatus.CANCELED == a.getStatus()).count();
                         lblAuctionsSub.setText(String.format("Running: %d | Finished: %d | Canceled: %d", running, finished, canceled));
 
                         double revenue = list.stream()
-                            .filter(a -> com.auction.model.auction.AuctionStatus.PAID == a.getStatus())
+                            .filter(a -> AuctionStatus.PAID == a.getStatus())
                             .mapToDouble(Auction::getCurrentHighestBid)
                             .sum();
                         lblTotalRevenue.setText(String.format("$%,.2f", revenue));
@@ -241,10 +243,10 @@ public class AdminAuctionListController implements Initializable {
                     if (resItems != null && resItems.isSuccess()) {
                         List<Item> list = (List<Item>) resItems.getData();
                         pendingItemsData.clear();
-                        List<String> pendingDisplay = new java.util.ArrayList<>();
+                        List<String> pendingDisplay = new ArrayList<>();
                         if (list != null) {
                             for (Item it : list) {
-                                if (it.getStatus() == com.auction.model.item.ItemStatus.PENDING) {
+                                if (it.getStatus() == ItemStatus.PENDING) {
                                     pendingItemsData.add(it);
                                     pendingDisplay.add(it.getName() + " - Giá khởi điểm: $" + it.getStartingPrice());
                                 }
@@ -349,7 +351,7 @@ public class AdminAuctionListController implements Initializable {
         colUsername.setCellValueFactory(new PropertyValueFactory<>("username"));
         colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
         colRole.setCellValueFactory(new PropertyValueFactory<>("role"));
-        colStatus.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
+        colStatus.setCellValueFactory(cellData -> new SimpleStringProperty(
                 cellData.getValue().getStatus()
         ));
         colBanReason.setCellValueFactory(new PropertyValueFactory<>("banReason"));
@@ -371,7 +373,7 @@ public class AdminAuctionListController implements Initializable {
         usersLoading.setManaged(true);
         usersList.clear();
 
-        javafx.concurrent.Task<Response> task = new javafx.concurrent.Task<>() {
+        Task<Response> task = new javafx.concurrent.Task<>() {
             @Override
             protected Response call() {
                 return ServerConnection.getInstance().send(RequestType.ADMIN_GET_ALL_USERS, null);
@@ -513,13 +515,13 @@ public class AdminAuctionListController implements Initializable {
     // --- Auction Management ---
     private void setupAuctionTable() {
         colAuctionId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colAuctionItem.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
+        colAuctionItem.setCellValueFactory(cellData -> new SimpleStringProperty(
                 cellData.getValue().getItem() != null ? cellData.getValue().getItem().getName() : "Unknown Item"
         ));
-        colAuctionStart.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
+        colAuctionStart.setCellValueFactory(cellData -> new SimpleStringProperty(
                 cellData.getValue().getStartTime() != null ? cellData.getValue().getStartTime().toString() : ""
         ));
-        colAuctionEnd.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(
+        colAuctionEnd.setCellValueFactory(cellData -> new SimpleStringProperty(
                 cellData.getValue().getEndTime() != null ? cellData.getValue().getEndTime().toString() : ""
         ));
         colAuctionStatus.setCellValueFactory(new PropertyValueFactory<>("status"));

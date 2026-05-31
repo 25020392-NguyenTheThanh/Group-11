@@ -49,36 +49,58 @@ import java.util.function.Consumer;
  */
 public class LiveAuctionController implements Initializable {
 
-    @FXML private Button backButton;
-    @FXML private ImageView productImageView;
-    @FXML private Label productNameLabel;
-    @FXML private Label productDescLabel;
-    @FXML private Label statusLabel;
-    @FXML private Label timerLabel;
-    @FXML private Label currentBidLabel;
-    @FXML private Label highestBidderLabel;
-    @FXML private Label bidCountLabel;
-    @FXML private Label viewerCountLabel; // Nhãn hiển thị số người xem
-    @FXML private TextField bidAmountField;
-    @FXML private Button confirmBidButton;
-    @FXML private VBox bidHistoryContainer;
-    @FXML private VBox biddingVBox; // Container chứa bàn đặt giá thầu
-    @FXML private Button autoBidButton ;
-    @FXML private Button cancelAutoBidButton;  // nút hủy riêng
-    @FXML private Label autoBidStatusLabel;    // hiện trạng thái
+    @FXML
+    private Button backButton;
+    @FXML
+    private ImageView productImageView;
+    @FXML
+    private Label productNameLabel;
+    @FXML
+    private Label productDescLabel;
+    @FXML
+    private Label statusLabel;
+    @FXML
+    private Label timerLabel;
+    @FXML
+    private Label currentBidLabel;
+    @FXML
+    private Label highestBidderLabel;
+    @FXML
+    private Label bidCountLabel;
+    @FXML
+    private Label viewerCountLabel; // Nhãn hiển thị số người xem
+    @FXML
+    private TextField bidAmountField;
+    @FXML
+    private Button confirmBidButton;
+    @FXML
+    private VBox bidHistoryContainer;
+    @FXML
+    private VBox biddingVBox; // Container chứa bàn đặt giá thầu
+    @FXML
+    private Button autoBidButton;
+    @FXML
+    private Button cancelAutoBidButton;  // nút hủy riêng
+    @FXML
+    private Label autoBidStatusLabel;    // hiện trạng thái
 
 
-    @FXML private AreaChart<Number, Number> priceChart;
-    @FXML private NumberAxis xAxis;
-    @FXML private NumberAxis yAxis;
-    @FXML private HBox mainContentContainer;
-    @FXML private VBox loadingOverlay;
+    @FXML
+    private AreaChart<Number, Number> priceChart;
+    @FXML
+    private NumberAxis xAxis;
+    @FXML
+    private NumberAxis yAxis;
+    @FXML
+    private HBox mainContentContainer;
+    @FXML
+    private VBox loadingOverlay;
 
     private Auction auction;
     private User user;
     private Timeline countdownTimeline;
     private Button watchlistButton;
-    private boolean autoBidEnabled = false ;
+    private boolean autoBidEnabled = false;
     private Stage ownerStage;
     private Parent previousRoot;
     private BidderAuctionListController listController;
@@ -98,11 +120,11 @@ public class LiveAuctionController implements Initializable {
                         currentBidLabel.setText(String.format("$%,.2f", upd.newHighestBid));
                         highestBidderLabel.setText("Đấu thầu: @" + upd.winnerUsername);
                         bidCountLabel.setText("🔨 " + upd.totalBids);
-                        
+
                         // Tự động gợi ý giá trị đặt tiếp theo ở ô nhập liệu
                         double minAccepted = upd.newHighestBid + auction.getMinBidStep();
                         bidAmountField.setText(String.format("%.2f", minAccepted));
-                        
+
                         // Đồng thời tải chi tiết dưới nền để cập nhật lịch sử và biểu đồ thầu
                         refreshAuctionDetails(false);
                     }
@@ -151,40 +173,40 @@ public class LiveAuctionController implements Initializable {
     // CSS đồng bộ kiểu dáng biểu đồ AreaChart theo chuẩn hiện đại, mã hóa % và khoảng trắng để tránh lỗi URLDecoder
     private static final String CHART_THEME_CSS = "data:text/css," + (
             ".chart-series-line {" +
-            "    -fx-stroke: #00ff66;" +
-            "    -fx-stroke-width: 3px;" +
-            "}" +
-            ".chart-series-area-fill {" +
-            "    -fx-fill: linear-gradient(to bottom, #00ff6633 0%, #00ff6600 100%);" +
-            "}" +
-            ".chart-line-symbol {" +
-            "    -fx-background-color: #ffaa00, #131315;" +
-            "    -fx-background-insets: 0, 2;" +
-            "    -fx-background-radius: 4px;" +
-            "    -fx-padding: 4px;" +
-            "}" +
-            ".chart-plot-background {" +
-            "    -fx-background-color: transparent;" +
-            "}" +
-            ".chart-alternative-column-row-line {" +
-            "    -fx-stroke: transparent;" +
-            "}" +
-            ".chart-alternative-row-fill {" +
-            "    -fx-fill: transparent;" +
-            "}" +
-            ".chart-horizontal-grid-lines {" +
-            "    -fx-stroke: #2d2d34;" +
-            "    -fx-stroke-dash-array: 2 2;" +
-            "}" +
-            ".chart-vertical-grid-lines {" +
-            "    -fx-stroke: #2d2d34;" +
-            "    -fx-stroke-dash-array: 2 2;" +
-            "}" +
-            ".axis {" +
-            "    -fx-tick-label-fill: #909097;" +
-            "    -fx-tick-mark-stroke: #45464d;" +
-            "    -fx-axis-label-fill: #ffd700;" +
-            "}"
+                    "    -fx-stroke: #00ff66;" +
+                    "    -fx-stroke-width: 3px;" +
+                    "}" +
+                    ".chart-series-area-fill {" +
+                    "    -fx-fill: linear-gradient(to bottom, #00ff6633 0%, #00ff6600 100%);" +
+                    "}" +
+                    ".chart-line-symbol {" +
+                    "    -fx-background-color: #ffaa00, #131315;" +
+                    "    -fx-background-insets: 0, 2;" +
+                    "    -fx-background-radius: 4px;" +
+                    "    -fx-padding: 4px;" +
+                    "}" +
+                    ".chart-plot-background {" +
+                    "    -fx-background-color: transparent;" +
+                    "}" +
+                    ".chart-alternative-column-row-line {" +
+                    "    -fx-stroke: transparent;" +
+                    "}" +
+                    ".chart-alternative-row-fill {" +
+                    "    -fx-fill: transparent;" +
+                    "}" +
+                    ".chart-horizontal-grid-lines {" +
+                    "    -fx-stroke: #2d2d34;" +
+                    "    -fx-stroke-dash-array: 2 2;" +
+                    "}" +
+                    ".chart-vertical-grid-lines {" +
+                    "    -fx-stroke: #2d2d34;" +
+                    "    -fx-stroke-dash-array: 2 2;" +
+                    "}" +
+                    ".axis {" +
+                    "    -fx-tick-label-fill: #909097;" +
+                    "    -fx-tick-mark-stroke: #45464d;" +
+                    "    -fx-axis-label-fill: #ffd700;" +
+                    "}"
     ).replace("%", "%25").replace(" ", "%20");
 
     @Override
@@ -208,7 +230,7 @@ public class LiveAuctionController implements Initializable {
      * đồng bộ thông tin chi tiết phiên đấu giá ban đầu từ server và bắt đầu đếm ngược.
      *
      * @param auction Đối tượng phiên đấu giá hiện tại
-     * @param user Đối tượng người dùng đang truy cập
+     * @param user    Đối tượng người dùng đang truy cập
      */
     public void setAuctionAndUser(Auction auction, User user) {
         this.auction = auction;
@@ -605,6 +627,7 @@ public class LiveAuctionController implements Initializable {
         yAxis.setLabel("Giá ($)");
         yAxis.setForceZeroInRange(false);
     }
+
     private void attachTooltip(XYChart.Data<Number, Number> point, int idx,
                                List<BidTransaction> history) {
         String text;
@@ -616,8 +639,8 @@ public class LiveAuctionController implements Initializable {
             text = String.format("Bid #%d\n%s\n$%,.0f",
                     idx, tx.getBidderUsername(), tx.getAmount());
         }
-        javafx.scene.control.Tooltip tp = new javafx.scene.control.Tooltip(text);
-        javafx.scene.control.Tooltip.install(point.getNode(), tp);
+        Tooltip tp = new Tooltip(text);
+        Tooltip.install(point.getNode(), tp);
 
         // Highlight điểm cuối (bid cao nhất hiện tại) bằng màu vàng cam nổi bật
         boolean isLast = (history != null) && (idx == history.size());
@@ -625,6 +648,7 @@ public class LiveAuctionController implements Initializable {
             point.getNode().setStyle("-fx-background-color: #ffaa00, white; -fx-background-insets: 0, 2; -fx-background-radius: 6px; -fx-padding: 6px;");
         }
     }
+
     /**
      * Điều chỉnh (tăng) số tiền đặt giá thầu hiển thị trong ô nhập liệu thêm một lượng xác định.
      *
@@ -844,7 +868,7 @@ public class LiveAuctionController implements Initializable {
     /**
      * Cập nhật kiểu dáng và trạng thái hiển thị của nút Theo dõi (Watchlist) trong phòng chi tiết.
      *
-     * @param btn Đối tượng nút Button cần cập nhật
+     * @param btn       Đối tượng nút Button cần cập nhật
      * @param isWatched Trạng thái theo dõi hiện tại
      */
     private void updateWatchlistButton(Button btn, boolean isWatched) {
@@ -959,7 +983,8 @@ public class LiveAuctionController implements Initializable {
                     double increment = Double.parseDouble(incrementField.getText().trim());
 
                     Task<Response> task = new Task<>() {
-                        @Override protected Response call() {
+                        @Override
+                        protected Response call() {
                             return ServerConnection.getInstance().setAutoBid(auction.getId(), maxBid, increment);
                         }
                     };
@@ -991,13 +1016,15 @@ public class LiveAuctionController implements Initializable {
     }
 
     @FXML
-    private void onAutoBidClicked(){
+    private void onAutoBidClicked() {
         showAutoBidDialog();
     }
+
     @FXML
     private void onCancelAutoBidClicked() {
         Task<Response> task = new Task<>() {
-            @Override protected Response call() {
+            @Override
+            protected Response call() {
                 return ServerConnection.getInstance().cancelAutoBid(auction.getId());
             }
         };
@@ -1019,5 +1046,5 @@ public class LiveAuctionController implements Initializable {
         this.ownerStage = stage;
         this.listController = listController;
     }
-    
+
 }

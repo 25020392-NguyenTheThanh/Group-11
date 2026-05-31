@@ -8,6 +8,8 @@ import com.auction.model.item.Item;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 import com.auction.network.*;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
@@ -19,19 +21,16 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import javafx.util.Duration;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.function.Consumer;
 
@@ -142,8 +141,8 @@ public class BidderAuctionListController implements Initializable {
     List<Auction> allAuctions = new ArrayList<>();
     String currentTab = "DASHBOARD";
     private List<Button> allButtons;
-    private final java.util.Map<Integer, Auction> slotAuctions = new java.util.HashMap<>();
-    private final java.util.Map<Integer, VBox> slotCards = new java.util.HashMap<>();
+    private final Map<Integer, Auction> slotAuctions = new HashMap<>();
+    private final Map<Integer, VBox> slotCards = new HashMap<>();
     private static final int FIXED_SLOT_COUNT = 12;
 
     @FXML
@@ -171,7 +170,7 @@ public class BidderAuctionListController implements Initializable {
     private VBox package6;
 
     private VBox selectedPackageNode = null;
-    private static final java.util.Set<Integer> toppedUpBidders = new java.util.HashSet<>();
+    private static final Set<Integer> toppedUpBidders = new HashSet<>();
 
     private int unreadNotificationsCount = 0;
     private Label badgeLabel;
@@ -501,9 +500,9 @@ public class BidderAuctionListController implements Initializable {
                 );
                 
                 // Prepend the slot number to the auction ID label in the header
-                for (javafx.scene.Node node : productCard.getChildren()) {
+                for (Node node : productCard.getChildren()) {
                     if (node instanceof HBox headerBar) {
-                        for (javafx.scene.Node child : headerBar.getChildren()) {
+                        for (Node child : headerBar.getChildren()) {
                             if (child instanceof Label lbl && lbl.getText().startsWith("ID: #")) {
                                 lbl.setText("VỊ TRÍ #" + i + " | " + lbl.getText());
                             }
@@ -725,10 +724,10 @@ public class BidderAuctionListController implements Initializable {
      */
 
     private void updateAuctionCardPrice(int auctionId, double newPrice,
-                                        String winner, int totalBids, java.time.LocalDateTime newEndTime) {
+                                        String winner, int totalBids, LocalDateTime newEndTime) {
         Integer slotKey = null;
         Auction found = null;
-        for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
+        for (Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
             if (entry.getValue() != null && entry.getValue().getId() == auctionId) {
                 slotKey = entry.getKey();
                 found = entry.getValue();
@@ -784,7 +783,7 @@ public class BidderAuctionListController implements Initializable {
 
                     // Find slot key and update card at that position
                     Integer slotKey = null;
-                    for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
+                    for (Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
                         if (entry.getValue() != null && entry.getValue().getId() == auctionId) {
                             slotKey = entry.getKey();
                             break;
@@ -810,9 +809,9 @@ public class BidderAuctionListController implements Initializable {
                             newCardNode.setId("auction-card-slot-" + slotKey);
                             
                             // Prepend slot text
-                            for (javafx.scene.Node n : newCardNode.getChildren()) {
+                            for (Node n : newCardNode.getChildren()) {
                                 if (n instanceof HBox headerBar) {
-                                    for (javafx.scene.Node child : headerBar.getChildren()) {
+                                    for (Node child : headerBar.getChildren()) {
                                         if (child instanceof Label lbl && lbl.getText().startsWith("ID: #")) {
                                             lbl.setText("VỊ TRÍ #" + slotKey + " | " + lbl.getText());
                                         }
@@ -849,8 +848,8 @@ public class BidderAuctionListController implements Initializable {
     private int parseAuctionId(Object data) {
         if (data == null) return -1;
         String text = data.toString();
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("Phiên #(\\d+)");
-        java.util.regex.Matcher m = p.matcher(text);
+        Pattern p = Pattern.compile("Phiên #(\\d+)");
+        Matcher m = p.matcher(text);
         if (m.find()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -922,7 +921,7 @@ public class BidderAuctionListController implements Initializable {
             }
             String friendlyMsg = getFriendlyMessage(notification);
 
-            javafx.scene.layout.HBox notifItemBox = new javafx.scene.layout.HBox(8);
+            HBox notifItemBox = new HBox(8);
             notifItemBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
             notifItemBox.setStyle("-fx-background-color: #1E2D45; -fx-padding: 8; -fx-background-radius: 4;");
             notifItemBox.setMaxWidth(220);
@@ -930,7 +929,7 @@ public class BidderAuctionListController implements Initializable {
             Label lbl = new Label(friendlyMsg);
             lbl.setWrapText(true);
             lbl.setStyle("-fx-text-fill: white; -fx-font-size: 11px;");
-            javafx.scene.layout.HBox.setHgrow(lbl, javafx.scene.layout.Priority.ALWAYS);
+            HBox.setHgrow(lbl, Priority.ALWAYS);
             lbl.setMaxWidth(180);
 
             Label btnDelete = new Label("✕");
@@ -1198,29 +1197,29 @@ public class BidderAuctionListController implements Initializable {
         setupRealtimeNotifications();
     }
 
-    private javafx.animation.Timeline countdownTimeline;
+    private Timeline countdownTimeline;
 
     private void startCountdownTimeline() {
         if (countdownTimeline != null) {
             countdownTimeline.stop();
         }
-        countdownTimeline = new javafx.animation.Timeline(new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1), event -> {
+        countdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             updateAllCardTimers();
         }));
-        countdownTimeline.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+        countdownTimeline.setCycleCount(Timeline.INDEFINITE);
         countdownTimeline.play();
     }
 
     private void updateAllCardTimers() {
         if (slotAuctions == null || slotCards == null) return;
-        for (java.util.Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
+        for (Map.Entry<Integer, Auction> entry : slotAuctions.entrySet()) {
             Auction auction = entry.getValue();
             if (auction != null && auction.getStatus() == AuctionStatus.RUNNING) {
                 VBox cardNode = slotCards.get(entry.getKey());
                 if (cardNode != null) {
                     Label timerLabel = (Label) cardNode.lookup("#timer");
                     if (timerLabel != null) {
-                        java.time.Duration d = java.time.Duration.between(java.time.LocalDateTime.now(), auction.getEndTime());
+                        java.time.Duration d = java.time.Duration.between(LocalDateTime.now(), auction.getEndTime());
                         if (!d.isNegative()) {
                             timerLabel.setText(String.format("%02d:%02d:%02d", d.toHours(), d.toMinutesPart(), d.toSecondsPart()));
                         } else {

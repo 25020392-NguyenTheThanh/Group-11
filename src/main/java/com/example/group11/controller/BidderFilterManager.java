@@ -2,6 +2,7 @@ package com.example.group11.controller;
 
 import com.auction.model.auction.Auction;
 import com.auction.model.auction.AuctionStatus;
+import com.auction.model.item.ItemStatus;
 import com.auction.model.user.Bidder;
 import com.auction.model.user.User;
 
@@ -20,7 +21,7 @@ public class BidderFilterManager {
         String categoryUpper = categoryFilter != null ? categoryFilter.trim().toUpperCase() : "SẢN PHẨM";
 
         List<Auction> filtered = allAuctions.stream().filter(auction -> {
-            if (auction.getItem() != null && auction.getItem().getStatus() == com.auction.model.item.ItemStatus.PENDING) {
+            if (auction.getItem() != null && auction.getItem().getStatus() == ItemStatus.PENDING) {
                 return false;
             }
             if (currentTab.equals("DASHBOARD")) {

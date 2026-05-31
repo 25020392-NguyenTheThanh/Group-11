@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 
+import java.io.File;
 import java.net.URL;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -135,7 +136,7 @@ public class ProductCardFactory {
                 if (imageUrl.startsWith("/")) {
                     // Giải pháp tối ưu: Đọc trực tiếp từ ổ đĩa (File System) dựa trên thư mục mã nguồn src
                     // Điều này giúp ảnh vừa đăng ký lập tức hiển thị mà không cần build lại dự án
-                    java.io.File imageFile = new java.io.File("src/main/resources" + imageUrl);
+                    File imageFile = new File("src/main/resources" + imageUrl);
 
                     if (imageFile.exists()) {
                         // Chuyển đổi file thành định dạng URL hệ thống tệp (file:/...)

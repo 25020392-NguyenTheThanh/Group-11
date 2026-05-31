@@ -21,6 +21,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
+import java.io.File;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.function.Consumer;
 
@@ -113,7 +115,7 @@ public class AuctionCardFactory {
         timerLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
         timerLabel.setFont(Font.font("System", 12.0));
         if (auction.getStatus() == AuctionStatus.RUNNING) {
-            java.time.Duration duration = java.time.Duration.between(java.time.LocalDateTime.now(), auction.getEndTime());
+            Duration duration = Duration.between(java.time.LocalDateTime.now(), auction.getEndTime());
             if (!duration.isNegative()) {
                 long hours = duration.toHours();
                 long minutes = duration.toMinutesPart();
@@ -146,7 +148,7 @@ public class AuctionCardFactory {
             if (imageUrl != null && !imageUrl.isEmpty()) {
                 if (imageUrl.startsWith("/")) {
                     // Giải pháp tối ưu: Đọc trực tiếp từ ổ đĩa (File System) dựa trên thư mục mã nguồn src
-                    java.io.File imageFile = new java.io.File("src/main/resources" + imageUrl);
+                    File imageFile = new java.io.File("src/main/resources" + imageUrl);
                     if (imageFile.exists()) {
                         imgView.setImage(new Image(imageFile.toURI().toString(), true));
                     } else {

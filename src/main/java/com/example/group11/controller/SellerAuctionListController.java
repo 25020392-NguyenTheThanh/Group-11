@@ -5,6 +5,7 @@ import com.auction.model.item.Art;
 import com.auction.model.item.Electronics;
 import com.auction.model.item.Item;
 import com.auction.model.item.Vehicle;
+import com.auction.model.user.Seller;
 import com.auction.model.user.User;
 import com.auction.network.*;
 import com.auction.model.auction.Auction;
@@ -23,6 +24,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
@@ -329,7 +331,7 @@ public class SellerAuctionListController implements Initializable {
      */
     public void setUser(User user) {
         this.user = user;
-        if (user instanceof com.auction.model.user.Seller seller) {
+        if (user instanceof Seller seller) {
             Platform.runLater(() -> {
                 if (walletBalance != null) {
                     walletBalance.setText(String.format("%,.2f", seller.getRevenue()));
@@ -424,7 +426,7 @@ public class SellerAuctionListController implements Initializable {
         header.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
         Label titleLabel = new Label();
-        titleLabel.setTextFill(javafx.scene.paint.Color.WHITE);
+        titleLabel.setTextFill(Color.WHITE);
         titleLabel.setFont(Font.font("System", javafx.scene.text.FontWeight.BOLD, 12.0));
 
         String type = notification.getType();
@@ -649,7 +651,7 @@ public class SellerAuctionListController implements Initializable {
                 },
                 (itemData, cardNode) -> {
                     if (cardNode != null) {
-                        javafx.concurrent.Task<Response> deleteTask = new javafx.concurrent.Task<>() {
+                        Task<Response> deleteTask = new javafx.concurrent.Task<>() {
                             @Override
                             protected Response call() throws Exception {
                                 return ServerConnection.getInstance().send(RequestType.DELETE_ITEM, itemData.getId());
@@ -682,7 +684,7 @@ public class SellerAuctionListController implements Initializable {
                                 String imageUrl = itemData.getImageUrl();
                                 if (imageUrl != null && !imageUrl.isEmpty() && imageUrl.startsWith("/")) {
                                     try {
-                                        java.io.File file = new java.io.File("src/main/resources" + imageUrl);
+                                       File file = new java.io.File("src/main/resources" + imageUrl);
                                         if (file.exists()) {
                                             boolean isDeleted = file.delete();
                                             if (isDeleted) {
@@ -1088,7 +1090,7 @@ public class SellerAuctionListController implements Initializable {
             selectedImageFile = null;
 
             try {
-                java.io.File imgFile = new java.io.File("src/main/resources" + item.getImageUrl());
+                File imgFile = new java.io.File("src/main/resources" + item.getImageUrl());
                 if (imgFile.exists()) {
                     ImagesController.displayImage(imgFile, productImageView, uploadPrompt);
                 } else {
