@@ -7,6 +7,8 @@ import com.auction.model.user.User;
 import com.auction.pattern.observer.Observer;
 import com.auction.server.ClientHandler;
 
+import java.util.concurrent.TimeUnit;
+
 class AutoBidEngine {
 
     private final Auction auction;
@@ -51,7 +53,7 @@ class AutoBidEngine {
             if (DataManager.isTestMode()) {
                 trigger(activeBidder);
             } else {
-                auction.getAutoBidExecutor().schedule(() -> trigger(activeBidder), 3, java.util.concurrent.TimeUnit.SECONDS);
+                auction.getAutoBidExecutor().schedule(() -> trigger(activeBidder), 500, TimeUnit.MILLISECONDS);
             }
         } catch (Exception e) {
             System.err.println("[AutoBid] Lỗi khi xử lý Auto-Bid của @" + activeBidder.getUsername() + ": " + e.getMessage());
