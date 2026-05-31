@@ -197,4 +197,4 @@ mvn test
 ## Link báo cáo & video demo
 
 - **Báo cáo PDF: https://drive.google.com/file/d/122ygmpu6IIl9OSGYzT1OuVBBkR1L7-Gp/view?usp=sharing
-- **Video demo:
+- **Video demo: https://drive.google.com/file/d/1tczaPB4mQsWZppQnE729ViFxV5TXVXDY/view?usp=sharing
