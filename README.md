@@ -1,4 +1,4 @@
-# Group-11# Hệ thống Đấu Giá Trực Tuyến — Nhóm 11
+<img width="1639" height="674" alt="image" src="https://github.com/user-attachments/assets/2755fc94-8926-42d6-ae0d-dda461291725" /># Group-11# Hệ thống Đấu Giá Trực Tuyến — Nhóm 11
 
 Hệ thống đấu giá trực tuyến theo mô hình Client–Server, hỗ trợ nhiều người dùng đồng thời với giao diện JavaFX. Người dùng có thể đăng ký tài khoản, đăng sản phẩm, tạo phiên đấu giá, đặt giá thủ công hoặc tự động, và theo dõi kết quả theo thời gian thực.
 
@@ -196,5 +196,5 @@ mvn test
 
 ## Link báo cáo & video demo
 
-- **Báo cáo PDF:
+- **Báo cáo PDF: https://drive.google.com/file/d/122ygmpu6IIl9OSGYzT1OuVBBkR1L7-Gp/view?usp=sharing
 - **Video demo:
