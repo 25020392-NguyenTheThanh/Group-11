@@ -77,6 +77,7 @@ public class RequestProcessor {
                 case ADMIN_GET_ALL_ITEMS       -> AdminHandler.handleGetAllItems(handler);
                 case ADMIN_FORCE_DELETE_ITEM   -> AdminHandler.handleForceDeleteItem(request, handler);
                 case ADMIN_APPROVE_ITEM        -> AdminHandler.handleApproveItem(request, handler);
+                case ADMIN_APPROVE_ITEMS_BATCH -> AdminHandler.handleApproveItemsBatch(request, handler);
                 case ADMIN_GET_STATS           -> AdminHandler.handleGetStats(handler);
                 case ADMIN_GET_AUDIT_LOG       -> AdminHandler.handleGetAuditLog(handler);
                 case ADMIN_GET_ACTIVE_SESSIONS -> AdminHandler.handleGetActiveSessions(handler);

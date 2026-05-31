@@ -111,6 +111,7 @@ public class AdminAuctionListController implements Initializable {
         setupUserTable();
         setupAuctionTable();
         setupItemTable();
+        listPendingItems.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         refreshStats();
     }
 
@@ -330,15 +331,25 @@ public class AdminAuctionListController implements Initializable {
 
     @FXML
     private void handleApproveItemFromDashboard() {
-        int idx = listPendingItems.getSelectionModel().getSelectedIndex();
-        if (idx == -1 || idx >= pendingItemsData.size()) {
+        ObservableList<Integer> indices = listPendingItems.getSelectionModel().getSelectedIndices();
+        if (indices == null || indices.isEmpty()) {
             NotificationController.showAlert("Thông báo", "Vui lòng chọn sản phẩm muốn duyệt.");
             return;
         }
-        Item selected = pendingItemsData.get(idx);
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_APPROVE_ITEM, new AdminPayload(selected.getId()));
+        List<Integer> targetIds = new ArrayList<>();
+        for (int idx : indices) {
+            if (idx >= 0 && idx < pendingItemsData.size()) {
+                targetIds.add(pendingItemsData.get(idx).getId());
+            }
+        }
+        if (targetIds.isEmpty()) {
+            NotificationController.showAlert("Thông báo", "Vui lòng chọn sản phẩm muốn duyệt.");
+            return;
+        }
+
+        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_APPROVE_ITEMS_BATCH, new AdminPayload(targetIds));
         if (res != null && res.isSuccess()) {
-            NotificationController.showNotification("Thành công", "Đã duyệt sản phẩm thành công!");
+            NotificationController.showNotification("Thành công", res.getMessage() != null ? res.getMessage() : "Đã duyệt các sản phẩm thành công!");
             refreshStats();
         } else {
             NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");
@@ -601,6 +612,8 @@ public class AdminAuctionListController implements Initializable {
         colItemOwner.setCellValueFactory(new PropertyValueFactory<>("ownerId"));
         colItemStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
 
+        tableItems.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
         FilteredList<Item> filteredItems = new FilteredList<>(itemsList, p -> true);
         txtSearchItem.textProperty().addListener((observable, oldValue, newValue) -> {
             filteredItems.setPredicate(item -> {
@@ -641,26 +654,35 @@ public class AdminAuctionListController implements Initializable {
 
     @FXML
     private void handleApproveItem() {
-        Item selected = tableItems.getSelectionModel().getSelectedItem();
-        if (selected == null) {
+        ObservableList<Item> selectedItems = tableItems.getSelectionModel().getSelectedItems();
+        if (selectedItems == null || selectedItems.isEmpty()) {
             NotificationController.showAlert("Thông báo", "Vui lòng chọn sản phẩm muốn duyệt.");
             return;
         }
 
-        if (selected.getStatus() != com.auction.model.item.ItemStatus.PENDING) {
-            NotificationController.showAlert("Thông báo", "Chỉ có thể duyệt sản phẩm ở trạng thái PENDING.");
+        List<Integer> targetIds = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        for (Item item : selectedItems) {
+            if (item.getStatus() == ItemStatus.PENDING) {
+                targetIds.add(item.getId());
+                names.add(item.getName());
+            }
+        }
+
+        if (targetIds.isEmpty()) {
+            NotificationController.showAlert("Thông báo", "Chỉ có thể duyệt các sản phẩm ở trạng thái PENDING.");
             return;
         }
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Xác nhận duyệt sản phẩm");
-        confirm.setHeaderText("Bạn có chắc chắn muốn duyệt sản phẩm '" + selected.getName() + "'?");
-        confirm.setContentText("Sau khi duyệt, sản phẩm sẽ ở trạng thái AVAILABLE và có thể đem đấu giá.");
+        confirm.setHeaderText("Bạn có chắc chắn muốn duyệt " + targetIds.size() + " sản phẩm đã chọn?");
+        confirm.setContentText("Danh sách: " + String.join(", ", names) + "\nSau khi duyệt, các sản phẩm này sẽ ở trạng thái AVAILABLE.");
         NotificationController.applyDarkTheme(confirm);
         if (confirm.showAndWait().orElse(null) == ButtonType.OK) {
-            Response res = ServerConnection.getInstance().send(RequestType.ADMIN_APPROVE_ITEM, new AdminPayload(selected.getId()));
+            Response res = ServerConnection.getInstance().send(RequestType.ADMIN_APPROVE_ITEMS_BATCH, new AdminPayload(targetIds));
             if (res != null && res.isSuccess()) {
-                NotificationController.showNotification("Thành công", "Đã duyệt sản phẩm thành công!");
+                NotificationController.showNotification("Thành công", res.getMessage() != null ? res.getMessage() : "Đã duyệt các sản phẩm thành công!");
                 loadItems();
             } else {
                 NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");

@@ -253,7 +253,9 @@ public class SellerAuctionListController implements Initializable {
     private User user;
 
     private int unreadNotificationsCount = 0;
+
     private Label badgeLabel;
+
     private StackPane badgeContainer;
 
     private final Consumer<Notification> realtimeListener = notification -> {
@@ -1421,6 +1423,10 @@ public class SellerAuctionListController implements Initializable {
         productImageView.setVisible(false);
         uploadPrompt.setVisible(true);
         linkImageUrl = null;
+
+        if (dynamicAttributesContainer != null) {
+            dynamicAttributesContainer.getChildren().clear();
+        }
     }
 
 }

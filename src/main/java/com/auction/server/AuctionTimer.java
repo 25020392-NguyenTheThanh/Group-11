@@ -56,6 +56,7 @@ public class AuctionTimer {
     // OPEN : kích hoạt phiên khi đến giờ bắt đầu
     private void tryActivateAuction(Auction auction, LocalDateTime now) {
         if (auction.getStartTime() != null && auction.getStartTime().isAfter(now)) return;
+        if (auction.getItem() != null && auction.getItem().getStatus() == ItemStatus.PENDING) return;
         try {
             auction.start();
             DataManager.getInstance().startAuction(auction.getId());

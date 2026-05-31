@@ -25,6 +25,7 @@ module com.example.group11 {
     exports com.auction.pattern.factory;
     exports com.auction.data;
     exports com.auction.manager;
+    exports com.auction.network;
     opens com.example.group11.controller to javafx.fxml;
     opens com.auction.model.user to javafx.base, javafx.fxml;
     opens com.auction.model.item to javafx.base, javafx.fxml;

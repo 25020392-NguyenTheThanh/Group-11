@@ -151,6 +151,31 @@ public class AdminHandler {
         return Response.ok("Duyệt sản phẩm thành công!");
     }
 
+    public static Response handleApproveItemsBatch(Request request, ClientHandler handler) {
+        Response guard = requireAdmin(handler);
+        if (guard != null) return guard;
+        if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Dữ liệu Admin không hợp lệ!");
+        if (p.targetIds == null || p.targetIds.isEmpty()) return Response.error("Danh sách sản phẩm trống!");
+
+        int successCount = 0;
+        for (int itemId : p.targetIds) {
+            boolean ok = ItemManager.getInstance().updateItemStatus(itemId, ItemStatus.AVAILABLE);
+            if (ok) {
+                successCount++;
+                // Thông báo cho Seller nếu online
+                Item item = ItemManager.getInstance().findItem(itemId);
+                if (item != null && AuctionServer.getInstance() != null) {
+                    String msg = String.format("Sản phẩm [%s] của bạn đã được Admin phê duyệt!", item.getName());
+                    AuctionServer.getInstance().getConnectedClients().stream()
+                            .filter(c -> c.getLoggedInUser() != null && c.getLoggedInUser().getId() == item.getOwnerId())
+                            .findFirst()
+                            .ifPresent(c -> c.sendNotification(new Notification("PRODUCT_APPROVED", msg)));
+                }
+            }
+        }
+        return Response.ok(String.format("Đã duyệt thành công %d/%d sản phẩm!", successCount, p.targetIds.size()));
+    }
+
     public static Response handleGetStats(ClientHandler handler) {
         Response guard = requireAdmin(handler);
         if (guard != null) return guard;
