@@ -42,6 +42,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.example.group11.controller.AuctionUIHelper.*;
 
@@ -728,8 +730,8 @@ public class SellerAuctionListController implements Initializable {
     private int parseAuctionId(Object data) {
         if (data == null) return -1;
         String text = data.toString();
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("Phiên #(\\d+)");
-        java.util.regex.Matcher m = p.matcher(text);
+        Pattern p = java.util.regex.Pattern.compile("Phiên #(\\d+)");
+        Matcher m = p.matcher(text);
         if (m.find()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -927,7 +929,13 @@ public class SellerAuctionListController implements Initializable {
     }
 
     public void loadMyListingView() {
-        SellerProductService.loadMyListingView(this);
+        SellerMyListingLoader.loadMyListingView(contentGrid, totalProductsLabel, (fetchedItems, fetchedMap) -> {
+            this.auctionItems = fetchedItems;
+            this.itemAuctionMap.clear();
+            this.itemAuctionMap.putAll(fetchedMap);
+            applyFiltersAndSort();
+            updateHeaderRevenue();
+        });
     }
 
     /**
@@ -983,110 +991,7 @@ public class SellerAuctionListController implements Initializable {
      * Ánh xạ các thuộc tính của đơn hàng vào bảng và định dạng kiểu chữ, màu sắc theo trạng thái đơn hàng.
      */
     private void setupOrderTableColumns() {
-        // Cài đặt các cell value factory để ánh xạ thuộc tính của Order vào từng cột
-        colOrderId.setCellValueFactory(new PropertyValueFactory<>("id"));
-        colProduct.setCellValueFactory(new PropertyValueFactory<>("product"));
-        colBuyer.setCellValueFactory(new PropertyValueFactory<>("buyer"));
-        colPrice.setCellValueFactory(new PropertyValueFactory<>("price"));
-        colDate.setCellValueFactory(new PropertyValueFactory<>("date"));
-        colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
-
-        // Định dạng và tạo kiểu cho cột Mã đơn hàng
-        colOrderId.setCellFactory(column -> new TableCell<Order, Integer>() {
-            @Override
-            protected void updateItem(Integer item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText("#" + item);
-                    setStyle("-fx-text-fill: #38BDF8; -fx-font-weight: bold;"); // Màu xanh da trời nhạt
-                }
-            }
-        });
-
-        // Định dạng và tạo kiểu cho cột Tên sản phẩm
-        colProduct.setCellFactory(column -> new TableCell<Order, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    setStyle("-fx-text-fill: #FFFFFF;"); // Chữ màu trắng cho tên sản phẩm
-                }
-            }
-        });
-
-        // Định dạng và tạo kiểu cho cột Người mua
-        colBuyer.setCellFactory(column -> new TableCell<Order, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    setStyle("-fx-text-fill: #E2E8F0;"); // Chữ màu xám đá nhạt
-                }
-            }
-        });
-
-        // Định dạng tiền tệ và tạo kiểu cột Giá chốt (Màu vàng hoàng kim)
-        colPrice.setCellFactory(column -> new TableCell<Order, Double>() {
-            @Override
-            protected void updateItem(Double item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(String.format("$%,.2f", item));
-                    setStyle("-fx-text-fill: #FFC107; -fx-font-weight: bold;"); // Màu vàng hoàng kim
-                }
-            }
-        });
-
-        // Định dạng cột Ngày hoàn thành (yyyy-MM-dd HH:mm:ss)
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        colDate.setCellFactory(column -> new TableCell<Order, LocalDateTime>() {
-            @Override
-            protected void updateItem(LocalDateTime item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item.format(formatter));
-                    setStyle("-fx-text-fill: #94A3B8;"); // Màu xám đá
-                }
-            }
-        });
-
-        // Tô màu nổi bật theo trạng thái giao dịch
-        colStatus.setCellFactory(column -> new TableCell<Order, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item.toUpperCase());
-                    if ("PAID".equalsIgnoreCase(item)) {
-                        setStyle("-fx-text-fill: #22C55E; -fx-font-weight: bold;"); // Màu xanh lá lục bảo
-                    } else if ("FINISHED".equalsIgnoreCase(item)) {
-                        setStyle("-fx-text-fill: #FFD700; -fx-font-weight: bold;"); // Màu vàng
-                    } else {
-                        setStyle("-fx-text-fill: #EF4444; -fx-font-weight: bold;"); // Màu đỏ (đã hủy hoặc khác)
-                    }
-                }
-            }
-        });
+        SellerOrderHistoryLoader.setupOrderTableColumns(colOrderId, colProduct, colBuyer, colPrice, colDate, colStatus);
     }
 
     /**
@@ -1096,66 +1001,121 @@ public class SellerAuctionListController implements Initializable {
      */
     public void loadOrderHistory() {
         System.out.println("Đang tải dữ liệu lịch sử đơn hàng...");
-
-        List<Order> orders = new ArrayList<>();
-        if (auctionItems != null && itemAuctionMap != null) {
-            for (Item item : auctionItems) {
-                Auction auction = itemAuctionMap.get(item.getId());
-                // Chỉ lấy các phiên đấu giá kết thúc thành công (FINISHED hoặc PAID) và có người thắng
-                if (auction != null && (auction.getStatus() == AuctionStatus.FINISHED || auction.getStatus() == AuctionStatus.PAID)
-                        && auction.getCurrentWinner() != null) {
-                    orders.add(new Order(
-                            auction.getId(),
-                            item.getName(),
-                            auction.getCurrentWinner().getUsername(),
-                            auction.getCurrentHighestBid(),
-                            auction.getEndTime(),
-                            auction.getStatus().name()
-                    ));
-                }
-            }
-        }
-
-        ObservableList<Order> orderList = FXCollections.observableArrayList(orders);
-        FilteredList<Order> filteredData = new FilteredList<>(orderList, p -> true);
-
-        // Đăng ký bộ lọc tìm kiếm theo thời gian thực nếu ô nhập liệu tồn tại
-        if (searchOrderField != null) {
-            searchOrderField.textProperty().addListener((observable, oldValue, newValue) -> {
-                filteredData.setPredicate(order -> {
-                    // Nếu từ khóa trống, hiển thị toàn bộ đơn hàng
-                    if (newValue == null || newValue.isEmpty()) {
-                        return true;
-                    }
-                    String lowerCaseFilter = newValue.toLowerCase();
-                    // Khớp theo mã đơn, tên sản phẩm, người mua hoặc trạng thái đơn hàng
-                    if (String.valueOf(order.getId()).contains(lowerCaseFilter)) {
-                        return true;
-                    } else if (order.getProduct().toLowerCase().contains(lowerCaseFilter)) {
-                        return true;
-                    } else if (order.getBuyer().toLowerCase().contains(lowerCaseFilter)) {
-                        return true;
-                    } else if (order.getStatus().toLowerCase().contains(lowerCaseFilter)) {
-                        return true;
-                    }
-                    return false;
-                });
-            });
-        }
-        orderTable.setItems(filteredData);
+        SellerOrderHistoryLoader.loadOrderHistory(auctionItems, itemAuctionMap, orderTable, searchOrderField);
     }
 
     void setupCategoryMenuItems() {
-        ProductFormManager.setupCategoryMenuItems(this);
+        MenuItem menuItemElectronics = new MenuItem("Electronics");
+        MenuItem menuItemVehicle = new MenuItem("Vehicle");
+        MenuItem menuItemArt = new MenuItem("Art");
+
+        menuItemElectronics.setOnAction(e -> handleCategorySelection("Electronics", "THƯƠNG HIỆU (BRAND)", "Ví dụ: ASUS, Apple, Samsung..."));
+        menuItemVehicle.setOnAction(e -> handleCategorySelection("Vehicle", "NĂM SẢN XUẤT (YEAR)", "Ví dụ: 2024, 2025..."));
+        menuItemArt.setOnAction(e -> handleCategorySelection("Art", "NGHỆ SĨ (ARTIST)", "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh..."));
+
+        categoryMenuButton.getItems().setAll(menuItemElectronics, menuItemVehicle, menuItemArt);
     }
 
 
     void handleCategorySelection(String categoryName, String labelText, String promptText) {
-        ProductFormManager.handleCategorySelection(this, categoryName, labelText, promptText);
+        categoryMenuButton.setText(categoryName);
+
+        if (dynamicAttributesContainer != null) {
+            dynamicAttributesContainer.getChildren().clear();
+
+            VBox fieldGroup = new VBox(5.0);
+
+            Label dynamicLabel = new Label(labelText.toUpperCase());
+            dynamicLabel.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+            TextField dynamicTextField = new TextField();
+            dynamicTextField.setPromptText(promptText);
+            dynamicTextField.setPrefHeight(45.0);
+            dynamicTextField.setStyle("-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8;");
+            dynamicTextField.setId("customAttributeField");
+
+            fieldGroup.getChildren().addAll(dynamicLabel, dynamicTextField);
+            dynamicAttributesContainer.getChildren().add(fieldGroup);
+        }
     }
 
     void handleStartEditProduct(Item item) {
-        ProductFormManager.handleStartEditProduct(this, item);
+        editingItem = item;
+
+        productNameField.setText(item.getName());
+        startingPriceField.setText(String.valueOf(item.getStartingPrice()));
+        descriptionArea.setText(item.getDescription());
+
+        String category = item.getCategory();
+        categoryMenuButton.setText(category);
+
+        dynamicAttributesContainer.getChildren().clear();
+        String labelText = "";
+        String promptText = "";
+        String attributeValue = "";
+
+        if (item instanceof Art art) {
+            labelText = "NGHỆ SĨ (ARTIST)";
+            promptText = "Ví dụ: Leonardo da Vinci, Nguyễn Phan Chánh...";
+            attributeValue = art.getArtist();
+        } else if (item instanceof Electronics elec) {
+            labelText = "THƯƠNG HIỆU (BRAND)";
+            promptText = "Ví dụ: ASUS, Apple, Samsung...";
+            attributeValue = elec.getBrand();
+        } else if (item instanceof Vehicle veh) {
+            labelText = "NĂM SẢN XUẤT (YEAR)";
+            promptText = "Ví dụ: 2024, 2025...";
+            attributeValue = String.valueOf(veh.getYear());
+        }
+
+        if (!labelText.isEmpty()) {
+            handleCategorySelection(category, labelText, promptText);
+            TextField customField = (TextField) dynamicAttributesContainer.lookup("#customAttributeField");
+            if (customField != null) {
+                customField.setText(attributeValue);
+            }
+        }
+
+        minimumBidIncrementField.setDisable(true);
+        minimumBidIncrementField.setText("");
+        startDatePicker.setDisable(true);
+        startDatePicker.setValue(null);
+        endDatePicker.setDisable(true);
+        endDatePicker.setValue(null);
+
+        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+            linkImageUrl = item.getImageUrl();
+            selectedImageFile = null;
+
+            try {
+                java.io.File imgFile = new java.io.File("src/main/resources" + item.getImageUrl());
+                if (imgFile.exists()) {
+                    ImagesController.displayImage(imgFile, productImageView, uploadPrompt);
+                } else {
+                    productImageView.setImage(new Image("https://placehold.co/260x135/000000/FFFFFF/png?text=No+Image"));
+                    productImageView.setVisible(true);
+                    uploadPrompt.setVisible(false);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            productImageView.setImage(null);
+            productImageView.setVisible(false);
+            uploadPrompt.setVisible(true);
+            linkImageUrl = null;
+            selectedImageFile = null;
+        }
+
+        registerTitleLabel.setText("SỬA THÔNG TIN SẢN PHẨM");
+        registerSubtitleLabel.setText("Thay đổi thông tin cho sản phẩm ID: " + item.getId());
+        submitButton.setText("LƯU THAY ĐỔI");
+
+        lastView = currentView;
+        lastButton = AuctionUIHelper.findActiveButton(allButtons);
+        AuctionUIHelper.resetAllButtons(allButtons);
+        currentView = registerProductView;
+        AuctionUIHelper.showView(registerProductView, allViews);
     }
 
     /**
@@ -1360,12 +1320,7 @@ public class SellerAuctionListController implements Initializable {
     }
 
     public void loadProfileData() {
-        if (user == null || profileView == null) return;
-        profileView.getChildren().clear();
-        VBox builtProfile = ProfileViewFactory.create(user, msg ->
-            NotificationController.showNotification("Đổi mật khẩu", msg)
-        );
-        profileView.getChildren().add(builtProfile);
+        SellerProfileLoader.loadProfileData(user, profileView);
     }
 
     @FXML
@@ -1386,10 +1341,6 @@ public class SellerAuctionListController implements Initializable {
                 NotificationController.showError("Lỗi kết nối", "Không thể kết nối tới Server để đăng xuất.");
             }
         }
-    }
-
-    void clearRegistrationForm() {
-        ProductFormManager.clearRegistrationForm(this);
     }
 
     /**
@@ -1451,4 +1402,23 @@ public class SellerAuctionListController implements Initializable {
             }
         }
     }
+
+    void clearRegistrationForm() {
+        productNameField.clear();
+        startingPriceField.clear();
+        minimumBidIncrementField.clear();
+        descriptionArea.clear();
+
+        categoryMenuButton.setText("Chọn danh mục");
+
+        startDatePicker.setValue(null);
+        endDatePicker.setValue(null);
+
+        selectedImageFile = null;
+        productImageView.setImage(null);
+        productImageView.setVisible(false);
+        uploadPrompt.setVisible(true);
+        linkImageUrl = null;
+    }
+
 }
