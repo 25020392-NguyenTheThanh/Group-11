@@ -112,6 +112,7 @@ public class AdminAuctionListController implements Initializable {
         setupAuctionTable();
         setupItemTable();
         listPendingItems.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listPendingUsers.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         refreshStats();
     }
 
@@ -314,15 +315,25 @@ public class AdminAuctionListController implements Initializable {
 
     @FXML
     private void handleApproveUserFromDashboard() {
-        int idx = listPendingUsers.getSelectionModel().getSelectedIndex();
-        if (idx == -1 || idx >= pendingUsersData.size()) {
+        ObservableList<Integer> indices = listPendingUsers.getSelectionModel().getSelectedIndices();
+        if (indices == null || indices.isEmpty()) {
             NotificationController.showAlert("Thông báo", "Vui lòng chọn tài khoản muốn duyệt.");
             return;
         }
-        User selected = pendingUsersData.get(idx);
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_UNBAN_USER, new AdminPayload(selected.getId()));
+        List<Integer> targetIds = new ArrayList<>();
+        for (int idx : indices) {
+            if (idx >= 0 && idx < pendingUsersData.size()) {
+                targetIds.add(pendingUsersData.get(idx).getId());
+            }
+        }
+        if (targetIds.isEmpty()) {
+            NotificationController.showAlert("Thông báo", "Vui lòng chọn tài khoản muốn duyệt.");
+            return;
+        }
+
+        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_UNBAN_USERS_BATCH, new AdminPayload(targetIds));
         if (res != null && res.isSuccess()) {
-            NotificationController.showNotification("Thành công", "Đã duyệt tài khoản thành công!");
+            NotificationController.showNotification("Thành công", res.getMessage() != null ? res.getMessage() : "Đã duyệt các tài khoản thành công!");
             refreshStats();
         } else {
             NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");
@@ -366,6 +377,8 @@ public class AdminAuctionListController implements Initializable {
                 cellData.getValue().getStatus()
         ));
         colBanReason.setCellValueFactory(new PropertyValueFactory<>("banReason"));
+
+        tableUsers.getSelectionModel().setSelectionMode(javafx.scene.control.SelectionMode.MULTIPLE);
 
         FilteredList<User> filteredUsers = new FilteredList<>(usersList, p -> true);
         txtSearchUser.textProperty().addListener((observable, oldValue, newValue) -> {
@@ -448,16 +461,25 @@ public class AdminAuctionListController implements Initializable {
 
     @FXML
     private void handleUnbanUser() {
-        User selected = tableUsers.getSelectionModel().getSelectedItem();
-        if (selected == null) {
+        ObservableList<User> selectedUsers = tableUsers.getSelectionModel().getSelectedItems();
+        if (selectedUsers == null || selectedUsers.isEmpty()) {
             NotificationController.showAlert("Thông báo", "Vui lòng chọn người dùng muốn duyệt hoặc mở khóa.");
             return;
         }
-        boolean isPending = "PENDING".equalsIgnoreCase(selected.getStatus());
-        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_UNBAN_USER, new AdminPayload(selected.getId()));
+
+        List<Integer> targetIds = new ArrayList<>();
+        boolean hasPending = false;
+        for (User u : selectedUsers) {
+            targetIds.add(u.getId());
+            if ("PENDING".equalsIgnoreCase(u.getStatus())) {
+                hasPending = true;
+            }
+        }
+
+        Response res = ServerConnection.getInstance().send(RequestType.ADMIN_UNBAN_USERS_BATCH, new AdminPayload(targetIds));
         if (res != null && res.isSuccess()) {
-            String msg = isPending ? "Đã duyệt tài khoản thành công!" : "Đã mở khóa tài khoản thành công!";
-            NotificationController.showNotification("Thành công", msg);
+            String msg = hasPending ? "Đã duyệt/mở khóa các tài khoản thành công!" : "Đã mở khóa các tài khoản thành công!";
+            NotificationController.showNotification("Thành công", res.getMessage() != null ? res.getMessage() : msg);
             loadUsers();
         } else {
             NotificationController.showAlert("Lỗi", res != null ? res.getMessage() : "Có lỗi xảy ra.");

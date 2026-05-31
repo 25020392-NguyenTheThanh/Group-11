@@ -72,6 +72,22 @@ public class AdminHandler {
         return ok ? Response.ok("Đã mở khóa tài khoản thành công!") : Response.error("Không thể mở khóa tài khoản.");
     }
 
+    public static Response handleUnbanUsersBatch(Request request, ClientHandler handler) {
+        Response guard = requireAdmin(handler);
+        if (guard != null) return guard;
+        if (!(request.getPayload() instanceof AdminPayload p)) return Response.error("Dữ liệu Admin không hợp lệ!");
+        if (p.targetIds == null || p.targetIds.isEmpty()) return Response.error("Danh sách người dùng trống!");
+
+        int successCount = 0;
+        for (int userId : p.targetIds) {
+            boolean ok = UserManager.getInstance().unbanUser(userId);
+            if (ok) {
+                successCount++;
+            }
+        }
+        return Response.ok(String.format("Đã duyệt/mở khóa thành công %d/%d tài khoản!", successCount, p.targetIds.size()));
+    }
+
     public static Response handleDeleteUser(Request request, ClientHandler handler) {
         Response guard = requireAdmin(handler);
         if (guard != null) return guard;

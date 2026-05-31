@@ -70,6 +70,7 @@ public class RequestProcessor {
                 case ADMIN_GET_ALL_USERS       -> AdminHandler.handleGetAllUsers(handler);
                 case ADMIN_BAN_USER            -> AdminHandler.handleBanUser(request, handler);
                 case ADMIN_UNBAN_USER          -> AdminHandler.handleUnbanUser(request, handler);
+                case ADMIN_UNBAN_USERS_BATCH   -> AdminHandler.handleUnbanUsersBatch(request, handler);
                 case ADMIN_DELETE_USER         -> AdminHandler.handleDeleteUser(request, handler);
                 case ADMIN_RESET_USER_PASSWORD -> AdminHandler.handleResetUserPassword(request, handler);
                 case ADMIN_GET_ALL_AUCTIONS    -> AdminHandler.handleGetAllAuctions(handler);

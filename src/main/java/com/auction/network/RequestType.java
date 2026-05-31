@@ -27,6 +27,7 @@ public enum RequestType {
     ADMIN_GET_ALL_USERS,          // Xem danh sách toàn bộ user
     ADMIN_BAN_USER,              // Khóa tài khoản
     ADMIN_UNBAN_USER,            // Mở khóa tài khoản
+    ADMIN_UNBAN_USERS_BATCH,      // Mở khóa/duyệt tài khoản hàng loạt
     ADMIN_DELETE_USER,           // Xóa hẳn user
     ADMIN_RESET_USER_PASSWORD,   // Đặt lại mật khẩu cho user
     ADMIN_GET_ALL_AUCTIONS,      // Xem tất cả phiên đấu giá
