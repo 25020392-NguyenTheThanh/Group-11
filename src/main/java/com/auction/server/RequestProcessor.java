@@ -369,11 +369,13 @@ public class RequestProcessor {
         }
         handler.sendNotification(new Notification("AUCTION_CREATED", String.format("Phiên đấu giá cho sản phẩm [%s] đã được tạo thành công!", item.getName())));
 
-        // Gửi thông báo đấu giá mới cho tất cả các client là Bidder
-        for (ClientHandler client : handler.getServer().getConnectedClients()) {
-            User u = client.getLoggedInUser();
-            if (u instanceof Bidder) {
-                client.sendNotification(new Notification("NEW_AUCTION", String.format("Sản phẩm mới [%s] vừa lên sàn đấu giá! Hãy tham gia ngay.", item.getName())));
+        // Gửi thông báo đấu giá mới cho tất cả các client là Bidder chỉ khi sản phẩm đã được duyệt (không ở trạng thái PENDING)
+        if (item.getStatus() != ItemStatus.PENDING) {
+            for (ClientHandler client : handler.getServer().getConnectedClients()) {
+                User u = client.getLoggedInUser();
+                if (u instanceof Bidder) {
+                    client.sendNotification(new Notification("NEW_AUCTION", String.format("Sản phẩm mới [%s] vừa lên sàn đấu giá! Hãy tham gia ngay.", item.getName())));
+                }
             }
         }
         return Response.ok(auction);

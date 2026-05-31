@@ -4,6 +4,7 @@ import com.auction.data.DataManager;
 import com.auction.manager.AuctionManager;
 import com.auction.manager.ItemManager;
 import com.auction.manager.UserManager;
+import com.auction.model.auction.AuctionStatus;
 import com.auction.model.item.Item;
 import com.auction.model.item.ItemStatus;
 import com.auction.model.user.User;
@@ -15,6 +16,7 @@ import com.auction.security.AuditLogger;
 import com.auction.server.AuctionServer;
 import com.auction.server.ClientHandler;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -155,9 +157,31 @@ public class AdminHandler {
         boolean ok = ItemManager.getInstance().updateItemStatus(p.targetId, ItemStatus.AVAILABLE);
         if (!ok) return Response.error("Không thể duyệt sản phẩm.");
 
-        // Thông báo cho Seller nếu online
         Item item = ItemManager.getInstance().findItem(p.targetId);
         if (item != null && AuctionServer.getInstance() != null) {
+            // Cập nhật trạng thái item bên trong object auction
+            AuctionManager.getInstance().getAuctions().stream()
+                    .filter(a -> a.getItem() != null && a.getItem().getId() == p.targetId)
+                    .forEach(auction -> {
+                        auction.getItem().setStatus(ItemStatus.AVAILABLE);
+                        
+                        // Kích hoạt ngay nếu thời gian bắt đầu đã đến hoặc ở quá khứ
+                        LocalDateTime now = LocalDateTime.now();
+                        if (auction.getStatus() == AuctionStatus.OPEN && (auction.getStartTime() == null || !auction.getStartTime().isAfter(now))) {
+                            try {
+                                auction.start();
+                                DataManager.getInstance().startAuction(auction.getId());
+                            } catch (Exception e) {
+                                System.err.println("Lỗi kích hoạt phiên đấu giá khi Admin duyệt: " + e.getMessage());
+                            }
+                        }
+                        
+                        // Phát thông báo để Bidder tự reload trang
+                        AuctionServer.getInstance().broadcast(new Notification("NEW_AUCTION", 
+                                String.format("Sản phẩm mới [%s] vừa lên sàn đấu giá! Hãy tham gia ngay.", item.getName())));
+                    });
+
+            // Thông báo cho Seller nếu online
             String msg = String.format("Sản phẩm [%s] của bạn đã được Admin phê duyệt!", item.getName());
             AuctionServer.getInstance().getConnectedClients().stream()
                     .filter(c -> c.getLoggedInUser() != null && c.getLoggedInUser().getId() == item.getOwnerId())
@@ -178,9 +202,31 @@ public class AdminHandler {
             boolean ok = ItemManager.getInstance().updateItemStatus(itemId, ItemStatus.AVAILABLE);
             if (ok) {
                 successCount++;
-                // Thông báo cho Seller nếu online
                 Item item = ItemManager.getInstance().findItem(itemId);
                 if (item != null && AuctionServer.getInstance() != null) {
+                    // Cập nhật trạng thái item bên trong object auction
+                    AuctionManager.getInstance().getAuctions().stream()
+                            .filter(a -> a.getItem() != null && a.getItem().getId() == itemId)
+                            .forEach(auction -> {
+                                auction.getItem().setStatus(ItemStatus.AVAILABLE);
+                                
+                                // Kích hoạt ngay nếu thời gian bắt đầu đã đến hoặc ở quá khứ
+                                LocalDateTime now = LocalDateTime.now();
+                                if (auction.getStatus() == AuctionStatus.OPEN && (auction.getStartTime() == null || !auction.getStartTime().isAfter(now))) {
+                                    try {
+                                        auction.start();
+                                        DataManager.getInstance().startAuction(auction.getId());
+                                    } catch (Exception e) {
+                                        System.err.println("Lỗi kích hoạt phiên đấu giá khi Admin duyệt batch: " + e.getMessage());
+                                    }
+                                }
+                                
+                                // Phát thông báo để Bidder tự reload trang
+                                AuctionServer.getInstance().broadcast(new Notification("NEW_AUCTION", 
+                                        String.format("Sản phẩm mới [%s] vừa lên sàn đấu giá! Hãy tham gia ngay.", item.getName())));
+                            });
+
+                    // Thông báo cho Seller nếu online
                     String msg = String.format("Sản phẩm [%s] của bạn đã được Admin phê duyệt!", item.getName());
                     AuctionServer.getInstance().getConnectedClients().stream()
                             .filter(c -> c.getLoggedInUser() != null && c.getLoggedInUser().getId() == item.getOwnerId())
