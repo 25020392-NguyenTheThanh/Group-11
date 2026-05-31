@@ -1,0 +1,92 @@
+package com.auction.server;
+
+import com.auction.manager.AuctionManager;
+import com.auction.manager.ItemManager;
+import com.auction.manager.UserManager;
+import com.auction.network.Notification;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import com.auction.data.DatabaseConnection;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+public class AuctionServer {
+    private static final int PORT = 9999 ;
+    private static volatile AuctionServer instance;
+
+    public AuctionServer() {
+        instance = this;
+    }
+
+    public static AuctionServer getInstance() {
+        return instance;
+    }
+
+    // Danh sách tất cả client đang kết nối — dùng CopyOnWriteArrayList
+    // vì nhiều thread đọc/ghi đồng thời
+    private final List<ClientHandler> connectedClients = new CopyOnWriteArrayList<>();
+    private final ExecutorService threadPool = Executors.newCachedThreadPool();
+
+    public void start() {
+        // Cập nhật Database Schema để hỗ trợ trạng thái UNSOLD
+        try (Connection con = DatabaseConnection.getConnection();
+             Statement st = con.createStatement()) {
+            st.executeUpdate("ALTER TABLE items MODIFY COLUMN status ENUM('PENDING','AVAILABLE','IN_AUCTION','SOLD','UNSOLD') NOT NULL DEFAULT 'PENDING'");
+            System.out.println("[DATABASE] Đã đồng bộ cấu trúc bảng items (thêm trạng thái PENDING và UNSOLD nếu chưa có).");
+        } catch (SQLException e) {
+            System.err.println("[DATABASE] Không thể thay đổi cấu trúc bảng items (có thể đã có hoặc lỗi quyền): " + e.getMessage());
+        }
+
+        // Load auctions from database at server startup
+        AuctionManager.getInstance().loadAuctionsFromDatabase();
+
+        new AuctionTimer(this).start();
+
+        Thread discoveryThread = new Thread(new ServerDiscovery());
+        discoveryThread.setDaemon(true);
+        discoveryThread.start();
+        System.out.println("Discovery service đã hoạt động");
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                ClientHandler handler = new ClientHandler(clientSocket, this);
+                connectedClients.add(handler);
+                threadPool.submit(handler);
+                System.out.println("Client mới kết nối : " + clientSocket.getInetAddress());
+            }
+        } catch (IOException e) {
+            System.err.println("Server lỗi : " + e.getMessage());
+
+        }
+    }
+    // gọi khi có bid mới , thông báo cho tất cả các client
+    public void broadcast(Notification notification) {
+        for (ClientHandler handler : connectedClients) {
+            try {
+                handler.sendNotification(notification);
+            } catch (Exception e) {
+                System.err.println("[Broadcast] Lỗi gửi tới client: " + e.getMessage());
+            }
+        }
+    }
+    // xóa các handler đã chết
+    public void removeClient(ClientHandler handler) {
+        connectedClients.remove(handler);
+    }
+
+    public List<ClientHandler> getConnectedClients() {
+        return connectedClients;
+    }
+
+    public static void main(String[] args) {
+        new AuctionServer().start();
+    }
+}

@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.Group?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.paint.Color?>
+<?import javafx.scene.paint.LinearGradient?>
+<?import javafx.scene.paint.Stop?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.Rectangle?>
+<?import javafx.scene.text.Text?>
+
+<HBox fx:id="rootHBox" prefHeight="800.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.LoginController">
+    <children>
+        <!-- Cột Trái: Thông tin / Banner -->
+        <VBox fx:id="door" alignment="TOP_CENTER" prefWidth="680.0" spacing="30.0" style="-fx-background-color: #0f172a; -fx-padding: 40px 40px 40px 40px;" HBox.hgrow="ALWAYS">
+            <children>
+                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <children>
+                        <ImageView fx:id="logoImage" fitHeight="60.0" fitWidth="60.0" pickOnBounds="true" preserveRatio="true" styleClass="ra">
+                            <image>
+                                <Image url="@images/logo.png" />
+                            </image>
+                        </ImageView>
+
+                        <VBox alignment="CENTER_LEFT">
+                            <children>
+                                <Text fill="WHITE" style="-fx-font-size: 26px; -fx-font-weight: 900;" text="HANK AUCTIONS" />
+                                <Text fill="#94a3b8" style="-fx-font-size: 11px; -fx-font-weight: bold;" text="AUCTION &amp; TRADING FLOOR" />
+                            </children>
+                        </VBox>
+                    </children>
+                </HBox>
+
+                <StackPane prefHeight="400.0">
+                    <children>
+                        <Group translateY="40.0">
+                            <children>
+                                <Rectangle arcHeight="10.0" arcWidth="10.0" fill="#334155" height="260.0" layoutX="142.0" layoutY="50.0" width="16.0" />
+                                <Circle fill="#cbd5e1" layoutX="150.0" layoutY="50.0" radius="20.0" />
+                                <Rectangle fx:id="scaleBar" arcHeight="12.0" arcWidth="12.0" height="16.0" layoutX="-50.0" layoutY="42.0" width="450.0">
+                                    <fill>
+                                        <LinearGradient endX="0.0" endY="1.0" startX="0.0" startY="0.0">
+                                            <stops>
+                                                <Stop color="#94a3b8" offset="0.0" />
+                                                <Stop color="#f8fafc" offset="0.4" />
+                                                <Stop color="#cbd5e1" offset="0.6" />
+                                                <Stop color="#475569" offset="1.0" />
+                                            </stops>
+                                        </LinearGradient>
+                                    </fill>
+                                    <effect>
+                                        <DropShadow blurType="GAUSSIAN" height="20.0" offsetY="5.0" radius="9.5" width="20.0">
+                                            <color><Color opacity="0.6" /></color>
+                                        </DropShadow>
+                                    </effect>
+                                </Rectangle>
+                            </children>
+                        </Group>
+
+                        <VBox fx:id="boxContainer" alignment="CENTER" maxHeight="130.0" maxWidth="120.0" spacing="8.0" style="-fx-background-color: #1e293b; -fx-background-radius: 12; -fx-border-color: #3b82f6; -fx-border-width: 1.5; -fx-border-radius: 12;" translateX="-210.0" translateY="65.0">
+                            <children>
+                                <Text fill="#3b82f6" style="-fx-font-size: 42px;" text="📈" />
+                                <Label style="-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #334155; -fx-padding: 3 8; -fx-background-radius: 8;" text="Net Realized Gain" />
+                            </children>
+                        </VBox>
+
+                        <VBox fx:id="coinContainer" alignment="CENTER" maxHeight="130.0" maxWidth="120.0" spacing="8.0" style="-fx-background-color: #1e293b; -fx-background-radius: 100; -fx-border-color: #10b981; -fx-border-width: 1.5; -fx-border-radius: 100;" translateX="230.0" translateY="65.0">
+                            <children>
+                                <Text fill="#10b981" style="-fx-font-size: 42px;" text="💰" />
+                                <Label style="-fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: #334155; -fx-padding: 3 8; -fx-background-radius: 8;" text="Core Equity" />
+                            </children>
+                        </VBox>
+                    </children>
+                </StackPane>
+
+                <VBox alignment="CENTER" spacing="15.0" translateY="60.0">
+                    <children>
+                        <Text style="-fx-fill: white; -fx-font-size: 26px; -fx-font-weight: bold;" text="Take Your Trading to the Next Level" />
+                        <Label maxWidth="450.0" style="-fx-text-fill: #94a3b8; -fx-font-size: 15px;" text="High-velocity trading engine engineered for market dominance and maximum capital extraction." textAlignment="CENTER" wrapText="true" />
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+
+        <!-- Cột Phải: Form Đăng nhập -->
+        <VBox fx:id="loginDialog" alignment="TOP_LEFT" prefWidth="600.0" spacing="25.0" style="-fx-background-color: #f7f9fb; -fx-padding: 150px 50px 60px 50px;" HBox.hgrow="ALWAYS">
+            <children>
+                <VBox spacing="8.0">
+                    <children>
+                        <Text style="-fx-font-size: 32px; -fx-font-weight: 800; -fx-fill: #1A1A1A;" text="Welcome back" />
+                        <Text style="-fx-fill: #45464d; -fx-font-size: 16px;" text="Log in to your auction floor." />
+                    </children>
+                </VBox>
+
+                <VBox spacing="20.0">
+                    <children>
+                        <!-- Khung Nhập Username -->
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="User Name" />
+                                <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
+                                    <children>
+                                        <Text fill="#94a3b8" style="-fx-font-size: 20px;" text="✉" />
+                                        <TextField fx:id="username" promptText="Enter your username" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" HBox.hgrow="ALWAYS" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Khung Nhập Password  -->
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label style="-fx-font-weight: bold; -fx-text-fill: #191c1e; -fx-font-size: 14px;" text="Password" />
+                                <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: white; -fx-border-color: #c6c6cd; -fx-border-radius: 10px; -fx-padding: 4px 16px;">
+                                    <children>
+                                        <Text fill="#94a3b8" style="-fx-font-size: 20px;" text="🔒" />
+
+                                        <!-- Sử dụng StackPane để xếp chồng TextField và PasswordField -->
+                                        <StackPane HBox.hgrow="ALWAYS">
+                                            <children>
+                                                <!-- TextField hiển thị chữ (mặc định ẩn) -->
+                                                <TextField fx:id="visiblePassword" promptText="••••••••" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" visible="false" />
+
+                                                <!-- PasswordField ẩn chữ (mặc định hiện) -->
+                                                <PasswordField fx:id="enterPassword" promptText="••••••••" style="-fx-background-color: transparent; -fx-padding: 14px 0; -fx-border-color: transparent; -fx-font-size: 15px;" />
+                                            </children>
+                                        </StackPane>
+
+                                        <!-- Icon con mắt có sự kiện onMouseClicked -->
+                                        <Text fx:id="togglePasswordIcon" fill="#94a3b8" onMouseClicked="#togglePasswordVisibility" style="-fx-font-size: 20px; -fx-cursor: hand;" text="👁" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+                    </children>
+                </VBox>
+
+                <!-- Tính năng Mở rộng (Remember me / Quên MK) -->
+                <HBox alignment="CENTER_LEFT">
+                    <children>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Hyperlink fx:id="forgotPassword" onAction="#hanleClickForgotPassword" style="-fx-font-size: 13px;" text="Forgot password?" />
+                    </children>
+                </HBox>
+
+                <!-- Các Nút Bấm / Liên Kết Cuối -->
+                <VBox alignment="CENTER" spacing="18.0" translateY="-20.0">
+                    <children>
+                        <Label fx:id="errorLabel" style="-fx-text-fill: #ef4444; -fx-font-size: 14px; -fx-font-weight: bold;" text="" visible="false" wrapText="true" />
+                        <Button fx:id="loginButton" maxWidth="Infinity" onAction="#handleLogin" style="-fx-background-color: #4169E1; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 16px; -fx-background-radius: 8px; -fx-font-size: 18px; -fx-cursor: hand;" text="Login" />
+
+                        <HBox alignment="CENTER" spacing="5.0">
+                            <children>
+                                <Label style="-fx-text-fill: #45464d; -fx-font-size: 15px;" text="Don't have an account?" />
+                                <Label fx:id="createAccountLabel" style="-fx-text-fill: #4169E1; -fx-font-weight: bold; -fx-font-size: 15px; -fx-cursor: hand;" text="Create account" />
+                            </children>
+                        </HBox>
+
+                        <HBox alignment="CENTER" spacing="10.0">
+                            <children>
+                                <Hyperlink fx:id="termsLink" onAction="#handleOpenTerms" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Terms of service" />
+                                <Label style="-fx-text-fill: #94a3b8; -fx-font-size: 16px;" text="and" />
+                                <Hyperlink fx:id="privacyLink" onAction="#handleOpenPrivacy" style="-fx-text-fill: #3b82f6; -fx-font-size: 16px;" text="Privacy policy" />
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </children>
+</HBox>

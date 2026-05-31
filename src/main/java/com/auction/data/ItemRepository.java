@@ -1,0 +1,176 @@
+package com.auction.data;
+
+import com.auction.model.item.Art;
+import com.auction.model.item.Electronics;
+import com.auction.model.item.Item;
+import com.auction.model.item.Vehicle;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ItemRepository {
+
+    private final DatabaseConnection db;
+    private final ItemMapper mapper;
+
+    public ItemRepository() {
+        this.db = DatabaseConnection.getInstance();
+        this.mapper = new ItemMapper();
+    }
+
+    /**
+     * Thêm item mới vào database.
+     * return id được sinh ra, hoặc {-1} nếu lỗi.
+     */
+    public int add(Item item) {
+        System.out.println(">>> STATUS: " + item.getStatus());
+        System.out.println(">>> STATUS name(): " + item.getStatus().name());
+        String sql = "INSERT INTO items "
+                + "(owner_id, name, description, starting_price, category, image_url, status, artist, brand, manufacture_year) "
+                + "VALUES (?,?,?,?,?,?,?,?,?,?)";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setInt(1, item.getOwnerId());
+            ps.setString(2, item.getName());
+            ps.setString(3, item.getDescription());
+            ps.setDouble(4, item.getStartingPrice());
+            ps.setString(5, item.getCategory());
+            ps.setString(6, item.getImageUrl());
+            ps.setString(7, item.getStatus().name());
+            bindCategoryFields(ps, item);
+            ps.executeUpdate();
+
+            ResultSet keys = ps.getGeneratedKeys();
+            if (keys.next()) return keys.getInt(1);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    // Lấy danh sách item thuộc về một seller cụ thể.
+    public List<Item> findBySeller(int sellerId) {
+        return query("SELECT * FROM items WHERE owner_id = ?", sellerId);
+    }
+
+    // Lấy toàn bộ danh sách item.
+    public List<Item> findAll() {
+        List<Item> list = new ArrayList<>();
+        try (Connection con = db.getConnection();
+             Statement st = con.createStatement();
+             ResultSet rs = st.executeQuery("SELECT * FROM items")) {
+
+            while (rs.next()) list.add(mapper.map(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    // Xóa item theo id (đồng thời xóa phiên đấu giá liên kết để bảo toàn khóa ngoại).
+    public boolean delete(int id) {
+        String deleteAuctionSql = "DELETE FROM auctions WHERE item_id = ?";
+        String deleteItemSql = "DELETE FROM items WHERE id = ?";
+        try (Connection con = db.getConnection()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement ps1 = con.prepareStatement(deleteAuctionSql);
+                 PreparedStatement ps2 = con.prepareStatement(deleteItemSql)) {
+                ps1.setInt(1, id);
+                ps2.setInt(1, id);
+                ps1.executeUpdate();
+                int rows = ps2.executeUpdate();
+                con.commit();
+                return rows > 0;
+            } catch (SQLException e) {
+                con.rollback();
+                throw e;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // Cập nhật item.
+    public boolean update(Item item) {
+        String sql = "UPDATE items SET owner_id = ?, name = ?, description = ?, starting_price = ?, category = ?, image_url = ?, artist = ?, brand = ?, manufacture_year = ? WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, item.getOwnerId());
+            ps.setString(2, item.getName());
+            ps.setString(3, item.getDescription());
+            ps.setDouble(4, item.getStartingPrice());
+            ps.setString(5, item.getCategory());
+            ps.setString(6, item.getImageUrl());
+            bindCategoryFields(ps, item, 7);
+            ps.setInt(10, item.getId());
+
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // Cập nhật trạng thái item.
+    public boolean updateStatus(int id, com.auction.model.item.ItemStatus status) {
+        String sql = "UPDATE items SET status = ? WHERE id = ?";
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, status.name());
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+
+    // Private helpers
+
+    private void bindCategoryFields(PreparedStatement ps, Item item) throws SQLException {
+        bindCategoryFields(ps, item, 8);
+    }
+
+    private void bindCategoryFields(PreparedStatement ps, Item item, int startIndex) throws SQLException {
+        if (item instanceof Art art) {
+            ps.setString(startIndex, art.getArtist());
+            ps.setNull  (startIndex + 1, Types.VARCHAR);
+            ps.setNull  (startIndex + 2, Types.SMALLINT);
+        } else if (item instanceof Electronics elec) {
+            ps.setNull  (startIndex, Types.VARCHAR);
+            ps.setString(startIndex + 1, elec.getBrand());
+            ps.setNull  (startIndex + 2, Types.SMALLINT);
+        } else if (item instanceof Vehicle veh) {
+            ps.setNull(startIndex, Types.VARCHAR);
+            ps.setNull(startIndex + 1, Types.VARCHAR);
+            ps.setInt (startIndex + 2, veh.getYear());
+        } else {
+            ps.setNull(startIndex, Types.VARCHAR);
+            ps.setNull(startIndex + 1, Types.VARCHAR);
+            ps.setNull(startIndex + 2, Types.SMALLINT);
+        }
+    }
+
+    // Chạy một PreparedStatement với một tham số int và trả về danh sách Item.
+    private List<Item> query(String sql, int param) {
+        List<Item> list = new ArrayList<>();
+        try (Connection con = db.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, param);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) list.add(mapper.map(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+}

@@ -1,0 +1,415 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
+
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.collections.FXCollections?>
+<?import java.lang.String?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.shape.SVGPath?>
+<StackPane alignment="TOP_RIGHT" prefHeight="800.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.group11.controller.SellerAuctionListController">
+    <children>
+
+        <BorderPane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1280.0" style="-fx-background-color: #0A192F;">
+
+            <top>
+                <HBox alignment="CENTER_LEFT" prefHeight="90.0" spacing="20.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent transparent #1E2D45 transparent; -fx-border-width: 1;" BorderPane.alignment="CENTER">
+                    <children>
+                        <Label text="HANK AUCTIONS" textFill="#ffd700">
+                            <font><Font name="System Bold Italic" size="22.0" /></font>
+                        </Label>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <HBox alignment="CENTER" spacing="15.0">
+                            <children>
+                                <HBox alignment="CENTER" prefHeight="35.0" spacing="8.0" style="-fx-background-color: #112240; -fx-border-color: #1E2D45; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 0 12 0 12;">
+                                    <children>
+                                        <Label text="\$" textFill="#94A3B8"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                        <Label fx:id="walletBalance" minWidth="50.0" text="0.00" textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                        <Button fx:id="addFundsBtn" style="-fx-background-color: transparent; -fx-cursor: hand;" text="+" textFill="#22c55e"><font><Font name="System Bold" size="18.0" /></font></Button>
+                                    </children>
+                                </HBox>
+                                <Button fx:id="SystemNotification" onAction="#handleToggleNotification" style="-fx-background-color: transparent; -fx-cursor: hand;" text="🔔 " textFill="WHITE"><font><Font size="18.0" /></font></Button>
+                                <Button fx:id="avatarBtn" onAction="#handleToggleProfile" style="-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 0 5 0 5;">
+                                    <graphic>
+                                        <HBox alignment="CENTER" spacing="12.0">
+                                            <children>
+                                                <StackPane>
+                                                    <children>
+                                                        <Circle fill="#E2E8F0" radius="20.0" stroke="#1E2D45" strokeType="INSIDE" strokeWidth="1.0" />
+
+                                                        <SVGPath content="M35,35 C43.28,35 50,28.28 50,20 C50,11.72 43.28,5 35,5 C26.72,5 20,11.72 20,20 C20,28.28 26.72,35 35,35 Z M35,40 C23.33,40 0,45.83 0,57.5 L0,65 L70,65 L70,57.5 C70,45.83 46.67,40 35,40 Z"
+                                                                 fill="#475569" scaleX="0.32" scaleY="0.32" />
+
+                                                        <StackPane alignment="CENTER" translateX="12.0" translateY="12.0" StackPane.alignment="CENTER">
+                                                            <children>
+                                                                <Circle fill="#1E2D45" radius="7.5" stroke="#0A192F" strokeType="INSIDE" strokeWidth="1.0" />
+                                                                <SVGPath content="M7.41,8.59L12,13.17l4.59-4.58L18,10l-6,6l-6-6L7.41,8.59z"
+                                                                         fill="#FFD700" scaleX="0.5" scaleY="0.5" />
+                                                            </children>
+                                                        </StackPane>
+                                                    </children>
+                                                </StackPane>
+
+                                                <Label text="Seller" textFill="#94A3B8">
+                                                    <font><Font name="System Bold" size="13.0" /></font>
+                                                </Label>
+                                            </children>
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+                            </children>
+                        </HBox>
+                    </children>
+                    <padding><Insets left="30.0" right="30.0" /></padding>
+                </HBox>
+            </top>
+
+            <left>
+                <VBox prefWidth="270.0" spacing="2.0" style="-fx-background-color: #0A192F; -fx-border-color: transparent #1E2D45 transparent transparent;" BorderPane.alignment="CENTER">
+                    <children>
+                        <VBox fx:id="auctionLive" onMouseClicked="#handleHammerPortalClick" spacing="10.0" style="-fx-background-color: rgba(17, 34, 64, 0.5); -fx-background-radius: 12; -fx-cursor: hand;">
+                            <padding><Insets bottom="15.0" left="15.0" right="15.0" top="15.0" /></padding>
+                            <VBox.margin><Insets bottom="20.0" left="15.0" right="15.0" top="20.0" /></VBox.margin>
+                            <children>
+                                <Label text="Hammer Portal" textFill="WHITE"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                <Label text="Live Marketplace" textFill="#94a3b8"><font><Font size="10.0" /></font></Label>
+                            </children>
+                        </VBox>
+                        <Button fx:id="btnMyListings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   MY LISTINGS"><font><Font name="System Bold" size="14.0" /></font></Button>
+                        <Button fx:id="btnAnalytics" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   ANALYTICS"><font><Font name="System Bold" size="14.0" /></font></Button>
+                        <Button fx:id="btnOrderHistory" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   ORDER HISTORY "><font><Font name="System Bold" size="14.0" /></font></Button>
+                        <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleSwitchTab" prefHeight="60.0" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8;" text="   SETTINGS"><font><Font name="System Bold" size="14.0" /></font></Button>
+                        <Button fx:id="addItemSidebar" alignment="CENTER" maxWidth="1.7976931348623157E308" onAction="#handleAddItem" prefHeight="60.0" style="-fx-background-color: #FFD700; -fx-background-radius: 10; -fx-text-fill: #0A192F; -fx-cursor: hand;" text="ADD ITEM">
+                            <graphic><Label text="⊕" textFill="#0a192f"><font><Font name="System Bold" size="30.0" /></font><padding><Insets right="5.0" /></padding></Label></graphic>
+                            <font><Font name="System Bold" size="14.0" /></font>
+                            <VBox.margin><Insets left="20.0" right="20.0" top="60.0" /></VBox.margin>
+                        </Button>
+                    </children>
+                </VBox>
+            </left>
+
+            <center>
+                <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;" BorderPane.alignment="CENTER">
+                    <content>
+                        <StackPane>
+                            <children>
+                                <VBox fx:id="myListingsView" spacing="20.0">
+                                    <padding><Insets bottom="30.0" left="30.0" right="30.0" top="30.0" /></padding>
+                                    <children>
+                                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-background-color: #112240; -fx-padding: 15; -fx-background-radius: 10; -fx-border-color: #1E2D45; -fx-border-radius: 10;">
+                                            <children>
+                                                <TextField fx:id="filterSearchId" prefWidth="250.0" promptText="Tìm kiếm ID sản phẩm..." style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                                <MenuButton fx:id="filterStatus" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 5;" text="TRẠNG THÁI" textFill="WHITE">
+                                                    <items>
+                                                        <MenuItem text="Tất cả" /><MenuItem text="AVAILABLE" /><MenuItem text="IN_AUCTION" /><MenuItem text="SOLD" /><MenuItem text="UNSOLD" />
+                                                    </items>
+                                                </MenuButton>
+                                                <MenuButton fx:id="filterSort" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 5;" text="SẮP XẾP" textFill="WHITE">
+                                                    <items>
+                                                        <MenuItem text="Mới nhất" /><MenuItem text="Giá: Thấp đến Cao" /><MenuItem text="Giá: Cao đến Thấp" /><MenuItem text="Kết thúc sớm nhất" />
+                                                    </items>
+                                                </MenuButton>
+                                            </children>
+                                        </HBox>
+                                        <HBox alignment="BOTTOM_LEFT" spacing="15.0">
+                                            <children>
+                                                <Label text="DANH SÁCH SẢN PHẨM: " textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                <Label fx:id="totalProductsLabel" text="0" textFill="#ffd700"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                            </children>
+                                        </HBox>
+                                        <GridPane fx:id="contentGrid" hgap="25.0" vgap="25.0">
+                                            <columnConstraints>
+                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="33.33" />
+                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="33.33" />
+                                                <ColumnConstraints hgrow="SOMETIMES" percentWidth="33.33" />
+                                            </columnConstraints>
+                                        </GridPane>
+                                    </children>
+                                </VBox>
+
+                                <VBox fx:id="analyticsPane" managed="false" spacing="20.0" visible="false">
+                                    <padding><Insets bottom="30.0" left="30.0" right="30.0" top="30.0" /></padding>
+                                    <children>
+                                        <Label text="THỐNG KÊ KINH DOANH" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+
+                                        <!-- Hàng thẻ thông số nhanh -->
+                                        <HBox spacing="20.0">
+                                            <children>
+                                                <!-- Thẻ TỔNG DOANH THU -->
+                                                <VBox prefWidth="250.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                                                    <Label text="TỔNG DOANH THU" textFill="#94A3B8"><font><Font name="System Bold" size="12.0" /></font></Label>
+                                                    <Label fx:id="totalRevenueLabel" text="/$0.00" textFill="#FFD700"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                </VBox>
+
+                                                <!-- Thẻ SẢN PHẨM ĐÃ BÁN -->
+                                                <VBox prefWidth="250.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                                                    <Label text="SẢN PHẨM ĐÃ BÁN" textFill="#94A3B8"><font><Font name="System Bold" size="12.0" /></font></Label>
+                                                    <Label fx:id="soldProductsLabel" text="0" textFill="#E2E8F0"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                </VBox>
+
+                                                <!-- Thẻ LƯỢT ĐẤU GIÁ -->
+                                                <VBox prefWidth="250.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 20; -fx-border-color: #1E2D45; -fx-border-radius: 12;" HBox.hgrow="ALWAYS">
+                                                    <Label text="LƯỢT ĐẤU GIÁ" textFill="#94A3B8"><font><Font name="System Bold" size="12.0" /></font></Label>
+                                                    <Label fx:id="totalBidsLabel" text="0" textFill="#22C55E"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                </VBox>
+                                            </children>
+                                        </HBox>
+
+                                        <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-padding: 25; -fx-border-color: #1E2D45; -fx-border-radius: 12;">
+                                            <children>
+                                                <Label text="Biểu đồ doanh thu theo tháng" textFill="#94A3B8" />
+                                                <BarChart fx:id="revenueChart" legendSide="RIGHT" prefHeight="350.0" style="-fx-background-color: transparent;">
+                                                    <xAxis>
+                                                        <CategoryAxis side="BOTTOM" tickLabelFill="#94a3b8">
+                                                            <categories>
+                                                                <FXCollections fx:factory="observableArrayList">
+                                                                    <String fx:value="Jan" />
+                                                                    <String fx:value="Feb" />
+                                                                    <String fx:value="Mar" />
+                                                                    <String fx:value="Apr" />
+                                                                    <String fx:value="May" />
+                                                                    <String fx:value="Jun" />
+                                                                    <String fx:value="Jul" />
+                                                                    <String fx:value="Aug" />
+                                                                    <String fx:value="Sep" />
+                                                                    <String fx:value="Oct" />
+                                                                    <String fx:value="Nov" />
+                                                                    <String fx:value="Dec" />
+                                                                </FXCollections>
+                                                            </categories>
+                                                        </CategoryAxis>
+                                                    </xAxis>
+                                                    <yAxis>
+                                                        <NumberAxis side="LEFT" tickLabelFill="#94a3b8" />
+                                                    </yAxis>
+                                                </BarChart>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+
+                                <!-- 3. ORDER ARCHIVE VIEW (Lưu trữ đơn hàng & Lịch sử) -->
+                                <VBox fx:id="orderHistoryView" managed="false" spacing="20.0" visible="false">
+                                    <padding><Insets bottom="30.0" left="30.0" right="30.0" top="30.0" /></padding>
+                                    <children>
+                                        <HBox alignment="CENTER_LEFT" spacing="20.0">
+                                            <children>
+                                                <Label text="LỊCH SỬ GIAO DỊCH" textFill="WHITE"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                <Region HBox.hgrow="ALWAYS" />
+                                                <TextField fx:id="searchOrderField" promptText="Tìm mã đơn hàng..." style="-fx-background-color: #112240; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 5;" />
+                                            </children>
+                                        </HBox>
+
+                                        <!-- Bảng lịch sử giao dịch -->
+                                        <VBox style="-fx-background-color: #112240; -fx-background-radius: 12; -fx-border-color: #1E2D45; -fx-border-radius: 12; -fx-padding: 1;">
+                                            <children>
+                                                <TableView fx:id="orderTable" prefHeight="500.0" style="-fx-background-color: transparent; -fx-base: #112240; -fx-control-inner-background: #112240;">
+                                                    <columns>
+                                                        <TableColumn fx:id="colOrderId" prefWidth="120.0" text="MÃ ĐƠN" />
+                                                        <TableColumn fx:id="colProduct" prefWidth="250.0" text="SẢN PHẨM" />
+                                                        <TableColumn fx:id="colBuyer" prefWidth="150.0" text="NGƯỜI MUA" />
+                                                        <TableColumn fx:id="colPrice" prefWidth="150.0" text="GIÁ CHỐT" />
+                                                        <TableColumn fx:id="colDate" prefWidth="150.0" text="NGÀY HOÀN THÀNH" />
+                                                        <TableColumn fx:id="colStatus" prefWidth="120.0" text="TRẠNG THÁI" />
+                                                    </columns>
+                                                </TableView>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+
+                                <VBox fx:id="registerProductView" managed="false" spacing="25.0" visible="false">
+                                    <padding><Insets bottom="30.0" left="40.0" right="40.0" top="10.0" /></padding>
+                                    <children>
+                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                            <children>
+                                                <Button onAction="#handleBackToListings" style="-fx-background-color: #1E2D45; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 8;" text="← Quay lại" />
+                                                <VBox>
+                                                    <children>
+                                                        <Label fx:id="registerTitleLabel" text="ĐĂNG KÝ ĐẤU GIÁ MỚI" textFill="#ffd700"><font><Font name="System Bold" size="24.0" /></font></Label>
+                                                        <Label fx:id="registerSubtitleLabel" text="Điền đầy đủ thông tin để niêm yết sản phẩm" textFill="#94A3B8"><font><Font size="12.0" /></font></Label>
+                                                    </children>
+                                                </VBox>
+                                            </children>
+                                        </HBox>
+
+                                        <VBox spacing="20.0">
+                                            <children>
+                                                <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-padding: 25; -fx-background-radius: 12; -fx-border-color: #1E2D45; -fx-border-radius: 12;">
+                                                    <children>
+                                                        <Label text="1. Thông tin tổng quan" textFill="#ffd700"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                                        <HBox spacing="20.0">
+                                                            <children>
+                                                                <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                                                    <Label text="TÊN SẢN PHẨM" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                                    <TextField fx:id="productNameField" prefHeight="45.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8;" />
+                                                                </VBox>
+                                                                <VBox prefWidth="250.0" spacing="5.0">
+                                                                    <Label text="DANH MỤC" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                                    <MenuButton fx:id="categoryMenuButton" maxWidth="1.7976931348623157E308" prefHeight="45.0" style="-fx-background-color: #0A192F; -fx-border-color: #1E2D45; -fx-border-radius: 8;" text="Chọn danh mục" textFill="WHITE">
+                                                                        <items>
+                                                                            <MenuItem text="Electronics" /><MenuItem text="Art" /><MenuItem text="Vehicle" />
+                                                                        </items>
+                                                                    </MenuButton>
+
+                                                                    <VBox fx:id="dynamicAttributesContainer" spacing="5.0">
+                                                                        <padding>
+                                                                            <Insets top="10.0" bottom="10.0" />
+                                                                        </padding>
+                                                                    </VBox>
+                                                                </VBox>
+                                                            </children>
+                                                        </HBox>
+                                                        <VBox spacing="5.0">
+                                                            <Label text="MÔ TẢ CHI TIẾT" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                            <TextArea fx:id="descriptionArea" prefHeight="100.0" style="-fx-control-inner-background: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45; -fx-border-radius: 8;" wrapText="true" />
+                                                        </VBox>
+                                                        <VBox spacing="10.0">
+                                                            <Label text="HÌNH ẢNH SẢN PHẨM" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                            <StackPane fx:id="imageDropzone" onMouseClicked="#handleSelectImage" prefHeight="220.0" style="-fx-background-color: #0A192F; -fx-border-color: #ffd700; -fx-border-style: dashed; -fx-border-radius: 12; -fx-border-width: 2; -fx-cursor: hand;">
+                                                                <children>
+                                                                    <!-- Nội dung hiển thị khi chưa có ảnh -->
+                                                                    <VBox fx:id="uploadPrompt" alignment="CENTER" spacing="10.0">
+                                                                        <children>
+                                                                            <Label style="-fx-text-fill: #ffc107; -fx-font-size: 40px;" text="📷+" />
+                                                                            <Label text="Nhấp vào để tải lên hình ảnh sản phẩm" textFill="#ffd700">
+                                                                                <font><Font name="System Bold" size="13.0" /></font>
+                                                                            </Label>
+                                                                        </children>
+                                                                    </VBox>
+
+                                                                    <!-- ImageView để hiển thị ảnh xem trước (mặc định ẩn) -->
+                                                                    <ImageView fx:id="productImageView" fitHeight="200.0" fitWidth="350.0" pickOnBounds="true" preserveRatio="true" visible="false" />
+                                                                </children>
+                                                            </StackPane>
+                                                        </VBox>
+                                                    </children>
+                                                </VBox>
+
+                                                <GridPane hgap="20.0" vgap="20.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-padding: 20; -fx-background-radius: 12; -fx-border-color: #1E2D45; -fx-border-radius: 12;">
+                                                            <children>
+                                                                <Label text="2. Thiết lập Tài chính" textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                                                <VBox spacing="12.0">
+                                                                    <children>
+                                                                        <VBox spacing="5.0">
+                                                                            <Label text="GIÁ KHỞI ĐIỂM ($)" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                                            <TextField fx:id="startingPriceField" prefHeight="40.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45;" />
+                                                                        </VBox>
+                                                                        <VBox spacing="5.0">
+                                                                            <Label text="BƯỚC GIÁ TỐI THIỂU ($)" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                                            <TextField fx:id="minimumBidIncrementField" prefHeight="40.0" style="-fx-background-color: #0A192F; -fx-text-fill: white; -fx-border-color: #1E2D45;" />
+                                                                        </VBox>
+                                                                    </children>
+                                                                </VBox>
+                                                            </children>
+                                                        </VBox>
+                                                        <VBox spacing="15.0" style="-fx-background-color: #112240; -fx-padding: 20; -fx-background-radius: 12; -fx-border-color: #1E2D45; -fx-border-radius: 12;" GridPane.columnIndex="1">
+                                                            <children>
+                                                                <Label text="3. Thời gian" textFill="#ffd700"><font><Font name="System Bold" size="14.0" /></font></Label>
+                                                                <VBox spacing="12.0">
+                                                                    <children>
+                                                                        <VBox spacing="5.0">
+                                                                            <Label text="NGÀY BẮT ĐẦU" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                                            <DatePicker fx:id="startDatePicker" maxWidth="1.7976931348623157E308" prefHeight="40.0" style="-fx-control-inner-background: #0A192F;" />
+                                                                        </VBox>
+                                                                        <VBox spacing="5.0">
+                                                                            <Label text="NGÀY KẾT THÚC" textFill="#94A3B8"><font><Font name="System Bold" size="10.0" /></font></Label>
+                                                                            <DatePicker fx:id="endDatePicker" maxWidth="1.7976931348623157E308" prefHeight="40.0" style="-fx-control-inner-background: #0A192F;"/>
+                                                                        </VBox>
+                                                                    </children>
+                                                                </VBox>
+                                                                <Region VBox.vgrow="ALWAYS" />
+                                                                <Button fx:id="submitButton" onAction="#handleSubmitProduct" maxWidth="1.7976931348623157E308" prefHeight="55.0" style="-fx-background-color: #ffc107; -fx-text-fill: #3f2e00; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="XÁC NHẬN ĐĂNG KÝ" />
+                                                            </children>
+                                                        </VBox>
+                                                    </children>
+                                                    <rowConstraints><RowConstraints /></rowConstraints>
+                                                </GridPane>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+
+                                <!-- Profile view: nội dung được build bằng ProfileViewFactory.java -->
+                                <VBox fx:id="profileView" managed="false" visible="false" />
+
+
+                            </children>
+                        </StackPane>
+                    </content>
+                </ScrollPane>
+            </center>
+        </BorderPane>
+
+        <VBox fx:id="notificationDropdown" maxHeight="380.0" maxWidth="320.0" managed="false" visible="false" spacing="12.0" style="-fx-background-color: #112240; -fx-border-color: #1E2D45; -fx-border-width: 1.5; -fx-border-radius: 12; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 15, 0, 0, 5);">
+            <padding><Insets bottom="15.0" left="15.0" right="15.0" top="15.0" /></padding>
+            <StackPane.margin><Insets right="80.0" top="65.0" /></StackPane.margin>
+            <children>
+                <HBox alignment="CENTER_LEFT">
+                    <children>
+                        <Label text="THÔNG BÁO HỆ THỐNG" textFill="#ffd700">
+                            <font><Font name="System Bold" size="13.0" /></font>
+                        </Label>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button style="-fx-background-color: transparent; -fx-text-fill: #22c55e; -fx-padding: 0; -fx-cursor: hand;" text="Đọc hết ✔">
+                            <font><Font name="System Bold" size="11.0" /></font>
+                        </Button>
+                    </children>
+                </HBox>
+
+                <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;" VBox.vgrow="ALWAYS">
+                    <content>
+                        <VBox fx:id="notificationListContainer" spacing="8.0" style="-fx-background-color: transparent;">
+                            <children>
+                            </children>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+            </children>
+        </VBox>
+
+        <VBox fx:id="profileDropdown" maxHeight="90.0" maxWidth="180.0" managed="false" visible="false" spacing="5.0" style="-fx-background-color: #112240; -fx-border-color: #1E2D45; -fx-border-width: 1.5; -fx-border-radius: 12; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.6), 15, 0, 0, 5);">
+            <padding><Insets bottom="10.0" left="10.0" right="10.0" top="10.0" /></padding>
+            <StackPane.margin><Insets right="30.0" top="75.0" /></StackPane.margin>
+            <children>
+                <Button fx:id="btnProfileInfo" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleViewProfile" style="-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-cursor: hand;" text="👤  Thông tin cá nhân">
+                    <font><Font name="System Bold" size="13.0" /></font>
+                </Button>
+                <Region prefHeight="1.0" style="-fx-background-color: #1E2D45;" />
+                <Button fx:id="btnLogout" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#handleLogout" style="-fx-background-color: transparent; -fx-text-fill: #ef4444; -fx-cursor: hand;" text="🚪  Đăng xuất">
+                    <font><Font name="System Bold" size="13.0" /></font>
+                </Button>
+            </children>
+        </VBox>
+
+    </children>
+</StackPane>
