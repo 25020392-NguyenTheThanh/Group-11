@@ -108,12 +108,6 @@ public class ClientHandler implements Runnable , Observer {
                             try {
                                 a.placeBid(bidder, nextBid, true);
                                 AuctionManager.getInstance().recordBid(a.getId(), bidderId, bidder.getUsername(), nextBid, "AUTO");
-                                 server.broadcast(new Notification("BID_UPDATE",
-                                         new BidUpdateData(
-                                                 a.getId(), nextBid,
-                                                 bidder.getUsername(),
-                                                 a.getBidHistory().size(),
-                                                 a.getEndTime())));
                             } catch (Exception ex) {
                                 System.err.println("[AutoBid handler] " + ex.getMessage());
                             }
@@ -130,7 +124,11 @@ public class ClientHandler implements Runnable , Observer {
             sendNotification(new Notification("TIME_EXTENDED", message.substring("TIME_EXTENDED:".length())));
             return;
         }
-        sendNotification(new Notification("BID_UPDATE", message));
+        if ("VIEW_UPDATE".equals(message)) {
+            sendNotification(new Notification("VIEW_UPDATE", message));
+            return;
+        }
+        sendNotification(new Notification("SYSTEM_MESSAGE", message));
     }
     public synchronized void sendNotification(Notification notification) {
         try {

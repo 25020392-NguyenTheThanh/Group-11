@@ -129,9 +129,9 @@ public class LiveAuctionController implements Initializable {
                         // Đồng thời tải chi tiết dưới nền để cập nhật lịch sử và biểu đồ thầu
                         refreshAuctionDetails(false);
                     }
-                } else {
-                    refreshAuctionDetails(false);
                 }
+            } else if ("VIEW_UPDATE".equals(notification.getType())) {
+                refreshAuctionDetails(false);
             } else if ("AUCTION_ENDED".equals(notification.getType())
                     || "ITEM_STATUS_CHANGED".equals(notification.getType())) {
                 refreshAuctionDetails(false);

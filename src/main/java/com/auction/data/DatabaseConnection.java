@@ -1,5 +1,8 @@
 package com.auction.data;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -82,9 +85,9 @@ public class DatabaseConnection {
         return (Connection) java.lang.reflect.Proxy.newProxyInstance(
             DatabaseConnection.class.getClassLoader(),
             new Class<?>[]{Connection.class},
-            new java.lang.reflect.InvocationHandler() {
+            new InvocationHandler() {
                 @Override
-                public Object invoke(Object proxy, java.lang.reflect.Method method, Object[] args) throws Throwable {
+                public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                     if (method.getName().equals("close")) {
                         synchronized (connectionPool) {
                             try {
@@ -101,7 +104,7 @@ public class DatabaseConnection {
                     }
                     try {
                         return method.invoke(finalPhysicalConn, args);
-                    } catch (java.lang.reflect.InvocationTargetException e) {
+                    } catch (InvocationTargetException e) {
                         throw e.getCause();
                     }
                 }
